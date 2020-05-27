@@ -23,12 +23,10 @@ from collections import OrderedDict
 scene_index = sys.argv[1]
 ### create a folder to store all the images generated from the current scene
 img_path = os.getcwd() + "/sensor_images/" + scene_index
-try:
-    os.mkdir(img_path)
-except OSError:
-    print ("Creation of the directory %s failed" % img_path)
-else:
-    print ("Successfully created the directory %s " % img_path)
+
+if os.path.exists(img_path):
+    shutil.rmtree(img_path)
+os.mkdir(img_path)
 
 ### create two servers ###
 ### One for planning, the other executing (ground truth) ###
@@ -161,41 +159,48 @@ projectionMatrix = p.computeProjectionMatrixFOV(
 ### first load in the ground truth of objects specified in a txt file
 Objects, targetObjectName = playground_utils.read_print_poses(scene_index)
 ### generate these ground truth poses and report the number of objects
-truePoses, nObjectInExecuting = playground_utils.trueScene_generation(Objects, executingServer)
+truePoses, nObjectInExecuting = playground_utils.trueScene_generation(Objects, planningServer)
 ### Take the initial images
 playground_utils.sensorImageTaker(viewMatrix, projectionMatrix, executingServer, img_path)
 
 ################################# sense the initial scene ####################################################
 
+
 # list of vacuum gripper's pick pose in object's frame
+vacuum_gripper_localPicks = []
+vacuum_gripper_localPicks.append([0, 0, -0.17, 0, 0, 0])
+vacuum_gripper_localPicks.append([0, 0, 0.17, 0, 180, 0])
+vacuum_gripper_localPicks.append([0, -0.15, 0, -90, 180, 0])
+vacuum_gripper_localPicks.append([0, 0.15, 0, 90, 0, 0])
+vacuum_gripper_localPicks.append([0.1, 0, 0, 0, -90, 0])
+vacuum_gripper_localPicks.append([-0.1, 0, 0, 0, 90, 0])
+
 # list of finger gripper's pick pose in object's frame
 
 # initial object pose
 # list of final object poses that work
 
 #####################################################################################################
+targetObj = truePoses[0]
+
+vacuum_grasps = playground_utils.genVacuumGrasps(targetObj, vacuum_gripper_localPicks)
+### try these vacuum grasps to see how they work
+for vacuum_grasp in vacuum_grasps:
+    goal_pose_pos = vacuum_grasp[0:3]
+    goal_pose_quat = [vacuum_grasp[3], vacuum_grasp[4], vacuum_grasp[6], vacuum_grasp[5]]
+    q_grasp = p.calculateInverseKinematics(bodyUniqueId=motomanID_p, endEffectorLinkIndex=motoman_left_ee_idx, 
+                                        targetPosition=goal_pose_pos, targetOrientation=goal_pose_quat, 
+                                        lowerLimits=ll, upperLimits=ul, jointRanges=jr, 
+                                        maxNumIterations=20000, residualThreshold=0.0000001,
+                                        physicsClientId=planningServer)
+    for j in range(1, 8):
+        result_p = p.resetJointState(motomanID_p, j, q_grasp[j-1], physicsClientId=planningServer)
+    for j in range(11, 18):
+        result_p = p.resetJointState(motomanID_p, j, q_grasp[j-4], physicsClientId=planningServer)
+    p.stepSimulation(planningServer)
+    raw_input("Enter to continue")
 
 
-# function pick-handoff-place ( grasps for picking arm, grasps for handoff arm, placement configurations, handoff configurations)
-# {
-    
-    # working picks = []
-    # iterate over picking grasps
-    #     if it works
-    #         working picks.append(pick grasp)
-    #         iterate over placements with this grasp
-    #             if it works
-    #                 solution is found - break
 
-    # iterate over working picks
-    #     iterate over hanndoff configurations
-    #         iterate over other arm's grasps at handoff configuration
-    #             iterate over placement configuration with the other arm
-    #                 if it works
-    #                     solution is found - break
-
-# }
-
-# execute the solution - the object moves along with the ee from start to goal configuration
 
 time.sleep(10000)

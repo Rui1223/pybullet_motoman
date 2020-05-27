@@ -8,6 +8,8 @@ import math
 from PIL import Image
 from skimage.io import imread, imsave
 
+import IPython
+
 class TrueMesh:
     def __init__(self, m, objName, pos, quat, angles):
         self.m = m
@@ -24,10 +26,6 @@ def sensorImageTaker(viewMatrix, projectionMatrix, clientId, img_path):
     viewMatrix=viewMatrix,
     projectionMatrix=projectionMatrix,
     physicsClientId=clientId)
-
-    print ("segmentation image: ")
-    for i in range(segImg.shape[0]):
-        print(segImg[i])
 
     ### save the images
     ### rgb
@@ -92,4 +90,27 @@ def trueScene_generation(Objects, clientId):
     # p.setGravity(0.0, 0.0, -9.8, clientId)
     # p.setRealTimeSimulation(1, clientId)
     print "Number of Objects in the ground truth (execution): " + str(len(truePoses))
-    return truePoses, nObjectInExecuting       
+    return truePoses, nObjectInExecuting
+
+
+
+def genVacuumGrasps(targetObj, vacuum_gripper_localPicks):
+    vacuum_grasps = []
+    for localPick in vacuum_gripper_localPicks:
+        vacuum_pick = []
+        ### Let's get the new configuration of the pick in the global frame
+        new_config = p.multiplyTransforms(
+            targetObj.pos, targetObj.quat, 
+            localPick[0:3], p.getQuaternionFromEuler([i*math.pi/180 for i in localPick[3:6]])
+        )
+        for item in new_config:
+            vacuum_pick += list(item)
+        vacuum_grasps.append(vacuum_pick)
+
+    # print("vacuum_grasps: ")
+    # for vacuum_grasp in vacuum_grasps:
+    #     print(vacuum_grasp)
+
+    return vacuum_grasps
+
+
