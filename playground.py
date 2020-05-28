@@ -168,12 +168,12 @@ playground_utils.sensorImageTaker(viewMatrix, projectionMatrix, executingServer,
 
 # list of vacuum gripper's pick pose in object's frame
 vacuum_gripper_localPicks = []
-vacuum_gripper_localPicks.append([0, 0, -0.17, 0, 0, 0])
-vacuum_gripper_localPicks.append([0, 0, 0.17, 0, 180, 0])
-vacuum_gripper_localPicks.append([0, -0.15, 0, -90, 180, 0])
-vacuum_gripper_localPicks.append([0, 0.15, 0, 90, 0, 0])
-vacuum_gripper_localPicks.append([0.1, 0, 0, 0, -90, 0])
-vacuum_gripper_localPicks.append([-0.1, 0, 0, 0, 90, 0])
+vacuum_gripper_localPicks.append([0, 0, -0.102, 0, 0, 0])
+vacuum_gripper_localPicks.append([0, 0, 0.102, 0, 180, 0])
+vacuum_gripper_localPicks.append([0, -0.086, 0, -90, 180, 0])
+vacuum_gripper_localPicks.append([0, 0.086, 0, 90, 0, 0])
+vacuum_gripper_localPicks.append([0.032, 0, 0, 0, -90, 0])
+vacuum_gripper_localPicks.append([-0.032, 0, 0, 0, 90, 0])
 
 # list of finger gripper's pick pose in object's frame
 
@@ -187,16 +187,29 @@ vacuum_grasps = playground_utils.genVacuumGrasps(targetObj, vacuum_gripper_local
 ### try these vacuum grasps to see how they work
 for vacuum_grasp in vacuum_grasps:
     goal_pose_pos = vacuum_grasp[0:3]
-    goal_pose_quat = [vacuum_grasp[3], vacuum_grasp[4], vacuum_grasp[6], vacuum_grasp[5]]
+    goal_pose_quat = [vacuum_grasp[3], vacuum_grasp[4], vacuum_grasp[5], vacuum_grasp[6]]
+
+    print "goal position: ", goal_pose_pos
+
     q_grasp = p.calculateInverseKinematics(bodyUniqueId=motomanID_p, endEffectorLinkIndex=motoman_left_ee_idx, 
                                         targetPosition=goal_pose_pos, targetOrientation=goal_pose_quat, 
                                         lowerLimits=ll, upperLimits=ul, jointRanges=jr, 
                                         maxNumIterations=20000, residualThreshold=0.0000001,
                                         physicsClientId=planningServer)
+
     for j in range(1, 8):
         result_p = p.resetJointState(motomanID_p, j, q_grasp[j-1], physicsClientId=planningServer)
     for j in range(11, 18):
         result_p = p.resetJointState(motomanID_p, j, q_grasp[j-4], physicsClientId=planningServer)
+
+    ls = p.getLinkState(motomanID_p, motoman_left_ee_idx)
+    final_ee_pose = ls[0]
+    diff = [goal_pose_pos[0] - final_ee_pose[0], goal_pose_pos[1] - final_ee_pose[1], goal_pose_pos[2] - final_ee_pose[2]]
+    ee_dist = math.sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
+
+    print "final ee pose: ", final_ee_pose
+    print "distance: ", ee_dist
+
     p.stepSimulation(planningServer)
     raw_input("Enter to continue")
 
