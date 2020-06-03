@@ -8,9 +8,15 @@ import numpy as np
 class Workspace(object):
     ### This specified a workspace where the robot is performing the task
     def __init__(self, theme, robotBasePosition, server):
+        ### specify the theme of the workspace
         self.theme = theme
+        ### get the server
         self.planningServer = server[0]
         self.executingServer = server[1]
+        ### collect geometries from the workspace
+        self.known_geometries_planning = []
+        self.known_geometries_executing = []        
+
         if self.theme == "Table": self.createTableScene(robotBasePosition)
 
 
@@ -33,6 +39,8 @@ class Workspace(object):
         self.standingBaseM_e = p.createMultiBody(baseCollisionShapeIndex=self.standingBase_c_e, baseVisualShapeIndex=self.standingBase_v_e,
                                     basePosition=self.standingBasePosition, physicsClientId=self.executingServer)
         print "standing base: " + str(self.standingBaseM_e)
+        self.known_geometries_planning.append(self.standingBaseM_p)
+        self.known_geometries_executing.append(self.standingBaseM_e)
         #################################################################################
 
 
@@ -54,4 +62,6 @@ class Workspace(object):
         self.tableM_e = p.createMultiBody(baseCollisionShapeIndex=self.table_c_e, baseVisualShapeIndex=self.table_v_e,
                                             basePosition=self.tablePosition, physicsClientId=self.executingServer)
         print "table: " + str(self.tableM_e)
+        self.known_geometries_planning.append(self.tableM_p)
+        self.known_geometries_executing.append(self.tableM_e)
         #################################################################################
