@@ -16,6 +16,8 @@ class MotomanRobot(object):
         self.motomanGEO_e = p.loadURDF("motoman.urdf", useFixedBase=True, physicsClientId=self.executingServer)
         self.known_geometries_planning.append(self.motomanGEO_p)
         self.known_geometries_executing.append(self.motomanGEO_e)
+        print("motomanGEO_p: " + str(self.motomanGEO_p))
+        print("motomanGEO_e: " + str(self.motomanGEO_e))
         
         ### reset the base of motoman
         self.BasePosition = [0, 0, 0]
@@ -36,11 +38,13 @@ class MotomanRobot(object):
         ### lower limits for null space
         self.ll = [-3.13, -1.90, -2.95, -2.36, -3.13, -1.90, -3.13, -3.13, -1.90, -2.95, -2.36, -3.13, -1.90, -3.13]
         ### upper limits for null space
-        self.ul = [3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13, 3.13, 1.90, -2.95, 2.36, 3.13, 1.90, 3.13]
+        self.ul = [3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13, 3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13]
         ### joint ranges for null space
         self.jr = [6.26, 3.80, 5.90, 4.72, 6.26, 3.80, 6.26, 6.26, 3.80, 5.90, 4.72, 6.26, 3.80, 6.26]
         ### restposes for null space
         self.rp = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+        # self.printRobotJointInfo()
 
 
     def resetConfiguration(self, resetConfiguration, robotGEO, server):
@@ -61,7 +65,8 @@ class MotomanRobot(object):
                 p.resetJointState(robotGEO, j, self.currConfiguration[j-1], physicsClientId=server)
             for j in range(11, 18):
                 p.resetJointState(robotGEO, j, singleArmConfiguration[j-11], physicsClientId=server)
-        p.stepSimulation(server)        
+        p.stepSimulation(physicsClientId=server)
+
 
 
     def moveDualArm(self, armConfiguration, robotGEO, handType, server):

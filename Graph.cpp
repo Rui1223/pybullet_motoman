@@ -19,6 +19,7 @@ Graph_t::Graph_t(std::string samples_file, std::string connections_file, std::st
     specify_neighborCosts(connections_file);
     connectStartAndGoal(task_file);
 
+
     // printStates();
     // printNeighbors();
     // printEdgeCosts();

@@ -16,9 +16,8 @@ scene_index = sys.argv[1]
 ### mode "p": planning mode, where you want to visualize the planning process for purposes like debugging
 exp_mode = sys.argv[2]
 saveImages = (sys.argv[3] in ('y', 'Y')) ### decide whether to save images or not
-nsamples = int(sys.argv[4])
 
-EXP = Experiment(scene_index, exp_mode, saveImages, nsamples)
+EXP = Experiment(scene_index, exp_mode, saveImages)
 EXP.runExperiment()
 
 time.sleep(10000)

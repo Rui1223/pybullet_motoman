@@ -92,6 +92,23 @@ def trueScene_generation(Objects, clientId):
     print "Number of Objects in the ground truth (execution): " + str(len(truePoses))
     return truePoses, nObjectInExecuting
 
+def trueObject_loadURDF(Objects, clientId):
+    truePoses = []
+    nObjectInExecuting = len(Objects)
+
+    for objName in Objects:
+        pos = Objects[objName][1]
+        ### convert the euler angles to quaternion
+        angles = Objects[objName][2]
+        euler_angles_in_radian = [i * math.pi/180 for i in angles]
+        quat = p.getQuaternionFromEuler(euler_angles_in_radian)
+        obj_meshID = p.loadURDF(
+            fileName="./object_urdfs/"+objName+".urdf", basePosition=pos, baseOrientation=quat, physicsClientId=clientId)
+        temp_mesh = TrueMesh(obj_meshID, objName, pos, quat, angles)
+        truePoses.append(temp_mesh)
+
+    return truePoses, nObjectInExecuting
+
 
 
 def genVacuumGrasps(targetObj, vacuum_gripper_localPicks):
@@ -112,5 +129,25 @@ def genVacuumGrasps(targetObj, vacuum_gripper_localPicks):
     #     print(vacuum_grasp)
 
     return vacuum_grasps
+
+
+def genFingerGrasps(targetObj, finger_gripper_localPicks):
+    finger_grasps = []
+    for localPick in finger_gripper_localPicks:
+        finger_pick = []
+        ### Let's get the new configuration of the pick in the global frame
+        new_config = p.multiplyTransforms(
+            targetObj.pos, targetObj.quat, 
+            localPick[0:3], p.getQuaternionFromEuler([i*math.pi/180 for i in localPick[3:6]])
+        )
+        for item in new_config:
+            finger_pick += list(item)
+        finger_grasps.append(finger_pick)
+
+    print("finger_grasps: ")
+    for finger_grasp in finger_grasps:
+        print(finger_grasp)
+
+    return finger_grasps    
 
 

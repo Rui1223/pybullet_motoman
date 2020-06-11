@@ -159,27 +159,85 @@ projectionMatrix = p.computeProjectionMatrixFOV(
 ### first load in the ground truth of objects specified in a txt file
 Objects, targetObjectName = playground_utils.read_print_poses(scene_index)
 ### generate these ground truth poses and report the number of objects
-truePoses, nObjectInExecuting = playground_utils.trueScene_generation(Objects, planningServer)
+# truePoses, nObjectInExecuting = playground_utils.trueScene_generation(Objects, planningServer)
+truePoses, nObjectInExecuting = playground_utils.trueObject_loadURDF(Objects, planningServer)
 ### Take the initial images
 playground_utils.sensorImageTaker(viewMatrix, projectionMatrix, executingServer, img_path)
 
+
+############################### information related to Motoman arm (joint info) ###################################
+## preserve the following five lines for debug purposes ###
+print "003_cracker_box: " + str(truePoses[0].m)
+num_joints = p.getNumJoints(truePoses[0].m, planningServer)
+print "Num of joints: " + str(num_joints)
+for i in range(num_joints):
+  print(p.getJointInfo(truePoses[0].m, i, planningServer))
+
 ################################# sense the initial scene ####################################################
 
-
+'''
 # list of vacuum gripper's pick pose in object's frame
-vacuum_gripper_localPicks = []
-vacuum_gripper_localPicks.append([0, 0, -0.102, 0, 0, 0])
-vacuum_gripper_localPicks.append([0, 0, 0.102, 0, 180, 0])
-vacuum_gripper_localPicks.append([0, -0.086, 0, -90, 180, 0])
-vacuum_gripper_localPicks.append([0, 0.086, 0, 90, 0, 0])
-vacuum_gripper_localPicks.append([0.032, 0, 0, 0, -90, 0])
-vacuum_gripper_localPicks.append([-0.032, 0, 0, 0, 90, 0])
+# vacuum_gripper_localPicks = []
+# vacuum_gripper_localPicks.append([0, 0, -0.102, 0, 0, 0])
+# vacuum_gripper_localPicks.append([0, 0, 0.102, 0, 180, 0])
+# vacuum_gripper_localPicks.append([0, -0.086, 0, -90, 180, 0])
+# vacuum_gripper_localPicks.append([0, 0.086, 0, 90, 0, 0])
+# vacuum_gripper_localPicks.append([0.032, 0, 0, 0, -90, 0])
+# vacuum_gripper_localPicks.append([-0.032, 0, 0, 0, 90, 0])
+
 
 # list of finger gripper's pick pose in object's frame
+finger_gripper_localPicks = []
+# finger_gripper_localPicks.append([0, 0, -0.26, 0, 0, 0])
+# finger_gripper_localPicks.append([0, 0, 0.26, 0, 180, 0])
+# finger_gripper_localPicks.append([0, 0.23, 0, 90, 0, 0])
+# finger_gripper_localPicks.append([0, -0.23, 0, -90, 0, 0])
+finger_gripper_localPicks.append([0, 0, -0.126, 0, 0, 0])
+finger_gripper_localPicks.append([0, 0, 0.126, 0, 180, 0])
+finger_gripper_localPicks.append([0, 0.13, 0, 90, 0, 0])
+finger_gripper_localPicks.append([0, -0.13, 0, -90, 0, 0])
+
 
 # initial object pose
 # list of final object poses that work
 
+#####################################################################################################
+targetObj = truePoses[0]
+
+finger_grasps = playground_utils.genFingerGrasps(targetObj, finger_gripper_localPicks)
+### try these finger grasps to see how they work
+for finger_grasp in finger_grasps:
+    goal_pose_pos = finger_grasp[0:3]
+    goal_pose_quat = [finger_grasp[3], finger_grasp[4], finger_grasp[5], finger_grasp[6]]
+    # print "goal position: ", goal_pose_pos
+
+    q_grasp = p.calculateInverseKinematics(bodyUniqueId=motomanID_p, endEffectorLinkIndex=motoman_right_ee_idx, 
+                                        targetPosition=goal_pose_pos, targetOrientation=goal_pose_quat, 
+                                        lowerLimits=ll, upperLimits=ul, jointRanges=jr, 
+                                        maxNumIterations=20000, residualThreshold=0.0000001,
+                                        physicsClientId=planningServer)
+
+    for j in range(1, 8):
+        result_p = p.resetJointState(motomanID_p, j, q_grasp[j-1], physicsClientId=planningServer)
+    for j in range(11, 18):
+        result_p = p.resetJointState(motomanID_p, j, q_grasp[j-4], physicsClientId=planningServer)
+
+    ls = p.getLinkState(motomanID_p, motoman_right_ee_idx, physicsClientId=planningServer)
+    final_ee_pose = ls[0]
+    diff = [goal_pose_pos[0] - final_ee_pose[0], goal_pose_pos[1] - final_ee_pose[1], goal_pose_pos[2] - final_ee_pose[2]]
+    ee_dist = math.sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
+
+    print "final ee pose: ", final_ee_pose
+    print "distance: ", ee_dist
+
+    p.stepSimulation(physicsClientId=planningServer)
+
+
+
+    raw_input("Enter to continue")
+    '''
+
+'''
 #####################################################################################################
 targetObj = truePoses[0]
 
@@ -212,7 +270,7 @@ for vacuum_grasp in vacuum_grasps:
 
     p.stepSimulation(planningServer)
     raw_input("Enter to continue")
-
+'''
 
 
 

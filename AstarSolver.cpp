@@ -94,7 +94,7 @@ void AstarSolver_t::Astar_search(Graph_t &g)
         }
     }
     // You are reaching here since the open list is empty and the goal is not found
-    std::cout << "The problem is not solvable. Search failed...\n";
+    std::cout << "The problem is not solvable. Search failed...\n\n";
     m_isFailure = true;
 }
 

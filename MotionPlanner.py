@@ -19,103 +19,26 @@ class MotionPlanner(object):
     def __init__(self, server, scene_index):
         self.planningServer = server
         self.scene_index = scene_index
-        self.roadmapFolder = self.createRoadmapFolder(scene_index)
+        self.taskFolder = self.createtaskFolder(scene_index)
         self.collisionAgent_p = CollisionChecker(self.planningServer)
-
-
-    def PRMstar_generation(self, workspace, robot, handType, nsamples):
-        self.samplesFile, self.connectionsFile = self.getRoadmapTxt(handType)
-        self.nsamples = nsamples
-        ### based on the workspace and the robot, let's specified the sampling boundaries
-        samplingBounds = self.getSamplingBoundary(workspace, robot, handType)
-        ### get the ee_idx on which you will perform IK
-        ee_idx = self.selectEndEffector(handType, robot)
-        ### sampling procedure
-        if handType == "Left":
-            self.leftNodes = self.samplingNodes(samplingBounds, ee_idx, robot, workspace, handType)
-            self.saveSamplesToFile(self.leftNodes, self.samplesFile)
-            ### neighbor connection procedure
-            self.roadmapConnect(self.leftNodes, ee_idx, workspace, robot, handType)
-        else:
-            self.rightNodes = self.samplingNodes(samplingBounds, ee_idx, robot, workspace, handType)
-            self.saveSamplesToFile(self.rightNodes, self.samplesFile)
-            ### neighbor connection procedure
-            self.roadmapConnect(self.rightNodes, ee_idx, workspace, robot, handType)
-        ### after roadmap regeneration, reset the arm to its previous configuration
-        robot.resetConfiguration(robot.homeConfiguration, robot.motomanGEO_p, self.planningServer)
-
-
-    def roadmapConnect(self, nodes, ee_idx, workspace, robot, handType):
-        nsamples = len(nodes)
-        connectivity = np.zeros((nsamples, nsamples))
-        tree = spatial.KDTree(nodes) ### use KD tree to arrange neighbors assignment
-        ### first find the parameter k_n used in PRM*
-        neighbors_const = 1.5 * math.e * (1 + 1/len(nodes[0]))
+        self.nodes = {}
+        self.nodes["Left"] = []
+        self.nodes["Right"] = []
+        self.loadRoadmap("Left")
+        self.loadRoadmap("Right")
+        self.nsamples = len(self.nodes["Left"])
+        neighbors_const = 2.5 * math.e * (1 + 1/len(self.nodes["Left"][0]))
         ### use k_n to decide the number of neighbors: #neighbors = k_n * log(#samples)
-        self.num_neighbors = int(neighbors_const * math.log(nsamples))
-        if self.num_neighbors >= nsamples:
-            self.num_neighbors = nsamples - 1
-        print "num_neighbors: " + str(self.num_neighbors)
-        f_roadmap = open(self.connectionsFile, "w")
-        ### for each node
-        for i in range(len(nodes)):
-            queryNode = nodes[i]
-            knn = tree.query(queryNode, k=self.num_neighbors, p=2)
-            # print("check current node " + str(i))
-            # print(knn[1])
-            ### for each potential neighbor
-            for j in range(len(knn[1])):
-                if knn[1][j] == i or connectivity[i][knn[1][j]] == 1:
-                    ### if the neighbor is the query node itself
-                    ### or the connectivity has been checked before
-                    ### then skip the edge checking procedure
-                    continue
-                ### Otherwise, check the edge validity
-                ### in terms of collision with the robot itself and all known geometries (e.g. table/shelf)
-                ### between the query node and the current neighbor
-                neighbor = nodes[knn[1][j]]
-                isEdgeValid = self.checkEdgeValidity(queryNode, neighbor, robot, workspace, handType)
-                if isEdgeValid:
-                    ### write this edge information with their costs and labels into the txt file
-                    f_roadmap.write(str(i) + " " + str(knn[1][j]) + " " + format(knn[0][j], '.4f') + "\n")
-                    connectivity[i][knn[1][j]] = 1
-                    connectivity[knn[1][j]][i] = 1
-        f_roadmap.close()
+        self.num_neighbors = int(neighbors_const * math.log(self.nsamples))        
 
 
-    def samplingNodes(self, samplingBounds, ee_idx, robot, workspace, handType):
-        numJoints = int(len(robot.homeConfiguration) / 2)
-        ### first figure out whether it is a left hand or right hand
-        if handType == "Left":
-            j = 0
-        else:
-            j = 0 + numJoints
-
-        nodes = []
-        temp_counter = 0
-
-        ### Let's start
-        while temp_counter < self.nsamples:
-            ### sample a cartesian ee pose and calculate the IK solution
-            if temp_counter < int(self.nsamples*0.01):
-                temp_sample = self.singleSampling_CartesianSpace(samplingBounds)
-                ikSolution = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO_p, endEffectorLinkIndex=ee_idx,
-                                                    targetPosition=temp_sample, 
-                                                    lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr,
-                                                    physicsClientId=self.planningServer)
-                ikSolution = [ float(format(jointAngle, '.2f')) for jointAngle in ikSolution[j:j+numJoints] ]
-            else:
-                ikSolution = self.singleSampling_CSpace(robot)
-            ### check if the IK solution is valid in terms of 
-            ### no collision with the robot and other known geometries like table/shelf/etc..
-            isValid = self.checkIK_onlyCollision(ikSolution, ee_idx, robot, workspace, handType)
-            if isValid:
-                # print str(temp_counter) + ": " + str(temp_sample)
-                nodes.append(ikSolution)
-                temp_counter += 1
-                # raw_input("add this sample. ENTER to continue")
-
-        return nodes
+    def loadRoadmap(self, handType):
+        roadmapFile = os.getcwd() + "/roadmaps/samples_" + handType + ".txt"
+        f_roadmap = open(roadmapFile, "r")
+        for line in f_roadmap:
+            line = line.split()
+            line = [float(e) for e in line[1:]]
+            self.nodes[handType].append(line)
 
 
     def checkEdgeValidity(self, n1, n2, robot, workspace, handType):
@@ -134,9 +57,11 @@ class MotionPlanner(object):
             robot.moveSingleArm(intermNode, robot.motomanGEO_p, handType, self.planningServer)
             ### check collision
             if self.collisionAgent_p.collisionCheck_selfCollision(robot.motomanGEO_p) == True:
+                # print("self collision")
                 return isEdgeValid
             if self.collisionAgent_p.collisionCheck_knownGEO(
                 robot.motomanGEO_p, workspace.known_geometries_planning) == True:
+                # print("collide with table!")
                 return isEdgeValid
 
         ### Reach here because the edge pass the collision check
@@ -194,49 +119,12 @@ class MotionPlanner(object):
         return temp_dist
 
 
-    def singleSampling_CartesianSpace(self, samplingBounds):
-        temp_x = float(format(random.uniform(samplingBounds[0][0], samplingBounds[0][1]), '.2f'))
-        temp_y = float(format(random.uniform(samplingBounds[1][0], samplingBounds[1][1]), '.2f'))
-        temp_z = float(format(random.uniform(samplingBounds[2][0], samplingBounds[2][1]), '.2f'))
-
-        return [temp_x, temp_y, temp_z]
-
-    def singleSampling_CSpace(self, robot):
-        temp_j0 = float(format(random.uniform(robot.ll[0], robot.ul[0]), '.2f'))
-        temp_j1 = float(format(random.uniform(robot.ll[1], robot.ul[1]), '.2f'))
-        temp_j2 = float(format(random.uniform(robot.ll[2], robot.ul[2]), '.2f'))
-        temp_j3 = float(format(random.uniform(robot.ll[3], robot.ul[3]), '.2f'))
-        temp_j4 = float(format(random.uniform(robot.ll[4], robot.ul[4]), '.2f'))
-        temp_j5 = float(format(random.uniform(robot.ll[5], robot.ul[5]), '.2f'))
-        temp_j6 = float(format(random.uniform(robot.ll[6], robot.ul[6]), '.2f'))
-        return [temp_j0, temp_j1, temp_j2, temp_j3, temp_j4, temp_j5, temp_j6]
-
-
-    def getSamplingBoundary(self, workspace, robot, handType):
-        if handType == "Left":
-            x_ll = robot.BasePosition[0] - 0.35
-            x_ul = workspace.tablePosition[0] + workspace.table_dim[0] / 2
-            y_ll = robot.BasePosition[1] - 0.05
-            y_ul = workspace.tablePosition[1] + workspace.table_dim[1] / 2 + 0.15
-            z_ll = workspace.tablePosition[2] + workspace.table_dim[2] / 2
-            z_ul = z_ll + 0.7
-        else:
-            x_ll = robot.BasePosition[0] - 0.35
-            x_ul = workspace.tablePosition[0] + workspace.table_dim[0] / 2
-            y_ll = workspace.tablePosition[1] - workspace.table_dim[1] / 2 - 0.15
-            y_ul = 0.05
-            z_ll = workspace.tablePosition[2] + workspace.table_dim[2] / 2
-            z_ul = z_ll + 0.7
-
-        return [[x_ll, x_ul], [y_ll, y_ul], [z_ll, z_ul]]
 
     def shortestPathPlanning(self, initialArmConfig, targetArmConfig, theme, robot, workspace, handType):
         ### first prepare the start_goal file
         f = self.writeStartGoal(initialArmConfig, targetArmConfig, theme)
-        if handType == "Left":
-            self.connectStartGoalToLeftArmRoadmap(f, initialArmConfig, targetArmConfig, robot, workspace, handType)
-        else:
-            self.connectStartGoalToRightArmRoadmap(f, initialArmConfig, targetArmConfig, robot, workspace, handType)
+        self.connectStartGoalToArmRoadmap(f, initialArmConfig, targetArmConfig, robot, workspace, handType)
+
         ### call the planning algorithm
         executeCommand = "./main_planner" + " " + str(self.scene_index) + " " + \
                         theme + " " + handType + " " + str(self.nsamples) + " shortestPath"
@@ -248,7 +136,7 @@ class MotionPlanner(object):
 
     def readTrajectory(self, theme):
         traj = []
-        traj_file = self.roadmapFolder + "/" + theme + "_traj.txt"
+        traj_file = self.taskFolder + "/" + theme + "_traj.txt"
         f = open(traj_file, "r")
         nline = 0
         for line in f:
@@ -268,72 +156,71 @@ class MotionPlanner(object):
         return traj
 
 
-    def connectStartGoalToLeftArmRoadmap(self, f, initialArmConfig, targetArmConfig, robot, workspace, handType):
+    def connectStartGoalToArmRoadmap(self, f, initialArmConfig, targetArmConfig, robot, workspace, handType):
         startConnectSuccess = False
         start_id = self.nsamples
         target_id = self.nsamples + 1
 
         ############# connect the initialArmConfig to the roadmap ###################
-        self.leftNodes.append(initialArmConfig)
-
-        tree = spatial.KDTree(self.leftNodes)
-        queryNode = self.leftNodes[-1]
-        knn = tree.query(queryNode, k=self.num_neighbors, p=2)
-        # print("start: ")
-        # print(knn[1])
-        ### for each neighbor
+        self.nodes[handType].append(initialArmConfig)
+        tree = spatial.KDTree(self.nodes[handType])
+        queryNode = self.nodes[handType][-1]
+        knn = tree.query(queryNode, k=self.nsamples, p=2)
+        neighbors_connected = 0
+        ### for each potential neighbor
         for j in range(len(knn[1])):
-            if knn[1][j] == len(self.leftNodes)-1: 
+            ### first check if this query node has already connected to enough neighbors
+            if neighbors_connected >= self.num_neighbors: 
+                break
+            if knn[1][j] == len(self.nodes[handType])-1:
+                ### if the neighbor is the query node itself
                 continue
-            else:
-                ### check collision
-                # print("neighbor " + str(knn[1][j]))
-                neighbor = self.leftNodes[knn[1][j]]
-                isEdgeValid = self.checkEdgeValidity(queryNode, neighbor, robot, workspace, handType)
-                # raw_input("Press to continue")
-                if isEdgeValid:
-                    f.write(str(start_id) + " " + str(knn[1][j]) + " " + format(knn[0][j], '.4f'))
-                    f.write("\n")
+            ### otherwise, check the edge validity
+            neighbor = self.nodes[handType][knn[1][j]]
+            isEdgeValid = self.checkEdgeValidity(queryNode, neighbor, robot, workspace, handType)
+            if isEdgeValid:
+                f.write(str(start_id) + " " + str(knn[1][j]) + " " + format(knn[0][j], '.4f'))
+                f.write("\n")
+                neighbors_connected += 1
+        print("Number of neighbors for start node " + str(start_id) + ": " + str(neighbors_connected))
 
         ### at the end, don't forget to delete initialArmConfig from the nodes
-        self.leftNodes.remove(self.leftNodes[-1])
+        self.nodes[handType].remove(self.nodes[handType][-1])
         ##############################################################################
 
         ############# connect the targetArmConfig to the roadmap ###################
-        self.leftNodes.append(targetArmConfig)
-
-        tree = spatial.KDTree(self.leftNodes)
-        queryNode = self.leftNodes[-1]
-        knn = tree.query(queryNode, k=self.num_neighbors, p=2)
-        # print("goal: ")
-        # print(knn[1])
-        ### for each neighbor
+        self.nodes[handType].append(targetArmConfig)
+        tree = spatial.KDTree(self.nodes[handType])
+        queryNode = self.nodes[handType][-1]
+        knn = tree.query(queryNode, k=self.nsamples, p=2)
+        neighbors_connected = 0
+        ### for each potential neighbor
         for j in range(len(knn[1])):
-            if knn[1][j] == len(self.leftNodes)-1: 
+            ### first check if this query node has already connected to enough neighbors
+            if neighbors_connected >= self.num_neighbors: 
+                break
+            if knn[1][j] == len(self.nodes[handType])-1:
+                ### if the neighbor is the query node itself
                 continue
-            else:
-                ### check collision
-                # print("neighbor " + str(knn[1][j]))
-                neighbor = self.leftNodes[knn[1][j]]
-                isEdgeValid = self.checkEdgeValidity(queryNode, neighbor, robot, workspace, handType)
-                # raw_input("Press to continue")
-                if isEdgeValid:
-                    f.write(str(target_id) + " " + str(knn[1][j]) + " " + format(knn[0][j], '.4f'))
-                    f.write("\n")
+            ### otherwise, check the edge validity
+            neighbor = self.nodes[handType][knn[1][j]]
+            isEdgeValid = self.checkEdgeValidity(queryNode, neighbor, robot, workspace, handType)
+            if isEdgeValid:
+                f.write(str(target_id) + " " + str(knn[1][j]) + " " + format(knn[0][j], '.4f'))
+                f.write("\n")
+                neighbors_connected += 1
+        print("Number of neighbors for goal node " + str(target_id) + ": " + str(neighbors_connected))
 
-        ### at the end, don't forget to delete initialArmConfig from the nodes
-        self.leftNodes.remove(self.leftNodes[-1])
+        ### at the end, don't forget to delete targetArmConfig from the nodes
+        self.nodes[handType].remove(self.nodes[handType][-1])
         ##############################################################################
 
         robot.resetConfiguration(robot.homeConfiguration, robot.motomanGEO_p, self.planningServer)
-
         f.close()
 
 
-
-
     def writeStartGoal(self, initialArmConfig, targetArmConfig, theme):
-        start_goal_file = self.roadmapFolder + "/" + theme + ".txt"
+        start_goal_file = self.taskFolder + "/" + theme + ".txt"
         f = open(start_goal_file, "w")
         f.write(str(self.nsamples) + " ")
         for e in initialArmConfig:
@@ -347,17 +234,6 @@ class MotionPlanner(object):
         return f
 
 
-    def saveSamplesToFile(self, nodes, samplesFile):
-        f_samples = open(samplesFile, "w")
-        for i in range(len(nodes)):
-            node = nodes[i]
-            f_samples.write(str(i))
-            for k in range(len(node)):
-                f_samples.write(" " + str(node[k]))
-            f_samples.write("\n")
-        f_samples.close()
-
-
     def selectEndEffector(self, handType, robot):
         if handType == "Left":
             ee_idx = robot.left_ee_idx
@@ -367,20 +243,14 @@ class MotionPlanner(object):
         return ee_idx
 
 
-    def createRoadmapFolder(self, scene_index):
+    def createtaskFolder(self, scene_index):
         ### create a folder to store the roadmap (samples + connections) for the current scene
-        roadmapFolder = os.getcwd() + "/roadmaps/" + scene_index
+        taskFolder = os.getcwd() + "/roadmaps/" + scene_index
 
-        if os.path.exists(roadmapFolder):
-            shutil.rmtree(roadmapFolder)
-        os.mkdir(roadmapFolder)
+        if os.path.exists(taskFolder):
+            shutil.rmtree(taskFolder)
+        os.mkdir(taskFolder)
 
-        return roadmapFolder
+        return taskFolder
 
 
-    def getRoadmapTxt(self, handType):
-
-        samplesFile = self.roadmapFolder + "/samples_" + str(handType) + ".txt"
-        connectionsFile = self.roadmapFolder + "/connections_" + str(handType) + ".txt"
-
-        return samplesFile, connectionsFile
