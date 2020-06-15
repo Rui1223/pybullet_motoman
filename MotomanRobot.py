@@ -4,10 +4,10 @@ import pybullet_data
 
 class MotomanRobot(object):
     ### Define the robot
-    def __init__(self, server):
+    def __init__(self, servers):
         ### get the server
-        self.planningServer = server[0]
-        self.executingServer = server[1]
+        self.planningServer = servers[0]
+        self.executingServer = servers[1]
         ### collect geometries from the robot
         self.known_geometries_planning = []
         self.known_geometries_executing = []
@@ -16,8 +16,6 @@ class MotomanRobot(object):
         self.motomanGEO_e = p.loadURDF("motoman.urdf", useFixedBase=True, physicsClientId=self.executingServer)
         self.known_geometries_planning.append(self.motomanGEO_p)
         self.known_geometries_executing.append(self.motomanGEO_e)
-        print("motomanGEO_p: " + str(self.motomanGEO_p))
-        print("motomanGEO_e: " + str(self.motomanGEO_e))
         
         ### reset the base of motoman
         self.BasePosition = [0, 0, 0]
@@ -25,7 +23,10 @@ class MotomanRobot(object):
         ### set motoman home configuration
         self.homeConfiguration = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         ### update its current configuration
-        self.updateCurrConfig(self.homeConfiguration)
+        self.updateLeftArmConfig(self.homeConfiguration[0:7], self.planningServer)
+        self.updateRightArmConfig(self.homeConfiguration[7:14], self.planningServer)
+        self.updateLeftArmConfig(self.homeConfiguration[0:7], self.executingServer)
+        self.updateRightArmConfig(self.homeConfiguration[7:14], self.executingServer)        
 
         ### joint and end effector information
         ### end-effector index
@@ -47,46 +48,82 @@ class MotomanRobot(object):
         # self.printRobotJointInfo()
 
 
-    def resetConfiguration(self, resetConfiguration, robotGEO, server):
+    def resetConfig(self, resetConfiguration):
         for j in range(1, 8):
-            p.resetJointState(robotGEO, j, resetConfiguration[j-1], physicsClientId=server)
+            p.resetJointState(self.motomanGEO_p, j, resetConfiguration[j-1], physicsClientId=self.planningServer)
         for j in range(11, 18):
-            p.resetJointState(robotGEO, j, resetConfiguration[j-4], physicsClientId=server)
+            p.resetJointState(self.motomanGEO_p, j, resetConfiguration[j-4], physicsClientId=self.planningServer)
 
 
-    def moveSingleArm(self, singleArmConfiguration, robotGEO, handType, server):
+    def moveSingleArm(self, singleArmConfiguration, handType):
         if handType == "Left":
             for j in range(1, 8):
-                p.resetJointState(robotGEO, j, singleArmConfiguration[j-1], physicsClientId=server)
+                p.resetJointState(self.motomanGEO_e, j, singleArmConfiguration[j-1], physicsClientId=self.executingServer)
             for j in range(11, 18):
-                p.resetJointState(robotGEO, j, self.currConfiguration[j-4], physicsClientId=server)
+                p.resetJointState(self.motomanGEO_e, j, self.rightArmCurrConfiguration_e[j-11], physicsClientId=self.executingServer)
+            self.updateLeftArmConfig(singleArmConfiguration, self.executingServer)
         else:
             for j in range(1, 8):
-                p.resetJointState(robotGEO, j, self.currConfiguration[j-1], physicsClientId=server)
+                p.resetJointState(self.motomanGEO_e, j, self.leftArmCurrConfiguration_e[j-1], physicsClientId=self.executingServer)
             for j in range(11, 18):
-                p.resetJointState(robotGEO, j, singleArmConfiguration[j-11], physicsClientId=server)
-        p.stepSimulation(physicsClientId=server)
+                p.resetJointState(self.motomanGEO_e, j, singleArmConfiguration[j-11], physicsClientId=self.executingServer)
+            self.updateRightArmConfig(singleArmConfiguration, self.executingServer)
+
+        p.stepSimulation(physicsClientId=self.executingServer)
 
 
 
-    def moveDualArm(self, armConfiguration, robotGEO, handType, server):
+    def moveDualArm(self, dualArmConfiguration):
+        for j in range(1, 8):
+            p.resetJointState(self.motomanGEO_e, j, dualArmConfiguration[j-1], physicsClientId=self.executingServer)
+        for j in range(11, 18):
+            p.resetJointState(self.motomanGEO_e, j, dualArmConfiguration[j-4], physicsClientId=self.executingServer)
+        self.updateLeftArmConfig(dualArmConfiguration[0:7], self.executingServer)
+        self.updateRightArmConfig(dualArmConfiguration[7:14], self.executingServer)
+
+        p.stepSimulation(physicsClientId=self.executingServer)
+
+
+
+    def setSingleArmToConfig(self, singleArmConfig, handType):
         if handType == "Left":
             for j in range(1, 8):
-                p.resetJointState(robotGEO, j, armConfiguration[j-1], physicsClientId=server)
+                p.resetJointState(self.motomanGEO_p, j, singleArmConfig[j-1], physicsClientId=self.planningServer)
             for j in range(11, 18):
-                p.resetJointState(robotGEO, j, armConfiguration[j-4], physicsClientId=server)
+                p.resetJointState(self.motomanGEO_p, j, self.rightArmCurrConfiguration_p[j-11], physicsClientId=self.planningServer)
         else:
             for j in range(1, 8):
-                p.resetJointState(robotGEO, j, armConfiguration[j-1], physicsClientId=server)
+                p.resetJointState(self.motomanGEO_p, j, self.leftArmCurrConfiguration_p[j-1], physicsClientId=self.planningServer)
             for j in range(11, 18):
-                p.resetJointState(robotGEO, j, armConfiguration[j-4], physicsClientId=server)
-        p.stepSimulation(server)
+                p.resetJointState(self.motomanGEO_p, j, singleArmConfig[j-11], physicsClientId=self.planningServer)
+
+        p.stepSimulation(physicsClientId=self.planningServer)
 
 
-    def updateCurrConfig(self, currConfiguration):
-        self.currConfiguration = currConfiguration
-        self.leftArmCurrConfiguration = self.currConfiguration[0:7]
-        self.rightArmCurrConfiguration = self.currConfiguration[7:14]
+
+    def setDualArmToConfig(self, dualArmConfig):
+        for j in range(1, 8):
+            p.resetJointState(self.motomanGEO_p, j, dualArmConfig[j-1], physicsClientId=self.planningServer)
+        for j in range(11, 18):
+            p.resetJointState(self.motomanGEO_p, j, dualArmConfig[j-4], physicsClientId=self.planningServer)
+
+        p.stepSimulation(physicsClientId=self.planningServer)
+
+
+
+    def updateLeftArmConfig(self, currLeftArmConfig, server):
+        if server == self.planningServer:
+            self.leftArmCurrConfiguration_p = currLeftArmConfig
+        else:
+            self.leftArmCurrConfiguration_e = currLeftArmConfig
+
+
+
+    def updateRightArmConfig(self, currRightArmConfig, server):
+        if server == self.planningServer:
+            self.rightArmCurrConfiguration_p = currRightArmConfig
+        else:
+            self.rightArmCurrConfiguration_e = currRightArmConfig
 
 
     def printRobotJointInfo(self):

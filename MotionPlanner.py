@@ -16,9 +16,10 @@ from CollisionChecker import CollisionChecker
 
 
 class MotionPlanner(object):
-    def __init__(self, server, scene_index):
+    def __init__(self, server, scene_index, camera):
         self.planningServer = server
         self.scene_index = scene_index
+        self.camera = camera
         self.taskFolder = self.createtaskFolder(scene_index)
         self.collisionAgent_p = CollisionChecker(self.planningServer)
         self.nodes = {}
@@ -54,7 +55,7 @@ class MotionPlanner(object):
             interm_j5 = n1[5] + (n2[5]-n1[5]) / nseg * i
             interm_j6 = n1[6] + (n2[6]-n1[6]) / nseg * i
             intermNode = [interm_j0, interm_j1, interm_j2, interm_j3, interm_j4, interm_j5, interm_j6]
-            robot.moveSingleArm(intermNode, robot.motomanGEO_p, handType, self.planningServer)
+            robot.setSingleArmToConfig(intermNode, handType)
             ### check collision
             if self.collisionAgent_p.collisionCheck_selfCollision(robot.motomanGEO_p) == True:
                 # print("self collision")
@@ -69,8 +70,8 @@ class MotionPlanner(object):
         return isEdgeValid
 
 
-    def checkIK(self, ikSolution, ee_idx, desired_ee_pose, robot, workspace, handType):
-        robot.moveSingleArm(ikSolution, robot.motomanGEO_p, handType, self.planningServer)
+    def checkIK(self, ikSolution, ee_idx, desired_ee_pose, robot, workspace):
+        robot.setDualArmToConfig(ikSolution)
         isValid = False
         ### first check if IK succeeds
         ### if the ee_idx is within 2.5cm(0.025m) Euclidean distance from the desired one, we accept it
@@ -78,23 +79,28 @@ class MotionPlanner(object):
         ee_dist = self.computePoseDist(actual_ee_pose, desired_ee_pose)
         if ee_dist > 0.02:
             # print("Not reachable as expected")
+            # raw_input("enter to continue")
             return isValid
         ### Then check if there is collision
         if self.collisionAgent_p.collisionCheck_selfCollision(robot.motomanGEO_p) == True:
             # print("self collision!")
+            # raw_input("enter to continue")
             return isValid
         if self.collisionAgent_p.collisionCheck_knownGEO(
             robot.motomanGEO_p, workspace.known_geometries_planning) == True:
             # print("collision with geometries in the workspace!")
+            # raw_input("enter to continue")
             return isValid
 
         ### If you reach here, the pose pass both IK success and collision check
         isValid = True
+        print("it is a valid IK")
+        # raw_input("this IK is valid")
         return isValid
 
 
     def checkIK_onlyCollision(self, ikSolution, ee_idx, robot, workspace, handType):
-        robot.moveSingleArm(ikSolution, robot.motomanGEO_p, handType, self.planningServer)
+        robot.setSingleArmToConfig(ikSolution, handType)
         isValid = False
         ### Then check if there is collision
         if self.collisionAgent_p.collisionCheck_selfCollision(robot.motomanGEO_p) == True:
@@ -215,7 +221,7 @@ class MotionPlanner(object):
         self.nodes[handType].remove(self.nodes[handType][-1])
         ##############################################################################
 
-        robot.resetConfiguration(robot.homeConfiguration, robot.motomanGEO_p, self.planningServer)
+        robot.resetConfig(robot.homeConfiguration)
         f.close()
 
 

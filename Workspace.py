@@ -7,17 +7,24 @@ import numpy as np
 
 class Workspace(object):
     ### This specified a workspace where the robot is performing the task
-    def __init__(self, theme, robotBasePosition, server):
+    def __init__(self, theme, robotBasePosition, servers):
         ### specify the theme of the workspace
         self.theme = theme
         ### get the server
-        self.planningServer = server[0]
-        self.executingServer = server[1]
+        self.planningServer = servers[0]
+        self.executingServer = servers[1]
         ### collect geometries from the workspace
         self.known_geometries_planning = []
         self.known_geometries_executing = []        
 
-        if self.theme == "Table": self.createTableScene(robotBasePosition)
+        if self.theme == "Table": 
+            self.createTableScene(robotBasePosition)
+            self.objectDropCenter = [
+                self.tablePosition[0], self.tablePosition[1], self.tablePosition[2]+0.8]
+            self.objectHandOffCenter = [
+                self.tablePosition[0], self.tablePosition[1]-0.01, self.tablePosition[2]+0.9]
+            self.leftArmFinishCenter = [
+                self.tablePosition[0]-0.3, self.tablePosition[1]+0.3, self.tablePosition[2]+1.0]
 
 
     def createTableScene(self, robotBasePosition):

@@ -138,7 +138,7 @@ class RoadmapGenerator(object):
             interm_j5 = n1[5] + (n2[5]-n1[5]) / nseg * i
             interm_j6 = n1[6] + (n2[6]-n1[6]) / nseg * i
             intermNode = [interm_j0, interm_j1, interm_j2, interm_j3, interm_j4, interm_j5, interm_j6]
-            self.robot.moveSingleArm(intermNode, self.robot.motomanGEO_p, handType, self.planningServer)
+            self.robot.setSingleArmToConfig(intermNode, handType)
             ### check collision
             if self.collisionAgent.collisionCheck_selfCollision(self.robot.motomanGEO_p) == True:
                 return isEdgeValid
@@ -151,7 +151,7 @@ class RoadmapGenerator(object):
 
 
     def checkIK_onlyCollision(self, ikSolution, ee_idx, handType):
-        self.robot.moveSingleArm(ikSolution, self.robot.motomanGEO_p, handType, self.planningServer)
+        self.robot.setSingleArmToConfig(ikSolution, handType)
         isValid = False
         ### Then check if there is collision
         if self.collisionAgent.collisionCheck_selfCollision(self.robot.motomanGEO_p) == True:
