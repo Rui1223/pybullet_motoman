@@ -2,6 +2,9 @@ from __future__ import division
 import pybullet as p
 import pybullet_data
 
+import pybullet_utils.bullet_client as bc
+import pybullet_utils.urdfEditor as ed
+
 from collections import OrderedDict
 import math
 import numpy as np
@@ -23,9 +26,8 @@ class Experiment(object):
         self.saveImages = saveImages
         ### get two servers, planning and execution respectively
         self.servers = self.genServers(exp_mode)
-        # p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.servers[1])
+        p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.servers[1])
         # p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=self.servers[1])
-        p.setTimeStep(timeStep=60, physicsClientId=self.servers[1])
         ### set the robot ready
         self.robot = MotomanRobot(self.servers)
         ### set the workspace (table, shelf, or whatever specified)
@@ -39,7 +41,7 @@ class Experiment(object):
         ### Let's generate a roadmap for any future planner to work on
         startTime = time.clock()
         self.planner = MotionPlanner(self.servers[0], self.scene_index, self.camera)
-        self.executor = MotionExecutor(self.servers[1], self.camera)
+        self.executor = MotionExecutor(self.servers[1], self.camera, False, False, None, None)
         print("Time spent for loading the nodes: " + str(time.clock() - startTime) + "\n")
 
         ####### specify some key locations of the arms (placement, handoff, recover) #######
@@ -55,6 +57,11 @@ class Experiment(object):
         self.vacuumFinishPose = \
             self.workspace.leftArmFinishCenter + list(p.getQuaternionFromEuler([math.pi/2, math.pi/2, 0.0]))
         self.vacuumFinishConfig = self.convertPoseToConfig(self.vacuumFinishPose, "Left")
+        ### specify the pose for placing the object for the right arm
+        self.fingerPlacementPose = \
+            self.workspace.objectDropCenter + list(p.getQuaternionFromEuler([0.0, math.pi, 0.0]))
+        self.fingerPlacementConfig = self.convertPoseToConfig(self.fingerPlacementPose, "Right")
+        print("fingerPlacementConfig: " + str(self.fingerPlacementConfig))
         ######################################################################################################
 
 
@@ -66,7 +73,6 @@ class Experiment(object):
         self.realObjsPoses = self.loadObjects_e(self.servers[1])
         self.objectInHand_p = self.objectsPoses[0]
         self.objectInHand_e = self.realObjsPoses[0]
-
         
         ### Take the initial image
         self.camera.takeImage(self.servers[0], self.saveImages)
@@ -75,9 +81,8 @@ class Experiment(object):
         ####################################################################################################
         self.vacuum_pose_file = os.path.join(os.getcwd(), "poses", self.scene_index, "vacuumPickPoses.txt")
         self.vacuumPickPoses, self.vacuumPickConfigs, self.vacuumLocalPoses, \
-                self.vacuumPrePickPoses, self.vacuumPrePickConfigs = self.getVacuumPickPoses(self.objectsPoses[0])
-        
-        
+                self.vacuumPrePickPoses, self.vacuumPrePickConfigs = self.getVacuumPickPoses(self.objectInHand_p)
+
         self.vacuumPrePickPaths = []
         for i in range(len(self.vacuumPrePickConfigs)):
             temp_path = self.planner.shortestPathPlanning(
@@ -93,15 +98,14 @@ class Experiment(object):
                 self.vacuumPrePickPoses.remove(self.vacuumPrePickPoses[i])
                 self.vacuumPrePickConfigs.remove(self.vacuumPrePickConfigs[i])
         
-        ####################################################################################################
-
         
+        ####################################################################################################
+        '''
         ### for the first local pick
         ### let's demonstrate the left arm successful picking task
         leftPick_id = 0
         ### planning the path for the left arm from picking to placing
         self.vacuumPlacementPath = []
-        temp_start_config = self.vacuumPickConfigs[leftPick_id]
         # print("vacuumPlacementConfig: " + str(self.vacuumPlacementConfig))
         temp_path = self.planner.shortestPathPlanning(
                 self.vacuumPickConfigs[leftPick_id], self.vacuumPlacementConfig, "LeftPlace_"+str(leftPick_id),
@@ -116,18 +120,18 @@ class Experiment(object):
         raw_input("enter to continue")
         ### Let's execute the path for this task
         self.executor.executePath(self.vacuumPrePickPaths[leftPick_id], self.robot, "Left")
-        self.executor.local_move(
-            self.vacuumPrePickPoses[leftPick_id], self.vacuumPickPoses[leftPick_id], self.robot, "Left")
+        self.executor.executePath([self.vacuumPrePickConfigs[leftPick_id], self.vacuumPickConfigs[leftPick_id]], self.robot, "Left")
+        # self.executor.local_move(
+        #     self.vacuumPrePickPoses[leftPick_id], self.vacuumPickPoses[leftPick_id], self.robot, "Left")
+
         self.executor.attachTheObject(self.robot, self.objectInHand_e, "Left", self.vacuumLocalPoses[leftPick_id])
-        time.sleep(1)
         self.executor.executePath(self.vacuumPlacementPath[0], self.robot, "Left")
         time.sleep(1)
         self.executor.disattachTheObject("Left")
-        self.camera.takeImage(self.servers[1], False)
         time.sleep(1)
         self.executor.executePath(self.vacuumFinishPath[0], self.robot, "Left")
-        
-        ''' 
+        '''
+
         ### for the second local pick
         ### let's demonstrate the left arm handoff to righ arm and right arm place the object
         self.finger_pose_file = os.path.join(os.getcwd(), "poses", self.scene_index, "fingerPickPoses.txt")
@@ -137,14 +141,22 @@ class Experiment(object):
         temp_path = self.planner.shortestPathPlanning(
             self.vacuumPickConfigs[leftPick_id], self.vacuumHandoffConfig, "LeftHandOff_"+str(0), self.robot, self.workspace, "Left")
         self.vacuumHandoffPath.append(temp_path)
+        ### planning the path for the left arm from placing to finishing
+        self.vacuumFinishPath = []
+        temp_path = self.planner.shortestPathPlanning(
+            self.vacuumHandoffConfig, self.vacuumFinishConfig, "LeftFinish_"+str(0), self.robot, self.workspace, "Left")
+        self.vacuumFinishPath.append(temp_path)
+
+
         ### set both the arm and the object to that config
         self.robot.setSingleArmToConfig(self.vacuumHandoffConfig, "Left")
         self.robot.updateLeftArmConfig(self.vacuumHandoffConfig, self.servers[0])
-        self.updateGrapsedObject(self.objectInHand_p, self.vacuumLocalPoses[leftPick_id], "Left")
+        self.updatePlanningObjectBasedonLocalPose(self.objectInHand_p, self.vacuumLocalPoses[leftPick_id], "Left")
+
 
         #### Let's filter out invalid finger pick poses
         self.fingerPickPoses, self.fingerPickConfigs, self.fingerLocalPoses, \
-                self.fingerPrePickPoses, self.fingerPrePickConfigs = self.getFingerPickPoses(self.objectsPoses[0])
+                self.fingerPrePickPoses, self.fingerPrePickConfigs = self.getFingerPickPoses(self.objectInHand_p)
         
         self.fingerPrePickPaths = []
         for i in range(len(self.fingerPrePickConfigs)):
@@ -161,37 +173,61 @@ class Experiment(object):
                 self.fingerPrePickPoses.remove(self.fingerPrePickPoses[i])
                 self.fingerPrePickConfigs.remove(self.fingerPrePickConfigs[i])
 
-        ### planning the path for the left arm from placing to finishing
-        self.vacuumFinishPath = []
+        ### planning the path for the right arm from picking to placement
+        self.fingerPlacementPath = []
         temp_path = self.planner.shortestPathPlanning(
-            self.vacuumHandoffConfig, self.vacuumFinishConfig, "LeftFinish_"+str(0), self.robot, self.workspace, "Left")
-        self.vacuumFinishPath.append(temp_path)
-        '''
+            self.fingerPrePickConfigs[0], self.fingerPlacementConfig, "RightPlacem_"+str(0), self.robot, self.workspace, "Right")
+        self.fingerPlacementPath.append(temp_path)
+        
 
-        '''
-        # print("vacuumLocalPoses: " + str(self.vacuumLocalPoses))
         
         ### Let's execute the path for this task
         self.executor.executePath(self.vacuumPrePickPaths[leftPick_id], self.robot, "Left")
+        # self.executor.executePath([self.vacuumPrePickConfigs[leftPick_id], self.vacuumPickConfigs[leftPick_id]], self.robot, "Left")
         self.executor.local_move(
             self.vacuumPrePickPoses[leftPick_id], self.vacuumPickPoses[leftPick_id], self.robot, "Left")
+        # raw_input("try to attach")
         self.executor.attachTheObject(self.robot, self.objectInHand_e, "Left", self.vacuumLocalPoses[leftPick_id])
+
+        # raw_input("attached!")
+
+        self.executor.executePath(self.vacuumHandoffPath[0], self.robot, "Left")
         time.sleep(1)
-        # self.executor.executePath(self.vacuumHandoffPath[0], self.robot, "Left")
-        # raw_input("ENTER to continue 3")
+
+        # self.updateRealObjectBasedonLocalPose(self.objectInHand_e, self.vacuumLocalPoses[leftPick_id], "Left")
+        time.sleep(1)     
+        
+        self.executor.executePath(self.fingerPrePickPaths[0], self.robot, "Right")
+        
+        # self.executor.local_move(
+        #     self.fingerPrePickPoses[0], self.fingerPickPoses[0], self.robot, "Right")
+        self.executor.attachTheObject(self.robot, self.objectInHand_e, "Right", self.fingerLocalPoses[0])
         # time.sleep(1)
-        # self.executor.executePath(self.fingerPrePickPaths[0], self.robot, "Right")
-        # self.executor.attachTheObject(self.robot, self.objectInHand_e, "Right", self.fingerLocalPoses[0])
-        # raw_input("ENTER to continue 4")
-        # time.sleep(0.5)
-        # self.executor.disattachTheObject("Left")
-        # self.executor.executePath(self.vacuumFinishPath[0], self.robot, "Left")
-        # raw_input("ENTER to continue 5")
-        '''
+        self.executor.disattachTheObject("Left")
+        self.executor.executePath(self.vacuumFinishPath[0], self.robot, "Left")
+        time.sleep(1)
+        self.executor.executePath(self.fingerPlacementPath[0], self.robot, "Right")   
+        time.sleep(1)
+        self.executor.disattachTheObject("Right")
+        time.sleep(2)
+        for i in range(0, 10000):
+            p.stepSimulation(self.servers[1])
 
+        
 
+        
+      
 
-    def updateGrapsedObject(self, objectInhand, localPose, handType):
+    def updatePlanningObjectBasedOnRealScene(self):
+
+        ls = p.getBasePositionAndOrientation(self.objectInHand_e.m, physicsClientId=self.servers[1])
+        print("ls: " + str(ls))
+        object_global_pose = list(ls[0]) + list(ls[1])
+        ### remove the old mesh of the grasped objectg
+        self.removeOldMesh(self.objectInHand_p, self.servers[0])
+        self.addNewMesh(self.objectInHand_p, object_global_pose, self.servers[0])        
+
+    def updatePlanningObjectBasedonLocalPose(self, objectInhand, localPose, handType):
         if handType == "Left":
             ee_idx = self.robot.left_ee_idx
         else:
@@ -199,10 +235,22 @@ class Experiment(object):
         ls = p.getLinkState(self.robot.motomanGEO_p, ee_idx, physicsClientId=self.servers[0])
         ee_global_pose = list(ls[0]) + list(ls[1])
         object_global_pose = self.getObjectGlobalPose(localPose, ee_global_pose)
-        ### remove the old mesh of the grasped objectg
+        ### remove the old mesh of the grasped object
         self.removeOldMesh(objectInhand, self.servers[0])
         self.addNewMesh(objectInhand, object_global_pose, self.servers[0])
 
+    def updateRealObjectBasedonLocalPose(self, objectInhand, localPose, handType):
+
+        if handType == "Left":
+            ee_idx = self.robot.left_ee_idx
+        else:
+            ee_idx = self.robot.right_ee_idx   
+        ls = p.getLinkState(self.robot.motomanGEO_e, ee_idx, physicsClientId=self.servers[1])
+        ee_global_pose = list(ls[0]) + list(ls[1])
+        object_global_pose = self.getObjectGlobalPose(localPose, ee_global_pose)
+        p.resetBasePositionAndOrientation(
+            objectInhand.m, object_global_pose[0:3], object_global_pose[3:7], physicsClientId=self.servers[1])
+        p.stepSimulation(physicsClientId=self.servers[1])
 
 
     def addNewMesh(self, mesh_object, object_global_pose, clientID):
@@ -254,7 +302,10 @@ class Experiment(object):
         isValid = self.planner.checkIK(
             q_IK, ee_idx, armPose[0:3], self.robot, self.workspace)
 
-        return list(q_IK[0:7])
+        if handType == "Left":
+            return list(q_IK[0:7])
+        else:
+            return list(q_IK[7:14])
 
 
     def getVacuumPickPoses(self, targetObj):
@@ -283,11 +334,12 @@ class Experiment(object):
                                     lowerLimits=self.robot.ll, upperLimits=self.robot.ul, jointRanges=self.robot.jr, 
                                     maxNumIterations=20000, residualThreshold=0.0000001,
                                     physicsClientId=self.servers[0])
-            
+
 
             ### step 3: check the validity of the IK
             isValid = self.planner.checkIK(
                 q_graspIK, self.robot.left_ee_idx, global_pose[0:3], self.robot, self.workspace)
+            # raw_input("ENTER to continue")
 
             if isValid:
                 ### generate pre-grasp pose and check its validity
@@ -337,8 +389,10 @@ class Experiment(object):
                 q_graspIK, self.robot.right_ee_idx, global_pose[0:3], self.robot, self.workspace)
             
             if isValid:
+                # raw_input("ready to see pre-grasp")
                 ### generate pre-grasp pose and check its validity
                 prePickPose, prePickConfig = self.getPrePickPose(global_pose, "Right")
+                # raw_input("let's see next grasp")
                 if prePickConfig != None:
                     ### the pre-grasp is also valid
                     ### Now let's add the poses and configs                    

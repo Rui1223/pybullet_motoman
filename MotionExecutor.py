@@ -7,9 +7,13 @@ import time
 from CollisionChecker import CollisionChecker
 
 class MotionExecutor(object):
-    def __init__(self, server, camera):
+    def __init__(self, server, camera, isObjectInLeftHand, isObjectInRightHand, objectInLeftHand, objectInRightHand):
         self.executingServer = server
         self.camera = camera
+        self.isObjectInLeftHand = isObjectInLeftHand
+        self.isObjectInRightHand = isObjectInRightHand
+        self.objectInLeftHand = objectInLeftHand
+        self.objectInRightHand = objectInRightHand
 
 
     def executePath(self, path, robot, handType):
@@ -40,13 +44,30 @@ class MotionExecutor(object):
             intermNode = [interm_j0, interm_j1, interm_j2, interm_j3, interm_j4, interm_j5, interm_j6]
 
             robot.moveSingleArm(intermNode, handType)
+            # if (self.isObjectInLeftHand and handType == "Left") or (self.isObjectInRightHand and handType == "Right"):
+            #     self.updateRealObjectBasedonLocalPose(robot, handType)
 
             time.sleep(0.05)
-        self.camera.takeImage(self.executingServer, False)
+
+
+    def updateRealObjectBasedonLocalPose(self, robot, handType):
+        print("Update object!")
+        if handType == "Left":
+            ee_idx = robot.left_ee_idx
+            objectInHand = self.objectInLeftHand
+            localPose = self.localPoseLeft
+        else:
+            ee_idx = robot.right_ee_idx
+            objectInHand = self.objectInRightHand
+            localPose = self.localPoseRight
+        ls = p.getLinkState(robot.motomanGEO_e, ee_idx, physicsClientId=self.executingServer)
+        ee_global_pose = list(ls[0]) + list(ls[1])
+        object_global_pose = self.getObjectGlobalPose(localPose, ee_global_pose)
+        p.resetBasePositionAndOrientation(
+            objectInHand.m, object_global_pose[0:3], object_global_pose[3:7], physicsClientId=self.executingServer)
 
 
     def local_move(self, pose1, pose2, robot, handType):
-        
         if handType == "Left":
             ee_idx = robot.left_ee_idx
         else:
@@ -65,37 +86,97 @@ class MotionExecutor(object):
                                     lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr, 
                                     maxNumIterations=20000, residualThreshold=0.0000001,
                                     physicsClientId=self.executingServer)
+
             ### Let's assume the IK is always valid in local_move
             robot.moveDualArm(q_IK)
+
+            # if handType == "Left" and self.isObjectInLeftHand == True:
+            #     # print("change constraint")
+            #     p.changeConstraint(
+            #         userConstraintUniqueId=self.leftArmConstrID, \
+            #         jointChildPivot=list(self.localPoseForLeftObject[0]), \
+            #         jointChildFrameOrientation=list(self.localPoseForLeftObject[1]), 
+            #         physicsClientId=self.executingServer)
+            #     # p.stepSimulation(physicsClientId=self.executingServer)
+                
+
+            # if handType == "Right" and self.isObjectInRightHand == True:
+            #     # print("change constraint")
+            #     p.changeConstraint(
+            #         userConstraintUniqueId=self.rightArmConstrID, \
+            #         jointChildPivot=list(self.localPoseForRightObject[0]), \
+            #         jointChildFrameOrientation=list(self.localPoseForRightObject[1]), 
+            #         physicsClientId=self.executingServer)
+            #     # p.stepSimulation(physicsClientId=self.executingServer)
+
             time.sleep(0.05)
-        self.camera.takeImage(self.executingServer, False)
 
 
     def attachTheObject(self, robot, objectInHand, handType, localPose):
+
+        localPoseForObject = p.invertTransform(localPose[0:3], localPose[3:7])
+
         if handType == "Left":
+            self.objectInLeftHand = objectInHand
+            self.isObjectInLeftHand = True
+            self.localPoseForLeftObject = localPoseForObject
+            self.localPoseLeft = localPose
             self.leftArmConstrID = p.createConstraint(
                 parentBodyUniqueId=robot.motomanGEO_e, parentLinkIndex=robot.left_ee_idx, 
                 childBodyUniqueId=objectInHand.m, childLinkIndex=-1,
                 jointType=p.JOINT_FIXED, jointAxis=[0,0,0],
-                parentFramePosition=localPose[0:3], childFramePosition=[0,0,0],
-                parentFrameOrientation=localPose[3:7],
+                parentFramePosition=[0,0,0.06], 
+                childFramePosition=list(self.localPoseForLeftObject[0]),
+                childFrameOrientation=list(self.localPoseForLeftObject[1]),
                 physicsClientId=self.executingServer
             )
             
         else:
+            self.objectInRightHand = objectInHand
+            self.isObjectInRightHand = True
+            self.localPoseForRightObject = localPoseForObject
+            self.localPoseRight = localPose
             self.rightArmConstrID = p.createConstraint(
                 parentBodyUniqueId=robot.motomanGEO_e, parentLinkIndex=robot.right_ee_idx, 
                 childBodyUniqueId=objectInHand.m, childLinkIndex=-1,
-                jointType=p.JOINT_FIXED, jointAxis=[0,0,1],
-                parentFramePosition=robot.BasePosition, childFramePosition=objectInHand.pos,
+                jointType=p.JOINT_FIXED, jointAxis=[0,0,0],
+                parentFramePosition=[0,0,0.06],
+                childFramePosition=list(self.localPoseForRightObject[0]),
+                childFrameOrientation=list(self.localPoseForRightObject[1]),
                 physicsClientId=self.executingServer
             )
-
+        # p.stepSimulation(physicsClientId=self.executingServer)
 
 
     def disattachTheObject(self, handType):
         if handType == "Left":
+            self.objectInLeftHand = None
+            self.isObjectInLeftHand = False
+            self.localPoseForLeftObject = None
+            self.localPoseLeft = None
             p.removeConstraint(userConstraintUniqueId=self.leftArmConstrID, physicsClientId=self.executingServer)
         else:
+            self.objectInRightHand = None
+            self.isObjectInRightHand = False
+            self.localPoseForRightObject = None
+            self.localPoseRight = None
             p.removeConstraint(userConstraintUniqueId=self.rightArmConstrID, physicsClientId=self.executingServer)
+
+        # p.stepSimulation(physicsClientId=self.executingServer)
+
+
+
+    def getObjectGlobalPose(self, local_pose, ee_global_pose):
+        local_pose1 = p.invertTransform(local_pose[0:3], local_pose[3:7])
+        
+        temp_object_global_pose = p.multiplyTransforms(
+            ee_global_pose[0:3], ee_global_pose[3:7],
+            list(local_pose1[0]), list(local_pose1[1])
+        )
+
+        object_global_pose = list(temp_object_global_pose[0]) + list(temp_object_global_pose[1])
+
+        return object_global_pose
+
+        
 

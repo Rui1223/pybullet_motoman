@@ -78,17 +78,17 @@ class MotionPlanner(object):
         actual_ee_pose = p.getLinkState(robot.motomanGEO_p, ee_idx)[0]
         ee_dist = self.computePoseDist(actual_ee_pose, desired_ee_pose)
         if ee_dist > 0.02:
-            # print("Not reachable as expected")
+            print("Not reachable as expected")
             # raw_input("enter to continue")
             return isValid
         ### Then check if there is collision
         if self.collisionAgent_p.collisionCheck_selfCollision(robot.motomanGEO_p) == True:
-            # print("self collision!")
+            print("self collision!")
             # raw_input("enter to continue")
             return isValid
         if self.collisionAgent_p.collisionCheck_knownGEO(
             robot.motomanGEO_p, workspace.known_geometries_planning) == True:
-            # print("collision with geometries in the workspace!")
+            print("collision with geometries in the workspace!")
             # raw_input("enter to continue")
             return isValid
 

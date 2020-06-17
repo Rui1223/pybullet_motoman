@@ -14,10 +14,10 @@
                 <mesh filename="../mesh/003_cracker_box/google_16k/textured.obj"/>
             </geometry>
         </collision>
-        <!-- <inertial> -->
-            <!-- <mass value="2.3"/> -->
-            <!-- <origin rpy="0 0 0" xyz="0 0 0"/> -->
-            <!-- <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/> -->
-        <!-- </inertial> -->
+<!--         <inertial>
+            <mass value="3.6"/>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+        </inertial> -->
     </link>
 </robot>
