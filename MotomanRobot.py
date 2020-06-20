@@ -60,9 +60,11 @@ class MotomanRobot(object):
                             targetPositions = singleArmConfiguration, physicsClientId=self.executingServer)
             self.updateRightArmConfig(singleArmConfiguration, self.executingServer)
 
-        for i in range(0,10):
-            p.stepSimulation(physicsClientId=self.executingServer)
-            time.sleep(1/240.0)
+        # p.stepSimulation(physicsClientId=self.executingServer)
+
+        # for i in range(0,10):
+        #     p.stepSimulation(physicsClientId=self.executingServer)
+        #     time.sleep(1/240.0)
 
 
 
@@ -74,9 +76,11 @@ class MotomanRobot(object):
         self.updateLeftArmConfig(dualArmConfiguration[0:7], self.executingServer)
         self.updateRightArmConfig(dualArmConfiguration[7:14], self.executingServer)
 
-        for i in range(0,10):
-            p.stepSimulation(physicsClientId=self.executingServer)
-            time.sleep(1/240.0)
+        # p.stepSimulation(physicsClientId=self.executingServer)
+
+        # for i in range(0,10):
+        #     p.stepSimulation(physicsClientId=self.executingServer)
+        #     time.sleep(1/240.0)
 
 
 

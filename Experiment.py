@@ -26,7 +26,7 @@ class Experiment(object):
         self.saveImages = saveImages
         ### get two servers, planning and execution respectively
         self.servers = self.genServers(exp_mode)
-        p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.servers[1])
+        p.setGravity(0.0, 0.0, 0.0, physicsClientId=self.servers[1])
         # p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=self.servers[1])
         ### set the robot ready
         self.robot = MotomanRobot(self.servers)
@@ -173,6 +173,7 @@ class Experiment(object):
                 self.fingerPrePickPoses.remove(self.fingerPrePickPoses[i])
                 self.fingerPrePickConfigs.remove(self.fingerPrePickConfigs[i])
 
+
         ### planning the path for the right arm from picking to placement
         self.fingerPlacementPath = []
         temp_path = self.planner.shortestPathPlanning(
@@ -182,36 +183,40 @@ class Experiment(object):
 
         
         ### Let's execute the path for this task
+        # raw_input("enter to continue")
         self.executor.executePath(self.vacuumPrePickPaths[leftPick_id], self.robot, "Left")
-        # self.executor.executePath([self.vacuumPrePickConfigs[leftPick_id], self.vacuumPickConfigs[leftPick_id]], self.robot, "Left")
-        self.executor.local_move(
-            self.vacuumPrePickPoses[leftPick_id], self.vacuumPickPoses[leftPick_id], self.robot, "Left")
-        # raw_input("try to attach")
+        raw_input("reach pre-grasp")
+        self.executor.executePath([self.vacuumPrePickConfigs[leftPick_id], self.vacuumPickConfigs[leftPick_id]], self.robot, "Left")
+        raw_input("reach grasp")
+        print("vacuumPickConfig: " + str(self.vacuumPickConfigs[leftPick_id]))
+        # self.executor.local_move(
+        #     self.vacuumPrePickPoses[leftPick_id], self.vacuumPickPoses[leftPick_id], self.robot, "Left")
+        raw_input("try to attach")
         self.executor.attachTheObject(self.robot, self.objectInHand_e, "Left", self.vacuumLocalPoses[leftPick_id])
 
-        # raw_input("attached!")
+        raw_input("attached!")
 
         self.executor.executePath(self.vacuumHandoffPath[0], self.robot, "Left")
-        time.sleep(1)
+        # time.sleep(1)
 
-        # self.updateRealObjectBasedonLocalPose(self.objectInHand_e, self.vacuumLocalPoses[leftPick_id], "Left")
-        time.sleep(1)     
-        
         self.executor.executePath(self.fingerPrePickPaths[0], self.robot, "Right")
+
         
-        # self.executor.local_move(
-        #     self.fingerPrePickPoses[0], self.fingerPickPoses[0], self.robot, "Right")
+        self.executor.local_move(
+            self.fingerPrePickPoses[0], self.fingerPickPoses[0], self.robot, "Right")
+        # time.sleep(1)
         self.executor.attachTheObject(self.robot, self.objectInHand_e, "Right", self.fingerLocalPoses[0])
         # time.sleep(1)
         self.executor.disattachTheObject("Left")
         self.executor.executePath(self.vacuumFinishPath[0], self.robot, "Left")
-        time.sleep(1)
+        # time.sleep(1)
         self.executor.executePath(self.fingerPlacementPath[0], self.robot, "Right")   
-        time.sleep(1)
+        # time.sleep(1)
         self.executor.disattachTheObject("Right")
-        time.sleep(2)
-        for i in range(0, 10000):
-            p.stepSimulation(self.servers[1])
+
+        time.sleep(1)
+        # p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.servers[1])
+        p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=self.servers[1])
 
         
 
