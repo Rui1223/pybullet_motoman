@@ -11,12 +11,30 @@ import numpy as np
 import os
 import IPython
 import time
+import threading
 
 from MotomanRobot import MotomanRobot
 from Workspace import Workspace
 from Camera import AzureKineticCamera
 from MotionPlanner import MotionPlanner
 from MotionExecutor import MotionExecutor
+
+
+class cameraThread(threading.Thread):
+    def __init__(self, threadID, threadName, timeInterval, camera, server, saveImages):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.threadName = threadName
+        self.timeInterval = timeInterval
+        self.camera = camera
+        self.server = server
+        self.saveImages = saveImages
+    def run(self):
+        print("turn on your camera to work")
+        self.camera.takeImage(self.name, self.timeInterval, self.server, self.saveImages)
+        print("camera stop working")
+
+
 
 class Experiment(object):
     ### This Experiment class defines how a experiment is performed
@@ -27,7 +45,7 @@ class Experiment(object):
         ### get two servers, planning and execution respectively
         self.servers = self.genServers(exp_mode)
         p.setGravity(0.0, 0.0, 0.0, physicsClientId=self.servers[1])
-        # p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=self.servers[1])
+        # p.setRealTimeSimulation(enableRealTimeSimulation=0, physicsClientId=self.servers[1])
         ### set the robot ready
         self.robot = MotomanRobot(self.servers)
         ### set the workspace (table, shelf, or whatever specified)
@@ -69,13 +87,14 @@ class Experiment(object):
     def runExperiment(self):
         ### get objects information from a txt file
         self.objectsInfos, self.targetObjectName = self.getObjectsInfos(self.scene_index)
-        self.objectsPoses = self.loadObjects_p(self.servers[0])
-        self.realObjsPoses = self.loadObjects_e(self.servers[1])
+        self.objectsPoses = self.loadObjects_meshBody(self.servers[0])
+        self.realObjsPoses = self.loadObjects_urdf(self.servers[1])
         self.objectInHand_p = self.objectsPoses[0]
         self.objectInHand_e = self.realObjsPoses[0]
         
-        ### Take the initial image
-        self.camera.takeImage(self.servers[0], self.saveImages)
+        ### Set up the camera
+        self.sensorAgent = cameraThread(1, "camera thread", 3, self.camera, self.servers[1], self.saveImages)
+        self.sensorAgent.start()
 
         ### Now Let's check valid picking poses for vacuum gripper
         ####################################################################################################
@@ -183,45 +202,49 @@ class Experiment(object):
 
         
         ### Let's execute the path for this task
-        # raw_input("enter to continue")
+        raw_input("enter to continue")
         self.executor.executePath(self.vacuumPrePickPaths[leftPick_id], self.robot, "Left")
-        raw_input("reach pre-grasp")
+        print("reach pre-grasp")
         self.executor.executePath([self.vacuumPrePickConfigs[leftPick_id], self.vacuumPickConfigs[leftPick_id]], self.robot, "Left")
-        raw_input("reach grasp")
+        print("reach grasp")
         print("vacuumPickConfig: " + str(self.vacuumPickConfigs[leftPick_id]))
         # self.executor.local_move(
         #     self.vacuumPrePickPoses[leftPick_id], self.vacuumPickPoses[leftPick_id], self.robot, "Left")
-        raw_input("try to attach")
+        print("try to attach")
         self.executor.attachTheObject(self.robot, self.objectInHand_e, "Left", self.vacuumLocalPoses[leftPick_id])
 
-        raw_input("attached!")
+        print("attached!")
 
         self.executor.executePath(self.vacuumHandoffPath[0], self.robot, "Left")
-        # time.sleep(1)
+        time.sleep(1)
 
         self.executor.executePath(self.fingerPrePickPaths[0], self.robot, "Right")
 
         
         self.executor.local_move(
             self.fingerPrePickPoses[0], self.fingerPickPoses[0], self.robot, "Right")
-        # time.sleep(1)
+        time.sleep(1)
         self.executor.attachTheObject(self.robot, self.objectInHand_e, "Right", self.fingerLocalPoses[0])
-        # time.sleep(1)
+        time.sleep(1)
         self.executor.disattachTheObject("Left")
         self.executor.executePath(self.vacuumFinishPath[0], self.robot, "Left")
-        # time.sleep(1)
+        time.sleep(1)
         self.executor.executePath(self.fingerPlacementPath[0], self.robot, "Right")   
-        # time.sleep(1)
+        time.sleep(1)
         self.executor.disattachTheObject("Right")
 
         time.sleep(1)
-        # p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.servers[1])
+        ### add some mass to the object so as to let it fall
+        p.changeDynamics(bodyUniqueId=self.objectInHand_e.m, linkIndex=-1, mass=1.0, physicsClientId=self.servers[1])
+        p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.servers[1])
         p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=self.servers[1])
 
-        
+        time.sleep(3)
+        p.setRealTimeSimulation(enableRealTimeSimulation=0, physicsClientId=self.servers[1])
+
 
         
-      
+
 
     def updatePlanningObjectBasedOnRealScene(self):
 
@@ -453,7 +476,7 @@ class Experiment(object):
         return prePickPose, prePickConfig
 
 
-    def loadObjects_e(self, clientID):
+    def loadObjects_urdf(self, clientID):
 
         objectsPoses = []
 
@@ -472,7 +495,7 @@ class Experiment(object):
         return objectsPoses
 
 
-    def loadObjects_p(self, clientID):
+    def loadObjects_meshBody(self, clientID):
 
         massList = {
             "003_cracker_box": 2.8,

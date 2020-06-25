@@ -20,6 +20,7 @@ saveImages = (sys.argv[3] in ('y', 'Y')) ### decide whether to save images or no
 EXP = Experiment(scene_index, exp_mode, saveImages)
 EXP.runExperiment()
 
+
 print("Finished.")
 time.sleep(10000)
 

@@ -32,7 +32,7 @@ class MotionExecutor(object):
             ee_idx = robot.right_ee_idx
 
         nseg = 25
-        for i in xrange(0, nseg+1):
+        for i in xrange(1, nseg+1):
             # print("i: " + str(i))
             interm_j0 = n1[0] + (n2[0]-n1[0]) / nseg * i
             interm_j1 = n1[1] + (n2[1]-n1[1]) / nseg * i
@@ -43,17 +43,13 @@ class MotionExecutor(object):
             interm_j6 = n1[6] + (n2[6]-n1[6]) / nseg * i
             intermNode = [interm_j0, interm_j1, interm_j2, interm_j3, interm_j4, interm_j5, interm_j6]
 
-            raw_input("control the move")
-            robot.moveSingleArm(intermNode, handType)
+
+            robot.moveSingleArm_resetState(intermNode, handType)
             if (self.isObjectInLeftHand and handType == "Left") or (self.isObjectInRightHand and handType == "Right"):
                 self.updateRealObjectBasedonLocalPose(robot, handType)
-            for k in range(5):
-                p.stepSimulation(physicsClientId=self.executingServer)
-            if i == nseg:
-                print("intermNode: " + str(intermNode))
 
+            p.stepSimulation(physicsClientId=self.executingServer)
             time.sleep(0.05)
-
 
 
     def local_move(self, pose1, pose2, robot, handType):
@@ -63,7 +59,7 @@ class MotionExecutor(object):
             ee_idx = robot.right_ee_idx
 
         nseg = 5
-        for i in xrange(0, nseg+1):
+        for i in xrange(1, nseg+1):
             temp_x = pose1[0] + (pose2[0]-pose1[0]) / nseg * i
             temp_y = pose1[1] + (pose2[1]-pose1[1]) / nseg * i
             temp_z = pose1[2] + (pose2[2]-pose1[2]) / nseg * i
@@ -77,16 +73,15 @@ class MotionExecutor(object):
                                     physicsClientId=self.executingServer)
 
             ### Let's assume the IK is always valid in local_move
-            raw_input("control the move")
             if handType == "Left":
-                robot.moveSingleArm(list(q_IK[0:7]), "Left")
+                robot.moveSingleArm_resetState(list(q_IK[0:7]), "Left")
             else:
-                robot.moveSingleArm(list(q_IK[7:14]), "Right")
+                robot.moveSingleArm_resetState(list(q_IK[7:14]), "Right")
 
             if (self.isObjectInLeftHand and handType == "Left") or (self.isObjectInRightHand and handType == "Right"):
                 self.updateRealObjectBasedonLocalPose(robot, handType)
-            for k in range(5):
-                p.stepSimulation(physicsClientId=self.executingServer)
+
+            p.stepSimulation(physicsClientId=self.executingServer)
             time.sleep(0.05)
 
 
@@ -141,7 +136,7 @@ class MotionExecutor(object):
             #     childFrameOrientation=list(self.localPoseForRightObject[1]),
             #     physicsClientId=self.executingServer
             # )
-        # p.stepSimulation(physicsClientId=self.executingServer)
+
 
 
     def disattachTheObject(self, handType):
@@ -157,8 +152,6 @@ class MotionExecutor(object):
             self.localPoseForRightObject = None
             self.localPoseRight = None
             # p.removeConstraint(userConstraintUniqueId=self.rightArmConstrID, physicsClientId=self.executingServer)
-
-        # p.stepSimulation(physicsClientId=self.executingServer)
 
 
 

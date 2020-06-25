@@ -2,9 +2,11 @@ from __future__ import division
 import pybullet as p
 import pybullet_data
 
+import threading
 import numpy as np
 import os
 import shutil
+import time
 
 from PIL import Image
 from skimage.io import imread, imsave
@@ -29,23 +31,32 @@ class AzureKineticCamera(object):
                 farVal=3.47)
 
 
-    def takeImage(self, clientId, saveImages):
-        ### get the image
-        width, height, rgbImg, depthImg, segImg = p.getCameraImage(
-        width=1280,
-        height=720,
-        viewMatrix=self.viewMatrix,
-        projectionMatrix=self.projectionMatrix,
-        physicsClientId=clientId)
+    def takeImage(self, threadName, timeInterval, clientId, saveImages):
+        counter = 1000
+        while counter:
+            # try:
+            ### get the image
+            width, height, rgbImg, depthImg, segImg = p.getCameraImage(
+            width=1280,
+            height=720,
+            viewMatrix=self.viewMatrix,
+            projectionMatrix=self.projectionMatrix,
+            physicsClientId=clientId)
 
-        ### save the images ###
-        if saveImages:
-            ### rgb
-            imsave(self.img_path + "/rgb.png", rgbImg)
-            ### depth
-            imsave(self.img_path + "/depth.png", depthImg)
-            ### segmentation
-            imsave(self.img_path + "/segment.png", segImg*1000)
+            ### save the images ###
+            if saveImages:
+                ### rgb
+                imsave(self.img_path + "/rgb.png", rgbImg)
+                ### depth
+                imsave(self.img_path + "/depth.png", depthImg)
+                ### segmentation
+                imsave(self.img_path + "/segment.png", segImg*1000)
+
+            time.sleep(timeInterval)
+            counter -= 1
+
+            # except KeyboardInterrupt:
+            #     threadName.exit() 
 
 
     def createImageFolder(self, scene_index):
