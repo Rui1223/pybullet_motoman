@@ -49,58 +49,23 @@ class MotomanRobot(object):
         # self.printRobotJointInfo()
 
 
+
     def moveSingleArm(self, singleArmConfiguration, handType):
-        if handType == "Left":
-            p.setJointMotorControlArray(self.motomanGEO_e, range(1, 8), controlMode=p.POSITION_CONTROL, 
-                            targetPositions = singleArmConfiguration, physicsClientId=self.executingServer)
-            self.updateLeftArmConfig(singleArmConfiguration, self.executingServer)
-        else:
-            p.setJointMotorControlArray(self.motomanGEO_e, range(11, 18), controlMode=p.POSITION_CONTROL, 
-                            targetPositions = singleArmConfiguration, physicsClientId=self.executingServer)
-            self.updateRightArmConfig(singleArmConfiguration, self.executingServer)
-
-        # p.stepSimulation(physicsClientId=self.executingServer)
-
-        # for i in range(0,10):
-        #     p.stepSimulation(physicsClientId=self.executingServer)
-        #     time.sleep(1/240.0)
-
-
-    def moveSingleArm_resetState(self, singleArmConfiguration, handType):
+        ### move single arm by resetJointState() function
         if handType == "Left":
             for j in range(1, 8):
                 p.resetJointState(self.motomanGEO_e, j, singleArmConfiguration[j-1], physicsClientId=self.executingServer)
-            # for j in range(11, 18):
-            #     p.resetJointState(self.motomanGEO_e, j, self.rightArmCurrConfiguration_e[j-11], physicsClientId=self.executingServer)
-
             self.updateLeftArmConfig(singleArmConfiguration, self.executingServer)
 
         else:
-            # for j in range(1, 8):
-            #     p.resetJointState(self.motomanGEO_e, j, self.leftArmCurrConfiguration_e[j-1], physicsClientId=self.executingServer)
             for j in range(11, 18):
                 p.resetJointState(self.motomanGEO_e, j, singleArmConfiguration[j-11], physicsClientId=self.executingServer)
-
             self.updateRightArmConfig(singleArmConfiguration, self.executingServer)
-
 
 
 
     def moveDualArm(self, dualArmConfiguration):
-        p.setJointMotorControlArray(self.motomanGEO_e, range(1, 8), controlMode=p.POSITION_CONTROL, 
-                        targetPositions = dualArmConfiguration[0:7], physicsClientId=self.executingServer)
-        p.setJointMotorControlArray(self.motomanGEO_e, range(11, 18), controlMode=p.POSITION_CONTROL, 
-                        targetPositions = dualArmConfiguration[7:14], physicsClientId=self.executingServer)
-        self.updateLeftArmConfig(dualArmConfiguration[0:7], self.executingServer)
-        self.updateRightArmConfig(dualArmConfiguration[7:14], self.executingServer)
-
-        # p.stepSimulation(physicsClientId=self.executingServer)
-
-        # for i in range(0,10):
-        #     p.stepSimulation(physicsClientId=self.executingServer)
-        #     time.sleep(1/240.0)
-
-    def moveDualArm_resetState(self, dualArmConfiguration):
+        ### move dual arm by resetJointState() function
         for j in range(1, 8):
             p.resetJointState(self.motomanGEO_e, j, dualArmConfiguration[j-1], physicsClientId=self.executingServer)
         for j in range(11, 18):
@@ -112,6 +77,7 @@ class MotomanRobot(object):
 
 
     def setSingleArmToConfig(self, singleArmConfig, handType):
+        ### the planning version of moveSingArm
         if handType == "Left":
             for j in range(1, 8):
                 p.resetJointState(self.motomanGEO_p, j, singleArmConfig[j-1], physicsClientId=self.planningServer)
@@ -154,11 +120,13 @@ class MotomanRobot(object):
             self.leftArmCurrConfiguration_e = currLeftArmConfig
 
 
+
     def updateRightArmConfig(self, currRightArmConfig, server):
         if server == self.planningServer:
             self.rightArmCurrConfiguration_p = currRightArmConfig
         else:
             self.rightArmCurrConfiguration_e = currRightArmConfig
+
 
 
     def printRobotJointInfo(self):
@@ -171,4 +139,34 @@ class MotomanRobot(object):
           print(p.getJointInfo(self.motomanGEO_p, i, self.planningServer))
 
 
+############################ The following code is not used but be kept for legacy #############################
+    # def moveSingleArm_controlArray(self, singleArmConfiguration, handType):
+    #     if handType == "Left":
+    #         p.setJointMotorControlArray(self.motomanGEO_e, range(1, 8), controlMode=p.POSITION_CONTROL, 
+    #                         targetPositions = singleArmConfiguration, physicsClientId=self.executingServer)
+    #         self.updateLeftArmConfig(singleArmConfiguration, self.executingServer)
+    #     else:
+    #         p.setJointMotorControlArray(self.motomanGEO_e, range(11, 18), controlMode=p.POSITION_CONTROL, 
+    #                         targetPositions = singleArmConfiguration, physicsClientId=self.executingServer)
+    #         self.updateRightArmConfig(singleArmConfiguration, self.executingServer)
 
+    #     # p.stepSimulation(physicsClientId=self.executingServer)
+
+    #     # for i in range(0,10):
+    #     #     p.stepSimulation(physicsClientId=self.executingServer)
+    #     #     time.sleep(1/240.0)
+
+
+    # def moveDualArm_controlArray(self, dualArmConfiguration):
+    #     p.setJointMotorControlArray(self.motomanGEO_e, range(1, 8), controlMode=p.POSITION_CONTROL, 
+    #                     targetPositions = dualArmConfiguration[0:7], physicsClientId=self.executingServer)
+    #     p.setJointMotorControlArray(self.motomanGEO_e, range(11, 18), controlMode=p.POSITION_CONTROL, 
+    #                     targetPositions = dualArmConfiguration[7:14], physicsClientId=self.executingServer)
+    #     self.updateLeftArmConfig(dualArmConfiguration[0:7], self.executingServer)
+    #     self.updateRightArmConfig(dualArmConfiguration[7:14], self.executingServer)
+
+    #     # p.stepSimulation(physicsClientId=self.executingServer)
+
+    #     # for i in range(0,10):
+    #     #     p.stepSimulation(physicsClientId=self.executingServer)
+    #     #     time.sleep(1/240.0)

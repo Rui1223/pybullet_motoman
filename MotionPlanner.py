@@ -16,10 +16,9 @@ from CollisionChecker import CollisionChecker
 
 
 class MotionPlanner(object):
-    def __init__(self, server, scene_index, camera):
+    def __init__(self, server, scene_index):
         self.planningServer = server
         self.scene_index = scene_index
-        self.camera = camera
         self.taskFolder = self.createtaskFolder(scene_index)
         self.collisionAgent_p = CollisionChecker(self.planningServer)
         self.nodes = {}
@@ -34,9 +33,9 @@ class MotionPlanner(object):
 
 
     def loadRoadmap(self, handType):
-        roadmapFile = os.getcwd() + "/roadmaps/samples_" + handType + ".txt"
-        f_roadmap = open(roadmapFile, "r")
-        for line in f_roadmap:
+        samplesFile = os.getcwd() + "/tasks/samples_" + handType + ".txt"
+        f_samples = open(samplesFile, "r")
+        for line in f_samples:
             line = line.split()
             line = [float(e) for e in line[1:]]
             self.nodes[handType].append(line)
@@ -74,28 +73,23 @@ class MotionPlanner(object):
         robot.setDualArmToConfig(ikSolution)
         isValid = False
         ### first check if IK succeeds
-        ### if the ee_idx is within 2.5cm(0.025m) Euclidean distance from the desired one, we accept it
+        ### if the ee_idx is within 2.0cm(0.02m) Euclidean distance from the desired one, we accept it
         actual_ee_pose = p.getLinkState(robot.motomanGEO_p, ee_idx)[0]
         ee_dist = self.computePoseDist(actual_ee_pose, desired_ee_pose)
         if ee_dist > 0.02:
-            print("Not reachable as expected")
-            # raw_input("enter to continue")
+            # print("Not reachable as expected")
             return isValid
         ### Then check if there is collision
         if self.collisionAgent_p.collisionCheck_selfCollision(robot.motomanGEO_p) == True:
-            print("self collision!")
-            # raw_input("enter to continue")
             return isValid
         if self.collisionAgent_p.collisionCheck_knownGEO(
             robot.motomanGEO_p, workspace.known_geometries_planning) == True:
-            print("collision with geometries in the workspace!")
-            # raw_input("enter to continue")
+            # print("collision with geometries in the workspace!")
             return isValid
 
-        ### If you reach here, the pose pass both IK success and collision check
+        ### If you reach here, the pose passes both IK success and collision check
         isValid = True
-        print("it is a valid IK")
-        # raw_input("this IK is valid")
+        # print("it is a valid IK")
         return isValid
 
 
@@ -251,7 +245,7 @@ class MotionPlanner(object):
 
     def createtaskFolder(self, scene_index):
         ### create a folder to store the roadmap (samples + connections) for the current scene
-        taskFolder = os.getcwd() + "/roadmaps/" + scene_index
+        taskFolder = os.getcwd() + "/tasks/" + scene_index
 
         if os.path.exists(taskFolder):
             shutil.rmtree(taskFolder)

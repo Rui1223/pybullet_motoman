@@ -14,7 +14,8 @@ from skimage.io import imread, imsave
 class AzureKineticCamera(object):
     def __init__(self, scene_index, tablePosition, table_dim):
         self.scene_index = scene_index
-        self.img_path = self.createImageFolder(scene_index)
+        self.rgbImg_path, self.depthImg_path, self.segmentationImg_path, self.data_path = self.createImageFolder(scene_index)
+        self.cameraFinish = False
         self.camera_extrinsic = np.array(
             [[-0.0182505, -0.724286,  0.689259, 0.329174], 
              [-0.999453,  0.0322427,  0.00741728,  -0.036492],
@@ -31,40 +32,53 @@ class AzureKineticCamera(object):
                 farVal=3.47)
 
 
-    def takeImage(self, threadName, timeInterval, clientId, saveImages):
-        counter = 1000
-        while counter:
-            # try:
-            ### get the image
-            width, height, rgbImg, depthImg, segImg = p.getCameraImage(
-            width=1280,
-            height=720,
-            viewMatrix=self.viewMatrix,
-            projectionMatrix=self.projectionMatrix,
-            physicsClientId=clientId)
+    def takeImage(self, clientId, saveImages, frame_idx):
 
-            ### save the images ###
-            if saveImages:
-                ### rgb
-                imsave(self.img_path + "/rgb.png", rgbImg)
-                ### depth
-                imsave(self.img_path + "/depth.png", depthImg)
-                ### segmentation
-                imsave(self.img_path + "/segment.png", segImg*1000)
+        ### get the image
+        width, height, rgbImg, depthImg, segImg = p.getCameraImage(
+        width=1280,
+        height=720,
+        viewMatrix=self.viewMatrix,
+        projectionMatrix=self.projectionMatrix,
+        physicsClientId=clientId)
 
-            time.sleep(timeInterval)
-            counter -= 1
+        ### save the images ###
+        if saveImages:
+            ### rgb
+            imsave(self.rgbImg_path + "/rgb_" + str(frame_idx) + ".png", rgbImg)
+            ### depth
+            imsave(self.depthImg_path + "/depth_" + str(frame_idx) + ".png", depthImg)
+            ### segmentation
+            imsave(self.segmentationImg_path + "/segment_" + str(frame_idx) + ".png", segImg)
 
-            # except KeyboardInterrupt:
-            #     threadName.exit() 
 
 
     def createImageFolder(self, scene_index):
         ### create a folder to store all the images generated from the current scene
         img_path = os.getcwd() + "/sensor_images/" + scene_index
+        rgbImg_path = img_path + "/rgb"
+        depthImg_path = img_path + "/depth"
+        segmentationImg_path = img_path + "/segmentation"
+        data_path = img_path + "/data"
 
         if os.path.exists(img_path):
             shutil.rmtree(img_path)
-        os.mkdir(img_path)
+        os.mkdir(img_path) 
 
-        return img_path
+        if os.path.exists(rgbImg_path):
+            shutil.rmtree(rgbImg_path)
+        os.mkdir(rgbImg_path)
+
+        if os.path.exists(depthImg_path):
+            shutil.rmtree(depthImg_path)
+        os.mkdir(depthImg_path)
+
+        if os.path.exists(segmentationImg_path):
+            shutil.rmtree(segmentationImg_path)
+        os.mkdir(segmentationImg_path)
+
+        if os.path.exists(data_path):
+            shutil.rmtree(data_path)
+        os.mkdir(data_path)        
+
+        return rgbImg_path, depthImg_path, segmentationImg_path, data_path

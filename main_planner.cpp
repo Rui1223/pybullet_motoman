@@ -14,9 +14,9 @@ int main(int argc, char** argv)
     std::string handType = std::string(argv[3]);
     int nsamples = atoi(argv[4]);
     std::string method = std::string(argv[5]);
-    std::string task_file = "./roadmaps/" + scene_index + "/" + task_name + ".txt";
-    std::string samples_file = "./roadmaps/samples_" + handType + ".txt";
-    std::string connections_file = "./roadmaps/connections_" + handType + ".txt";
+    std::string task_file = "./tasks/" + scene_index + "/" + task_name + ".txt";
+    std::string samples_file = "./tasks/samples_" + handType + ".txt";
+    std::string connections_file = "./tasks/connections_" + handType + ".txt";
 
 
     // construct the graph given these files
@@ -33,7 +33,7 @@ int main(int argc, char** argv)
             std::cout << "\n";
         }
         // write the trajectory
-        std::string task_trajectory_file = "./roadmaps/" + scene_index + "/" + task_name + "_traj.txt";
+        std::string task_trajectory_file = "./tasks/" + scene_index + "/" + task_name + "_traj.txt";
         astar_solver.writeTrajectory(task_trajectory_file);
 
     }
