@@ -1,0 +1,5 @@
+__pycache__/
+sensor_images/
+tasks/
+main_planner
+*.pyc

@@ -17,7 +17,7 @@ class MotomanRobot(object):
         self.motomanGEO_e = p.loadURDF("motoman.urdf", useFixedBase=True, physicsClientId=self.executingServer)
         self.known_geometries_planning.append(self.motomanGEO_p)
         self.known_geometries_executing.append(self.motomanGEO_e)
-        
+
         ### reset the base of motoman
         self.BasePosition = [0, 0, 0]
         self.BaseOrientation = [0, 0, 0, 1]
@@ -27,7 +27,7 @@ class MotomanRobot(object):
         self.updateLeftArmConfig(self.homeConfiguration[0:7], self.planningServer)
         self.updateRightArmConfig(self.homeConfiguration[7:14], self.planningServer)
         self.updateLeftArmConfig(self.homeConfiguration[0:7], self.executingServer)
-        self.updateRightArmConfig(self.homeConfiguration[7:14], self.executingServer)        
+        self.updateRightArmConfig(self.homeConfiguration[7:14], self.executingServer)
 
         ### joint and end effector information
         ### end-effector index
@@ -132,9 +132,9 @@ class MotomanRobot(object):
     def printRobotJointInfo(self):
         ### This printing function is for debugging purpose (not used in experiment)
         ############################### information related to Motoman arm (joint info) ###################################
-        print "Motoman Robot: " + str(self.motomanGEO_p)
+        print("Motoman Robot: " + str(self.motomanGEO_p))
         num_joints = p.getNumJoints(self.motomanGEO_p, self.planningServer)
-        print "Num of joints: " + str(num_joints)
+        print("Num of joints: " + str(num_joints))
         for i in range(num_joints):
           print(p.getJointInfo(self.motomanGEO_p, i, self.planningServer))
 
@@ -142,11 +142,11 @@ class MotomanRobot(object):
 ############################ The following code is not used but be kept for legacy #############################
     # def moveSingleArm_controlArray(self, singleArmConfiguration, handType):
     #     if handType == "Left":
-    #         p.setJointMotorControlArray(self.motomanGEO_e, range(1, 8), controlMode=p.POSITION_CONTROL, 
+    #         p.setJointMotorControlArray(self.motomanGEO_e, range(1, 8), controlMode=p.POSITION_CONTROL,
     #                         targetPositions = singleArmConfiguration, physicsClientId=self.executingServer)
     #         self.updateLeftArmConfig(singleArmConfiguration, self.executingServer)
     #     else:
-    #         p.setJointMotorControlArray(self.motomanGEO_e, range(11, 18), controlMode=p.POSITION_CONTROL, 
+    #         p.setJointMotorControlArray(self.motomanGEO_e, range(11, 18), controlMode=p.POSITION_CONTROL,
     #                         targetPositions = singleArmConfiguration, physicsClientId=self.executingServer)
     #         self.updateRightArmConfig(singleArmConfiguration, self.executingServer)
 
@@ -158,9 +158,9 @@ class MotomanRobot(object):
 
 
     # def moveDualArm_controlArray(self, dualArmConfiguration):
-    #     p.setJointMotorControlArray(self.motomanGEO_e, range(1, 8), controlMode=p.POSITION_CONTROL, 
+    #     p.setJointMotorControlArray(self.motomanGEO_e, range(1, 8), controlMode=p.POSITION_CONTROL,
     #                     targetPositions = dualArmConfiguration[0:7], physicsClientId=self.executingServer)
-    #     p.setJointMotorControlArray(self.motomanGEO_e, range(11, 18), controlMode=p.POSITION_CONTROL, 
+    #     p.setJointMotorControlArray(self.motomanGEO_e, range(11, 18), controlMode=p.POSITION_CONTROL,
     #                     targetPositions = dualArmConfiguration[7:14], physicsClientId=self.executingServer)
     #     self.updateLeftArmConfig(dualArmConfiguration[0:7], self.executingServer)
     #     self.updateRightArmConfig(dualArmConfiguration[7:14], self.executingServer)

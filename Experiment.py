@@ -55,7 +55,7 @@ class cameraThread(threading.Thread):
             if self.collectData:
                 self.doc_yaml(self.counter)
             time.sleep(self.timeInterval)
-       
+
 
     def doc_yaml(self, counter):
         yaml_file = self.camera.data_path + "/" + "frame" + str(counter) + ".yml"
@@ -102,7 +102,7 @@ class Experiment(object):
         ### set the camera ready
         self.camera = AzureKineticCamera(self.scene_index, self.workspace.tablePosition, self.workspace.table_dim)
 
-        ### launch the MotionPlanner and MotionExecutor 
+        ### launch the MotionPlanner and MotionExecutor
         self.planner = MotionPlanner(self.servers[0], self.scene_index) ### load the roadmap
         self.executor = MotionExecutor(self.servers[1], self.camera, \
             isObjectInLeftHand=False, isObjectInRightHand=False, objectInLeftHand=None, objectInRightHand=None)
@@ -162,14 +162,14 @@ class Experiment(object):
         p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.servers[1])
         p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=self.servers[1])
         time.sleep(2)
-        p.setRealTimeSimulation(enableRealTimeSimulation=0, physicsClientId=self.servers[1])        
+        p.setRealTimeSimulation(enableRealTimeSimulation=0, physicsClientId=self.servers[1])
         self.executor.executePath(self.vacuumFinishPath[0], self.robot, "Left")
         '''
         #######################################################################################################
-        
+
 
         #######################################################################################################
-        
+
         ### for the second local pick
         ### let's demonstrate the left arm handoff to righ arm and right arm place the object
         leftPick_id = 1
@@ -202,9 +202,9 @@ class Experiment(object):
                             self.fingerPrePickConfigs[0], self.fingerPlacementConfig, \
                             "RightPlacem_"+str(leftPick_id), self.robot, self.workspace, "Right")
         self.fingerPlacementPath.append(temp_path)
-        
-        
-        raw_input("enter to show the motions for the tasks")
+
+
+        input("enter to show the motions for the tasks")
 
         ## Set up the camera
         self.dataCollector = cameraThread(
@@ -233,7 +233,7 @@ class Experiment(object):
 
         self.executor.executePath(self.vacuumFinishPath[0], self.robot, "Left")
         time.sleep(1)
-        self.executor.executePath(self.fingerPlacementPath[0], self.robot, "Right")   
+        self.executor.executePath(self.fingerPlacementPath[0], self.robot, "Right")
         time.sleep(1)
         self.executor.disattachTheObject("Right")
         ### add some mass to the object so as to let it fall
@@ -245,7 +245,7 @@ class Experiment(object):
         p.setRealTimeSimulation(enableRealTimeSimulation=0, physicsClientId=self.servers[1])
 
         self.camera.cameraFinish = True
-        
+
         #######################################################################################################
 
 
@@ -264,12 +264,12 @@ class Experiment(object):
         ### specify the pose for placing the object for the right arm
         self.fingerPlacementPose = \
             self.workspace.objectDropCenter + list(p.getQuaternionFromEuler([0.0, math.pi, 0.0]))
-        self.fingerPlacementConfig = self.convertPoseToConfig(self.fingerPlacementPose, "Right")        
+        self.fingerPlacementConfig = self.convertPoseToConfig(self.fingerPlacementPose, "Right")
 
 
     def getObjectGlobalPose(self, local_pose, ee_global_pose):
         local_pose1 = p.invertTransform(local_pose[0:3], local_pose[3:7])
-        
+
         temp_object_global_pose = p.multiplyTransforms(
             ee_global_pose[0:3], ee_global_pose[3:7],
             list(local_pose1[0]), list(local_pose1[1])
@@ -302,11 +302,11 @@ class Experiment(object):
             global_pose = list(global_pose[0]) + list(global_pose[1])
 
             ### step 2: get the corresponding IK for the currently examined pose
-            q_graspIK = p.calculateInverseKinematics(bodyUniqueId=self.robot.motomanGEO_p, 
-                                    endEffectorLinkIndex=self.robot.left_ee_idx, 
-                                    targetPosition=global_pose[0:3], 
-                                    targetOrientation=global_pose[3:7], 
-                                    lowerLimits=self.robot.ll, upperLimits=self.robot.ul, jointRanges=self.robot.jr, 
+            q_graspIK = p.calculateInverseKinematics(bodyUniqueId=self.robot.motomanGEO_p,
+                                    endEffectorLinkIndex=self.robot.left_ee_idx,
+                                    targetPosition=global_pose[0:3],
+                                    targetOrientation=global_pose[3:7],
+                                    lowerLimits=self.robot.ll, upperLimits=self.robot.ul, jointRanges=self.robot.jr,
                                     maxNumIterations=20000, residualThreshold=0.0000001,
                                     physicsClientId=self.servers[0])
 
@@ -333,7 +333,7 @@ class Experiment(object):
         self.vacuumPrePickPaths = []
         for i in range(len(self.vacuumPrePickConfigs)):
             temp_path = self.planner.shortestPathPlanning(
-                            currArmConfig, self.vacuumPrePickConfigs[i], "LeftPrePick_"+str(i), 
+                            currArmConfig, self.vacuumPrePickConfigs[i], "LeftPrePick_"+str(i),
                             self.robot, self.workspace, "Left")
             self.vacuumPrePickPaths.append(temp_path)
 
@@ -369,25 +369,25 @@ class Experiment(object):
             global_pose = list(global_pose[0]) + list(global_pose[1])
 
             ### step 2: get the corresponding IK for the currently examined pose
-            q_graspIK = p.calculateInverseKinematics(bodyUniqueId=self.robot.motomanGEO_p, 
-                                    endEffectorLinkIndex=self.robot.right_ee_idx, 
-                                    targetPosition=global_pose[0:3], 
-                                    targetOrientation=global_pose[3:7], 
-                                    lowerLimits=self.robot.ll, upperLimits=self.robot.ul, jointRanges=self.robot.jr, 
+            q_graspIK = p.calculateInverseKinematics(bodyUniqueId=self.robot.motomanGEO_p,
+                                    endEffectorLinkIndex=self.robot.right_ee_idx,
+                                    targetPosition=global_pose[0:3],
+                                    targetOrientation=global_pose[3:7],
+                                    lowerLimits=self.robot.ll, upperLimits=self.robot.ul, jointRanges=self.robot.jr,
                                     maxNumIterations=20000, residualThreshold=0.0000001,
                                     physicsClientId=self.servers[0])
 
             ### step 3: check the validity of the IK
             isValid = self.planner.checkIK(
                 q_graspIK, self.robot.right_ee_idx, global_pose[0:3], self.robot, self.workspace)
-            
+
             if isValid:
                 ### generate pre-grasp pose and check its validity
                 prePickPose, prePickConfig = self.getPrePickPose(global_pose, "Right")
                 # raw_input("let's see next grasp")
                 if prePickConfig != None:
                     ### the pre-grasp is also valid
-                    ### Now let's add the poses and configs                    
+                    ### Now let's add the poses and configs
                     self.fingerPickPoses.append(global_pose)
                     self.fingerPickConfigs.append(list(q_graspIK[0:7]))
                     self.fingerLocalPoses.append(
@@ -400,7 +400,7 @@ class Experiment(object):
         self.fingerPrePickPaths = []
         for i in range(len(self.fingerPrePickConfigs)):
             temp_path = self.planner.shortestPathPlanning(
-                            currArmConfig, self.fingerPrePickConfigs[i], "rightPrePick_"+str(i), 
+                            currArmConfig, self.fingerPrePickConfigs[i], "rightPrePick_"+str(i),
                             self.robot, self.workspace, "Right")
             self.fingerPrePickPaths.append(temp_path)
 
@@ -418,7 +418,7 @@ class Experiment(object):
 
     def getPrePickPose(self, pickPose, handType):
         ### this function return pre-grasp poses and their correpsonding arm configs based on the pick poses
-        ### Here a pre-grasp pose is a pose which is 10cm away from 
+        ### Here a pre-grasp pose is a pose which is 10cm away from
         ### the approaching direction (always local z-axis of the gripper) of its corresponding grasp pose
 
         prePickConfig = None
@@ -438,18 +438,18 @@ class Experiment(object):
         prePickPose = temp_pos + temp_quat
 
         ### step 2: get the corresponding IK for the currently examined pose
-        q_preGraspIK = p.calculateInverseKinematics(bodyUniqueId=self.robot.motomanGEO_p, 
-                                endEffectorLinkIndex=ee_idx, 
-                                targetPosition=prePickPose[0:3], 
-                                targetOrientation=prePickPose[3:7], 
-                                lowerLimits=self.robot.ll, upperLimits=self.robot.ul, jointRanges=self.robot.jr, 
+        q_preGraspIK = p.calculateInverseKinematics(bodyUniqueId=self.robot.motomanGEO_p,
+                                endEffectorLinkIndex=ee_idx,
+                                targetPosition=prePickPose[0:3],
+                                targetOrientation=prePickPose[3:7],
+                                lowerLimits=self.robot.ll, upperLimits=self.robot.ul, jointRanges=self.robot.jr,
                                 maxNumIterations=20000, residualThreshold=0.0000001,
                                 physicsClientId=self.servers[0])
 
         ### step 3: check the validity of the IK
         isValid = self.planner.checkIK(
             q_preGraspIK, ee_idx, prePickPose[0:3], self.robot, self.workspace)
-        
+
         if isValid:
             if handType == "Left":
                 prePickConfig = list(q_preGraspIK[0:7])
@@ -466,11 +466,11 @@ class Experiment(object):
         else:
             ee_idx = self.robot.right_ee_idx
         ### get the corresponding IK for the currently examined pose
-        q_IK = p.calculateInverseKinematics(bodyUniqueId=self.robot.motomanGEO_p, 
-                                endEffectorLinkIndex=ee_idx, 
-                                targetPosition=armPose[0:3], 
-                                targetOrientation=armPose[3:7], 
-                                lowerLimits=self.robot.ll, upperLimits=self.robot.ul, jointRanges=self.robot.jr, 
+        q_IK = p.calculateInverseKinematics(bodyUniqueId=self.robot.motomanGEO_p,
+                                endEffectorLinkIndex=ee_idx,
+                                targetPosition=armPose[0:3],
+                                targetOrientation=armPose[3:7],
+                                lowerLimits=self.robot.ll, upperLimits=self.robot.ul, jointRanges=self.robot.jr,
                                 maxNumIterations=20000, residualThreshold=0.0000001,
                                 physicsClientId=self.servers[0])
         isValid = self.planner.checkIK(
@@ -490,7 +490,7 @@ class Experiment(object):
         object_global_pose = list(ls[0]) + list(ls[1])
         ### remove the old mesh of the grasped objectg
         self.removeOldMesh(self.object_to_manipulate_p, self.servers[0])
-        self.addNewMesh(self.object_to_manipulate_p, object_global_pose, self.servers[0])        
+        self.addNewMesh(self.object_to_manipulate_p, object_global_pose, self.servers[0])
 
 
 
@@ -518,7 +518,7 @@ class Experiment(object):
             euler_angles_in_radian = [i * math.pi/180 for i in angles]
             quat = p.getQuaternionFromEuler(euler_angles_in_radian)
             obj_meshID = p.loadURDF(
-                    fileName="./object_urdfs/"+objName+".urdf", 
+                    fileName="./object_urdfs/"+objName+".urdf",
                     basePosition=pos, baseOrientation=quat,
                     physicsClientId=clientID)
             temp_mesh = ObjectMesh(obj_meshID, objName, pos, quat, angles, self.objectsInfos[objName][0])
@@ -545,17 +545,17 @@ class Experiment(object):
         objectsPoses = []
 
         for objName in self.objectsInfos:
-            _c = p.createCollisionShape(shapeType=p.GEOM_MESH, 
+            _c = p.createCollisionShape(shapeType=p.GEOM_MESH,
                             fileName=self.objectsInfos[objName][0], meshScale=[1, 1, 1], physicsClientId=clientID)
-            _v = p.createVisualShape(shapeType=p.GEOM_MESH, 
+            _v = p.createVisualShape(shapeType=p.GEOM_MESH,
                             fileName=self.objectsInfos[objName][0], meshScale=[1, 1, 1], physicsClientId=clientID)
             pos = self.objectsInfos[objName][1]
             angles = self.objectsInfos[objName][2]
             euler_angles_in_radian = [i * math.pi/180 for i in angles]
             quat = p.getQuaternionFromEuler(euler_angles_in_radian)
-            # _m = p.createMultiBody(baseMass=massList[objName], baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v, 
+            # _m = p.createMultiBody(baseMass=massList[objName], baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
             #                                       basePosition=pos, baseOrientation=quat, physicsClientId=clientID)
-            _m = p.createMultiBody(baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v, 
+            _m = p.createMultiBody(baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
                                                 basePosition=pos, baseOrientation=quat, physicsClientId=clientID)
             temp_mesh = ObjectMesh(_m, objName, pos, quat, angles, self.objectsInfos[objName][0])
             objectsPoses.append(temp_mesh)
@@ -574,7 +574,7 @@ class Experiment(object):
                 targetObjectName = line[0]
             objectsInfos[line[0]] = []
             objectsInfos[line[0]].append("/mesh/"+line[0]+"/google_16k/textured.obj") ### put in the mesh file path
-            objectsInfos[line[0]].append([float(line[1]), float(line[2]), float(line[3])]) ### put in the obj pos info   
+            objectsInfos[line[0]].append([float(line[1]), float(line[2]), float(line[3])]) ### put in the obj pos info
             objectsInfos[line[0]].append([float(line[4]), float(line[5]), float(line[6])]) ### put in the obj orient info
             temp_counter += 1
         # for objName in objectsInfos:
@@ -589,7 +589,7 @@ class Experiment(object):
         if exp_mode == "e":
             planningServer = p.connect(p.DIRECT)
             executingServer = p.connect(p.DIRECT)
-        ### visualization mode: use this when you only want to see 
+        ### visualization mode: use this when you only want to see
         ### the visualization of the execution and the ground truth
         elif exp_mode == "v":
             planningServer = p.connect(p.DIRECT)
@@ -604,14 +604,14 @@ class Experiment(object):
 
 
     def addNewMesh(self, mesh_object, object_global_pose, clientID):
-        _c = p.createCollisionShape(shapeType=p.GEOM_MESH, 
+        _c = p.createCollisionShape(shapeType=p.GEOM_MESH,
                 fileName=self.objectsInfos[mesh_object.objName][0], meshScale=[1, 1, 1], physicsClientId=clientID)
-        _v = p.createVisualShape(shapeType=p.GEOM_MESH, 
+        _v = p.createVisualShape(shapeType=p.GEOM_MESH,
                 fileName=self.objectsInfos[mesh_object.objName][0], meshScale=[1, 1, 1], physicsClientId=clientID)
         pos = object_global_pose[0:3]
         quat = object_global_pose[3:7]
         angles = list(p.getEulerFromQuaternion(quat))
-        _m = p.createMultiBody(baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v, 
+        _m = p.createMultiBody(baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
                                     basePosition=pos, baseOrientation=quat, physicsClientId=clientID)
         mesh_object.update_m(_m)
         mesh_object.update_pos(pos)

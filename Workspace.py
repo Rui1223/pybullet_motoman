@@ -15,9 +15,9 @@ class Workspace(object):
         self.executingServer = servers[1]
         ### collect geometries from the workspace
         self.known_geometries_planning = []
-        self.known_geometries_executing = []        
+        self.known_geometries_executing = []
 
-        if self.theme == "Table": 
+        if self.theme == "Table":
             self.createTableScene(robotBasePosition)
             self.objectDropCenter = [
                 self.tablePosition[0], self.tablePosition[1], self.tablePosition[2]+0.8]
@@ -28,24 +28,24 @@ class Workspace(object):
 
 
     def createTableScene(self, robotBasePosition):
-        print "---------Enter to table scene!----------"
+        print("---------Enter to table scene!----------")
 
         ################ create the known geometries - standingBase  ####################
         self.standingBase_dim = np.array([0.915, 0.62, 0.19])
         self.standingBasePosition = [robotBasePosition[0], robotBasePosition[1], robotBasePosition[2]-self.standingBase_dim[2]/2-0.005]
-        self.standingBase_c_p = p.createCollisionShape(shapeType=p.GEOM_BOX, 
+        self.standingBase_c_p = p.createCollisionShape(shapeType=p.GEOM_BOX,
                                     halfExtents=self.standingBase_dim/2, physicsClientId=self.planningServer)
-        self.standingBase_v_p = p.createVisualShape(shapeType=p.GEOM_BOX, 
+        self.standingBase_v_p = p.createVisualShape(shapeType=p.GEOM_BOX,
                                     halfExtents=self.standingBase_dim/2, physicsClientId=self.planningServer)
         self.standingBaseM_p = p.createMultiBody(baseCollisionShapeIndex=self.standingBase_c_p, baseVisualShapeIndex=self.standingBase_v_p,
                                     basePosition=self.standingBasePosition, physicsClientId=self.planningServer)
-        self.standingBase_c_e = p.createCollisionShape(shapeType=p.GEOM_BOX, 
+        self.standingBase_c_e = p.createCollisionShape(shapeType=p.GEOM_BOX,
                                     halfExtents=self.standingBase_dim/2, physicsClientId=self.executingServer)
-        self.standingBase_v_e = p.createVisualShape(shapeType=p.GEOM_BOX, 
+        self.standingBase_v_e = p.createVisualShape(shapeType=p.GEOM_BOX,
                                     halfExtents=self.standingBase_dim/2, physicsClientId=self.executingServer)
         self.standingBaseM_e = p.createMultiBody(baseCollisionShapeIndex=self.standingBase_c_e, baseVisualShapeIndex=self.standingBase_v_e,
                                     basePosition=self.standingBasePosition, physicsClientId=self.executingServer)
-        print "standing base: " + str(self.standingBaseM_e)
+        print("standing base: " + str(self.standingBaseM_e))
         self.known_geometries_planning.append(self.standingBaseM_p)
         self.known_geometries_executing.append(self.standingBaseM_e)
         #################################################################################
@@ -68,7 +68,7 @@ class Workspace(object):
                                 halfExtents=self.table_dim/2, physicsClientId=self.executingServer)
         self.tableM_e = p.createMultiBody(baseCollisionShapeIndex=self.table_c_e, baseVisualShapeIndex=self.table_v_e,
                                             basePosition=self.tablePosition, physicsClientId=self.executingServer)
-        print "table: " + str(self.tableM_e)
+        print("table: " + str(self.tableM_e))
         self.known_geometries_planning.append(self.tableM_p)
         self.known_geometries_executing.append(self.tableM_e)
         #################################################################################
