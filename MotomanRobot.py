@@ -139,6 +139,8 @@ class MotomanRobot(object):
           print(p.getJointInfo(self.motomanGEO_p, i, self.planningServer))
 
 
+
+
 ############################ The following code is not used but be kept for legacy #############################
     # def moveSingleArm_controlArray(self, singleArmConfiguration, handType):
     #     if handType == "Left":

@@ -14,9 +14,8 @@ from skimage.io import imread, imsave
 
 class AzureKineticCamera(object):
 
-    def __init__(self, scene_index, tablePosition, table_dim):
+    def __init__(self, tablePosition, table_dim, scene_index, saveImages):
         self.scene_index = scene_index
-        self.rgbImg_path, self.depthImg_path, self.segmentationImg_path, self.data_path = self.createImageFolder(scene_index)
         self.cameraFinish = False
         self.camera_extrinsic = np.array(
             [[-0.0182505, -0.724286,  0.689259, 0.329174],
@@ -32,6 +31,10 @@ class AzureKineticCamera(object):
                 aspect=1.78,
                 nearVal=0.1,
                 farVal=1.5)
+
+        if saveImages:
+            self.createImageDataFolder()
+
 
     def takeImage(self, clientId, saveImages, frame_idx):
 
@@ -53,32 +56,33 @@ class AzureKineticCamera(object):
             ### segmentation
             np.save(self.segmentationImg_path + "/frame%06d"%frame_idx, segImg)
 
-    def createImageFolder(self, scene_index):
+
+    def createImageDataFolder(self):
         ### create a folder to store all the images generated from the current scene
-        img_path = os.getcwd() + "/sensor_images/" + scene_index
-        rgbImg_path = img_path + "/rgb"
-        depthImg_path = img_path + "/depth"
-        segmentationImg_path = img_path + "/segmentation"
-        data_path = img_path + "/data"
+        ### input -> scene_index
+        ### output -> rgbImg_path, depthImg_path, segmentationImg_path, data_path (self member)
+        self.img_path = os.getcwd() + "/sensor_images/" + self.scene_index
+        self.rgbImg_path = self.img_path + "/rgb"
+        self.depthImg_path = self.img_path + "/depth"
+        self.segmentationImg_path = self.img_path + "/segmentation"
+        self.data_path = self.img_path + "/data"
 
-        if os.path.exists(img_path):
-            shutil.rmtree(img_path)
-        os.makedirs(img_path)
+        if os.path.exists(self.img_path):
+            shutil.rmtree(self.img_path)
+        os.makedirs(self.img_path)
 
-        if os.path.exists(rgbImg_path):
-            shutil.rmtree(rgbImg_path)
-        os.makedirs(rgbImg_path)
+        if os.path.exists(self.rgbImg_path):
+            shutil.rmtree(self.rgbImg_path)
+        os.makedirs(self.rgbImg_path)
 
-        if os.path.exists(depthImg_path):
-            shutil.rmtree(depthImg_path)
-        os.makedirs(depthImg_path)
+        if os.path.exists(self.depthImg_path):
+            shutil.rmtree(self.depthImg_path)
+        os.makedirs(self.depthImg_path)
 
-        if os.path.exists(segmentationImg_path):
-            shutil.rmtree(segmentationImg_path)
-        os.makedirs(segmentationImg_path)
+        if os.path.exists(self.segmentationImg_path):
+            shutil.rmtree(self.segmentationImg_path)
+        os.makedirs(self.segmentationImg_path)
 
-        if os.path.exists(data_path):
-            shutil.rmtree(data_path)
-        os.makedirs(data_path)
-
-        return rgbImg_path, depthImg_path, segmentationImg_path, data_path
+        if os.path.exists(self.data_path):
+            shutil.rmtree(self.data_path)
+        os.makedirs(self.data_path)
