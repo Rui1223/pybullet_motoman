@@ -13,8 +13,10 @@ class MotomanRobot(object):
         self.known_geometries_planning = []
         self.known_geometries_executing = []
         ### get the urdf
-        self.motomanGEO_p = p.loadURDF("motoman.urdf", useFixedBase=True, flags=p.URDF_USE_SELF_COLLISION, physicsClientId=self.planningServer)
-        self.motomanGEO_e = p.loadURDF("motoman.urdf", useFixedBase=True, physicsClientId=self.executingServer)
+        loc = "/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src/"
+        self.motomanGEO_p = p.loadURDF(loc+"motoman.urdf", useFixedBase=True, \
+                                            flags=p.URDF_USE_SELF_COLLISION, physicsClientId=self.planningServer)
+        self.motomanGEO_e = p.loadURDF(loc+"motoman.urdf", useFixedBase=True, physicsClientId=self.executingServer)
         self.known_geometries_planning.append(self.motomanGEO_p)
         self.known_geometries_executing.append(self.motomanGEO_e)
 

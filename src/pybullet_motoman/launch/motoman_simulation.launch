@@ -1,0 +1,4 @@
+<launch>
+	<node pkg="pybullet_motoman" type="sceneGenerator.py" name="image_taker" args="$(arg motoman_args)"
+		output="screen" required="true" />
+</launch>

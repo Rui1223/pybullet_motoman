@@ -59,7 +59,7 @@ object_configs_angles = {
 }
 ### add an object
 object_pose = utils.dropObjectOnTable(object_name, object_configs_angles[object_name], workspace.tablePosition, workspace.table_dim, 0.15, servers[1])
-raw_input("press ENTER to take image")
+time.sleep(3)
 camera.takeImage(servers[1], saveImages, 1)
 
 pos, quat = p.getBasePositionAndOrientation(object_pose.m, servers[1])

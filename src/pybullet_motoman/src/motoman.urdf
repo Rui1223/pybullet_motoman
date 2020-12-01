@@ -410,7 +410,7 @@
     <origin rpy="3.141 0 0" xyz="0 0 -0.028"/>
   </joint>
   <link name="motoman_left_hand">
-<!--     <visual>
+    <visual>
       <geometry>
         <mesh filename="sda10f_description/meshes/sda10f/visual/vacuum_gripper_no_mouth.stl"/>
       </geometry>
@@ -425,8 +425,8 @@
       <material name="yellow">
         <color rgba="0 1 1 1"/>
       </material>
-    </collision> -->
-    <visual>
+    </collision>
+<!--     <visual>
       <geometry>
         <mesh filename="sda10f_description/meshes/sda10f/visual/baxter_suction2.stl"/>
       </geometry>
@@ -441,7 +441,7 @@
       <material name="yellow">
         <color rgba="0 1 1 1"/>
       </material>
-    </collision>
+    </collision> -->
 
     </link>
   <joint name="motoman_left_joint_ee" type="fixed">
