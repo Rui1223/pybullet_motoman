@@ -31,7 +31,7 @@ def genServers(exp_mode):
     return [planningServer, executingServer]
 
 
-def dropObjectOnTable(obj_name, obj_configs_angles, tablePosition, table_dim, dropHeight, serverClientID):
+def dropObjectOnTable(mesh_folder, obj_name, obj_configs_angles, tablePosition, table_dim, dropHeight, serverClientID):
     ### This function drop an obj of a specified configs and random position (table region)
     ### on the table
     ### input -> obj_name, the name of the object you want to drop
@@ -54,11 +54,9 @@ def dropObjectOnTable(obj_name, obj_configs_angles, tablePosition, table_dim, dr
         "019_pitcher_base": 1.6,
         "021_bleach_cleanser": 2.7
     }
-    loc = "/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src/"
-    _c = p.createCollisionShape(shapeType=p.GEOM_MESH,
-                    fileName=loc+"/mesh/"+obj_name+"/google_16k/textured.obj", meshScale=[1, 1, 1], physicsClientId=serverClientID)
-    _v = p.createVisualShape(shapeType=p.GEOM_MESH,
-                    fileName=loc+"/mesh/"+obj_name+"/google_16k/textured.obj", meshScale=[1, 1, 1], physicsClientId=serverClientID)
+    obj_path = os.path.join(mesh_folder, obj_name, "google_16k/textured.obj")
+    _c = p.createCollisionShape(shapeType=p.GEOM_MESH, fileName=obj_path, meshScale=[1, 1, 1], physicsClientId=serverClientID)
+    _v = p.createVisualShape(shapeType=p.GEOM_MESH, fileName=obj_path, meshScale=[1, 1, 1], physicsClientId=serverClientID)
     ### random position given the table position and table_dim
     temp_pos = [random.uniform(tablePosition[0]-table_dim[0]/2+0.1, tablePosition[0]+table_dim[0]/2-0.1), \
                 random.uniform(tablePosition[1]+0.1, tablePosition[1]+table_dim[1]/2-0.1), \
@@ -81,7 +79,7 @@ def dropObjectOnTable(obj_name, obj_configs_angles, tablePosition, table_dim, dr
     p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=serverClientID)
 
     pos, quat = p.getBasePositionAndOrientation(_m, physicsClientId=serverClientID)
-    object_pose = ObjectMesh(_m, obj_name, list(pos), list(quat), list(p.getEulerFromQuaternion(list(quat))), "/mesh/"+obj_name+"/google_16k/textured.obj")
+    object_pose = ObjectMesh(_m, obj_name, list(pos), list(quat), list(p.getEulerFromQuaternion(list(quat))), obj_path)
     print("object position on the table: " + str(object_pose.pos))
     print("object orientation on the table: " + str(object_pose.angles))
 
@@ -112,4 +110,4 @@ class ObjectMesh:
 
 
 
-    
+

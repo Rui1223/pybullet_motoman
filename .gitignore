@@ -1,9 +1,8 @@
 __pycache__/
-src/pybullet_motoman/src/sensor_images/
-src/pybullet_motoman/src/object_urdfs/
-src/pybullet_motoman/src/ground_truth_objectsPlacement/
-src/pybullet_motoman/src/gripper_poses
-src/pybullet_motoman/src/legacy/main_planner
+src/sensor_images/
+src/object_urdfs/
+src/ground_truth_objectsPlacement/
+src/gripper_poses
+src/legacy/main_planner
 *.pyc
-build/
-devel/
+.vscode/

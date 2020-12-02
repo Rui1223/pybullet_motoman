@@ -4,27 +4,30 @@ import pybullet_data
 import time
 
 class MotomanRobot(object):
-    ### Define the robot
-    def __init__(self, servers):
+
+    def __init__(self, servers, urdf_filepath):
         ### get the server
         self.planningServer = servers[0]
         self.executingServer = servers[1]
+
         ### collect geometries from the robot
         self.known_geometries_planning = []
         self.known_geometries_executing = []
-        ### get the urdf
-        loc = "/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src/"
-        self.motomanGEO_p = p.loadURDF(loc+"motoman.urdf", useFixedBase=True, \
-                                            flags=p.URDF_USE_SELF_COLLISION, physicsClientId=self.planningServer)
-        self.motomanGEO_e = p.loadURDF(loc+"motoman.urdf", useFixedBase=True, physicsClientId=self.executingServer)
+
+        ### get urdf
+        self.motomanGEO_p = p.loadURDF(urdf_filepath, useFixedBase=True,
+                                       flags=p.URDF_USE_SELF_COLLISION, physicsClientId=self.planningServer)
+        self.motomanGEO_e = p.loadURDF(urdf_filepath, useFixedBase=True, physicsClientId=self.executingServer)
         self.known_geometries_planning.append(self.motomanGEO_p)
         self.known_geometries_executing.append(self.motomanGEO_e)
 
         ### reset the base of motoman
         self.BasePosition = [0, 0, 0]
         self.BaseOrientation = [0, 0, 0, 1]
+
         ### set motoman home configuration
         self.homeConfiguration = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
         ### update its current configuration
         self.updateLeftArmConfig(self.homeConfiguration[0:7], self.planningServer)
         self.updateRightArmConfig(self.homeConfiguration[7:14], self.planningServer)

@@ -63,7 +63,8 @@ class AzureKineticCamera(object):
         ### create a folder to store all the images generated from the current scene
         ### input -> scene_index
         ### output -> rgbImg_path, depthImg_path, segmentationImg_path, data_path (self member)
-        self.img_path = "/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src/sensor_images/" + self.scene_index
+        # self.img_path = "/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src/sensor_images/" + self.scene_index
+        self.img_path = os.path.join("sensor_images", self.scene_index)
         self.rgbImg_path = self.img_path + "/rgb"
         self.depthImg_path = self.img_path + "/depth"
         self.segmentationImg_path = self.img_path + "/segmentation"
