@@ -3,6 +3,6 @@ src/sensor_images/
 src/object_urdfs/
 src/ground_truth_objectsPlacement/
 src/gripper_poses
-src/legacy/main_planner
+src/backup/main_planner
 *.pyc
 .vscode/
