@@ -8,9 +8,11 @@ project(pybullet_motoman)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
+  cv_bridge
   rospy
+  sensor_msgs
   std_msgs
+  roscpp
 )
 
 
@@ -110,8 +112,10 @@ catkin_package(
 #  DEPENDS system_lib
 )
 
-catkin_install_python(PROGRAMS src/sceneGenerator.py
-                      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+catkin_install_python(PROGRAMS 
+	script/scene_registration.py 
+	script/pybullet_real_scene.py
+    	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 ###########
 ## Build ##
