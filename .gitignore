@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
+backup/
+sensor_images/
+src/
+roadmaps/
 .vscode/
