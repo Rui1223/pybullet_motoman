@@ -113,7 +113,6 @@ catkin_package(
 )
 
 catkin_install_python(PROGRAMS 
-	script/scene_registration.py 
 	script/pybullet_real_scene.py
     	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 

@@ -1,8 +1,3 @@
 __pycache__/
-src/sensor_images/
-src/object_urdfs/
-src/ground_truth_objectsPlacement/
-src/gripper_poses
-src/backup/main_planner
 *.pyc
 .vscode/
