@@ -31,9 +31,11 @@
 		<rosparam param="dropHeight">0.15</rosparam>
 	</group>
 
+    <arg name="pybullet_real_scene" value="3 n 003_cracker_box"/>
 	<!-- the following node expected argument pybullet_real_scene <scene_index(int) saveImage(bool) objectName(string)> -->
 	<node pkg="pybullet_motoman" type="pybullet_real_scene.py" name="pybullet_real_scene" args="$(arg pybullet_real_scene)"
-		output="screen" required="True" />
+		output="screen" required="True">
+    </node>
 
 
 </launch>

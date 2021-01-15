@@ -83,6 +83,16 @@ class MotomanRobot(object):
 
 
     def getJointState(self):
+        #TODO: update joint state 
+        self.leftArmCurrConfiguration = []
+        self.rightArmCurrConfiguration = []
+        for j in range(1,8):
+            state = p.getJointState(self.motomanGEO, j, self.server)
+            self.leftArmCurrConfiguration.append(state[0])
+        for j in range(11,18):
+            state = p.getJointState(self.motomanGEO, j, self.server)
+            self.rightArmCurrConfiguration.append(state[0])
+
         return self.motomanRJointNames, self.leftArmCurrConfiguration + self.rightArmCurrConfiguration
 
 
@@ -90,13 +100,14 @@ class MotomanRobot(object):
         ################# information related to Motoman arm (joint info) #################
         ### output: self.motomanRJointNames [7 left joints, 7 right joints] 14*1        
         self.motomanRJointNames = []
+        # NOTE: Fix binary string to string 
         num_joints = p.getNumJoints(self.motomanGEO, self.server)
         for i in range(num_joints):
             jointInfo = p.getJointInfo(self.motomanGEO, i, self.server)
             # print(jointInfo)
             if jointInfo[2] == 0:
                 ### only get revolute joint
-                self.motomanRJointNames.append(jointInfo[1])
+                self.motomanRJointNames.append(jointInfo[1].decode('ascii'))
 
 
     def printRJointNames(self):

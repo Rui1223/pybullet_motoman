@@ -13,7 +13,7 @@ import math
 import numpy as np
 import time
 import IPython
-
+import rospy
 
 
 
@@ -52,8 +52,9 @@ def dropObjectOnTable(mesh_folder, obj_name,
         "019_pitcher_base": 1.6,
         "021_bleach_cleanser": 2.7
     }
-
+    rospy.loginfo("mesh folder: %s" % (mesh_folder))
     obj_path = os.path.join(mesh_folder, obj_name, "google_16k/textured.obj")
+    rospy.loginfo('obj_path: %s' % (obj_path))
     _c = p.createCollisionShape(shapeType=p.GEOM_MESH, fileName=obj_path, meshScale=[1, 1, 1], physicsClientId=server)
     _v = p.createVisualShape(shapeType=p.GEOM_MESH, fileName=obj_path, meshScale=[1, 1, 1], physicsClientId=server)
     ### random position given the table position and table_dim
@@ -75,7 +76,7 @@ def dropObjectOnTable(mesh_folder, obj_name,
     ### ready to drop the object
     # raw_input("press ENTER to drop the object")
     p.setGravity(0.0, 0.0, -9.8, physicsClientId=server)
-    p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=server)
+    p.setRealTimeSimulation(enableRealTimeSimulation=0, physicsClientId=server)
     ### wait for one second after the drop
     time.sleep(1)
 
@@ -501,7 +502,7 @@ def dropObjectOnTable1(mesh_folder, obj_name, obj_configs_angles, tablePosition,
     ### ready to drop the object
     # raw_input("press ENTER to drop the object")
     p.setGravity(0.0, 0.0, -9.8, physicsClientId=serverClientID)
-    p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=serverClientID)
+    p.setRealTimeSimulation(enableRealTimeSimulation=0, physicsClientId=serverClientID)
 
     pos, quat = p.getBasePositionAndOrientation(_m, physicsClientId=serverClientID)
     object_pose = ObjectMesh(_m, obj_name, list(pos), list(quat), list(p.getEulerFromQuaternion(list(quat))), obj_path)

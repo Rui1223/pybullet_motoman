@@ -11,12 +11,9 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 
 import utils
-print(utils.__dict__)
-print(utils)
 from MotomanRobot import MotomanRobot
 from WorkspaceTable import WorkspaceTable
 from SimulatedCamera import SimulatedCamera
-from MotomanController import MotomanController
 
 import rospy
 import rospkg
@@ -87,7 +84,7 @@ def main(args):
     rgbImg_pub = rospy.Publisher('rgb_images', Image, queue_size=10)
     jointState_pub = rospy.Publisher("joint_states", JointState, queue_size=3)
     rospy.init_node("pybullet_real_scene", anonymous=True)
-    rate = rospy.Rate(500) ### 10hz
+    rate = rospy.Rate(10) ### 10hz
     rospack = rospkg.RosPack() ### https://wiki.ros.org/Packages
 
     ### set the server for the pybullet real scene
@@ -102,7 +99,7 @@ def main(args):
     ### configure the workspace
     workspace_e = WorkspaceTable(robot_e.basePosition, 
         standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
-        executingClientID)
+        executingClientID)z
 
     ### indicate which scene you are working on and whether you want to save images
     scene_index = sys.argv[1]
@@ -122,15 +119,13 @@ def main(args):
             executingClientID)
 
 
-    # configure the controller
-    # setup the step function for perception
-    def sim_step_func():
+    while not rospy.is_shutdown():
         ### get the time stamp
         time_stamp = rospy.get_time()
-        #rospy.loginfo("time stamp for image and joint state publisher %s" % time_stamp)
+        rospy.loginfo("time stamp for image and joint state publisher %s" % time_stamp)
 
         ### get the image
-        #rgbImg = camera_e.takeRGBImage()
+        rgbImg = camera_e.takeRGBImage()
         ### get current joint state
         motomanRJointNames, armCurrConfiguration = robot_e.getJointState()
 
@@ -141,67 +136,16 @@ def main(args):
         joint_state_msg.name = motomanRJointNames
         joint_state_msg.position = armCurrConfiguration
         ### convert the image format to ros message
-        #rgb_msg = CvBridge().cv2_to_imgmsg(rgbImg)
+        rgb_msg = CvBridge().cv2_to_imgmsg(rgbImg)
 
         ### publish the message
-        #rgbImg_pub.publish(rgb_msg)
+        rgbImg_pub.publish(rgb_msg)
         ### publish the message
-
-        # print('joint state names:')
-        # print(motomanRJointNames)
-        # print('joint state config:')
-        # print(armCurrConfiguration)
-        
-
         jointState_pub.publish(joint_state_msg)
 
+        
+        rate.sleep()
 
-    # reset robot using traj
-    import json
-    f = open('/home/yinglong/Documents/research/task_motion_planning/infrastructure/motoman_ws/src/pybullet_motoman/script/traj1.json', 'r')
-    traj_dict = json.load(f)
-    joint_names = traj_dict[0]['joint'].keys()
-    # map from name to id
-    joint_name_to_id = {}
-    num_joints = p.getNumJoints(robot_e.motomanGEO, executingClientID)
-    for i in range(num_joints):
-        jointInfo = p.getJointInfo(robot_e.motomanGEO, i, executingClientID)
-        joint_name_to_id[jointInfo[1].decode('ascii')] = i
-    for name in joint_names:
-        j = joint_name_to_id[name]
-        p.resetJointState(robot_e.motomanGEO, j, traj_dict[0]['joint'][name], physicsClientId=executingClientID)
-
-
-    motomanRJointNames, armCurrConfiguration = robot_e.getJointState()
-
-    # this will create the trajectory server for tracking
-    rospy.loginfo('starting controller...')
-    #p.setTimeStep(0.0001)
-    #1/240
-    for i in range(1,8):
-        p.changeDynamics(robot_e.motomanGEO, i, lateralFriction=0., linearDamping=0., angularDamping=0., \
-                            physicsClientId=executingClientID)
-    for i in range(11,18):
-        p.changeDynamics(robot_e.motomanGEO, i, lateralFriction=0., linearDamping=0., angularDamping=0., \
-                            physicsClientId=executingClientID)
-
-    controller_e = MotomanController(sim_step_func, time_step=1/240, robot_id=robot_e.motomanGEO, robot_joints=motomanRJointNames,\
-                                     pybullet_client_id=executingClientID)
-
-
-    while not rospy.is_shutdown():
-        if not controller_e.executing:
-            # keep the velocity zero
-            #print('executing is false...')
-            sim_step_func()
-            for i in range(1,8):
-                p.setJointMotorControl2(robot_e.motomanGEO, i, p.VELOCITY_CONTROL, targetVelocity=0, physicsClientId=executingClientID)
-            for i in range(11,18):
-                p.setJointMotorControl2(robot_e.motomanGEO, i, p.VELOCITY_CONTROL, targetVelocity=0, physicsClientId=executingClientID)
-
-            p.stepSimulation(executingClientID)
-
-            rate.sleep()
 
     rospy.spin()
 
