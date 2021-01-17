@@ -82,7 +82,50 @@ class MotomanRobot(object):
         p.stepSimulation(physicsClientId=self.server)
 
 
+    def setSingleArmToConfig(self, singleArmConfig, armType):
+        ### the planning version of moveSingArm
+        if armType == "Left":
+            for j in range(1, 8):
+                p.resetJointState(self.motomanGEO, j, singleArmConfig[j-1], physicsClientId=self.server)
+            for j in range(11, 18):
+                p.resetJointState(self.motomanGEO, j, self.rightArmCurrConfiguration[j-11], physicsClientId=self.server)
+        else:
+            for j in range(1, 8):
+                p.resetJointState(self.motomanGEO, j, self.leftArmCurrConfiguration[j-1], physicsClientId=self.server)
+            for j in range(11, 18):
+                p.resetJointState(self.motomanGEO, j, singleArmConfig[j-11], physicsClientId=self.server)
+
+        p.stepSimulation(physicsClientId=self.server)
+
+
+    def moveSingleArm(self, singleArmConfiguration, armType):
+        ### move single arm by resetJointState() function
+        if armType == "Left":
+            for j in range(1, 8):
+                p.resetJointState(self.motomanGEO, j, singleArmConfiguration[j-1], physicsClientId=self.server)
+            self.updateSingleArmConfig(singleArmConfiguration, armType)
+
+        else:
+            for j in range(11, 18):
+                p.resetJointState(self.motomanGEO, j, singleArmConfiguration[j-11], physicsClientId=self.server)
+            self.updateSingleArmConfig(singleArmConfiguration, armType)
+
+
     def getJointState(self):
+        left_joint_state = p.getJointStates(
+                bodyUniqueId=self.motomanGEO, jointIndices=range(1, 8), physicsClientId=self.server)
+        right_joint_state = p.getJointStates(
+                bodyUniqueId=self.motomanGEO, jointIndices=range(11, 18), physicsClientId=self.server)
+        temp_left_arm_config = []
+        temp_right_arm_config = []
+        for joint in left_joint_state:
+            temp_left_arm_config.append(joint[0])
+        for joint in right_joint_state:
+            temp_right_arm_config.append(joint[0])
+
+        self.updateSingleArmConfig(temp_left_arm_config, "Left")
+        self.updateSingleArmConfig(temp_right_arm_config, "Right")
+
         return self.motomanRJointNames, self.leftArmCurrConfiguration + self.rightArmCurrConfiguration
 
 

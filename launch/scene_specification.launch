@@ -3,8 +3,8 @@
 		<!-- specification of the motoman robot -->
 		<rosparam param="basePosition">[0.0, 0.0, 0.0]</rosparam>
 		<rosparam param="baseOrientation">[0.0, 0.0, 0.0, 1.0]</rosparam>
-		<rosparam param="leftArmHomeConfiguration">[2.827, -1.257, 3.142, 0.000, -1.571, -1.571, 0.000]</rosparam>
-		<rosparam param="rightArmHomeConfiguration">[2.827, -1.257, 3.142, 0.000, -1.571, -1.571, 0.000]</rosparam>
+		<rosparam param="leftArmHomeConfiguration">[2.827, -1.257, 2.67, 0.000, -1.571, -1.571, 0.000]</rosparam>
+		<rosparam param="rightArmHomeConfiguration">[2.827, -1.257, 2.67, 0.000, -1.571, -1.571, 0.000]</rosparam>
 		<rosparam param="urdfFile">urdf/motoman.urdf</rosparam>
 	</group>
 
@@ -31,9 +31,16 @@
 		<rosparam param="dropHeight">0.15</rosparam>
 	</group>
 
-	<!-- the following node expected argument pybullet_real_scene <scene_index(int) saveImage(bool) objectName(string)> -->
-	<node pkg="pybullet_motoman" type="pybullet_real_scene.py" name="pybullet_real_scene" args="$(arg pybullet_real_scene)"
+	<!-- the following node expected argument PybulletExecutionScene <scene_index(int) saveImage(bool) objectName(string)> -->
+	<node pkg="pybullet_motoman" type="PybulletExecutionScene.py" name="pybullet_execution_scene" 
+		args="$(arg pybullet_execution_scene)" output="screen" required="True" />
+
+	<node pkg="pybullet_motoman" type="PybulletPlanScene.py" name="pybullet_plan_scene"
 		output="screen" required="True" />
+
+	<node pkg="pybullet_motoman" type="fake_perception.py" name="fake_perception"
+		output="screen" required="True" />
+
 
 
 </launch>
