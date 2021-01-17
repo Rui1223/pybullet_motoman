@@ -1,0 +1,8 @@
+# This srv file defines the service
+# for a need to execute a given trajectory
+# on a specified arm
+
+sensor_msgs/JointState[] joint_trajectory
+pybullet_motoman/ArmType armType
+---
+bool success
