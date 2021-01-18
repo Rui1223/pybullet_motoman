@@ -12,7 +12,6 @@ import utils
 from MotomanRobot import MotomanRobot
 from WorkspaceTable import WorkspaceTable
 from Planner import Planner
-# from MotionExecutor import MotionExecutor
 
 import rospy
 import rospkg
@@ -54,6 +53,8 @@ class PybulletPlanScene(object):
 
 
         self.rosInit() ### initialize a ros node
+
+        raw_input("press enter to continue")
 
 
     def readROSParam(self):
