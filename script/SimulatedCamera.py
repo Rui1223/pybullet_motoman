@@ -52,7 +52,7 @@ class SimulatedCamera(object):
             physicsClientId=self.server
         )
 
-        return cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR)
+        return cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR), depthImg
 
 
     def saveImage(imageType, Img, frame_idx):
