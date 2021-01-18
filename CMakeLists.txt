@@ -58,6 +58,7 @@ add_message_files(
   BoundingBox3D.msg
   ObjectEstimate3D.msg
   ArmType.msg
+  EEPoses.msg
 )
 
 ## Generate services in the 'srv' folder
