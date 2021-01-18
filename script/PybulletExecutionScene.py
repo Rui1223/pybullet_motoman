@@ -53,7 +53,7 @@ class PybulletExecutionScene(object):
         ### set up the camera
         self.setupCamera(camera_extrinsic, camera_intrinsic, args)
 
-        ### after initialize the scene, 
+        ### after initialize the scene,
         ### randomize an object in the scene (drop an object on the table)
         self.object_name = args[3]
         self.workspace_e.dropObjectOnTable(self.object_name, dropHeight)
@@ -62,7 +62,7 @@ class PybulletExecutionScene(object):
         self.rosInit() ### initialize a ros node
 
     def readROSParam(self):
-        ### This functions read in needed ROS parameters    
+        ### This functions read in needed ROS parameters
         while not rospy.has_param('/motoman_robot/basePosition'):
             rospy.sleep(0.2)
         basePosition = rospy.get_param('/motoman_robot/basePosition')
@@ -142,20 +142,20 @@ class PybulletExecutionScene(object):
         return ExecuteTrajectoryResponse(True)
 
 
-    def configureMotomanRobot(self, 
+    def configureMotomanRobot(self,
                 urdfFile, basePosition, baseOrientation,
                 leftArmHomeConfiguration, rightArmHomeConfiguration):
         ### This function configures the robot in the real scene ###
         self.robot_e = MotomanRobot(
-            os.path.join(self.rospack.get_path("pybullet_motoman"), urdfFile), 
-            basePosition, baseOrientation, leftArmHomeConfiguration, rightArmHomeConfiguration, 
+            os.path.join(self.rospack.get_path("pybullet_motoman"), urdfFile),
+            basePosition, baseOrientation, leftArmHomeConfiguration, rightArmHomeConfiguration,
             self.executingClientID)
 
     def setupWorkspace(self,
-            standingBase_dim, table_dim, table_offset_x, 
+            standingBase_dim, table_dim, table_offset_x,
             transitCenterHeight, object_mesh_path):
         ### This function sets up the workspace ###
-        self.workspace_e = WorkspaceTable(self.robot_e.basePosition, 
+        self.workspace_e = WorkspaceTable(self.robot_e.basePosition,
             standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
             os.path.join(self.rospack.get_path("pybullet_motoman"), object_mesh_path),
             self.executingClientID)
@@ -167,7 +167,7 @@ class PybulletExecutionScene(object):
         self.scene_index = args[1]
         self.saveImages = (args[2] in ('y', 'Y')) ### decide whether to save images or not
         self.camera_e = SimulatedCamera(
-            self.workspace_e.tablePosition, self.workspace_e.table_dim, 
+            self.workspace_e.tablePosition, self.workspace_e.table_dim,
             camera_extrinsic, camera_intrinsic,
             self.scene_index, self.saveImages,
             self.executingClientID)
@@ -177,6 +177,7 @@ def main(args):
 
     pybullet_execution_scene = PybulletExecutionScene(args)
     rate = rospy.Rate(10) ### 10hz
+    bridge = CvBridge()
 
     while not rospy.is_shutdown():
         ### get the time stamp
@@ -195,14 +196,14 @@ def main(args):
         joint_state_msg.name = motomanRJointNames
         joint_state_msg.position = armCurrConfiguration
         ### convert the image format to ros message
-        rgb_msg = CvBridge().cv2_to_imgmsg(rgbImg)
+        rgb_msg = bridge.cv2_to_imgmsg(rgbImg, 'bgr8')
 
         ### publish the message
         pybullet_execution_scene.rgbImg_pub.publish(rgb_msg)
         ### publish the message
         pybullet_execution_scene.jointState_pub.publish(joint_state_msg)
 
-        
+
         rate.sleep()
 
 

@@ -12,7 +12,7 @@ import utils
 from MotomanRobot import MotomanRobot
 from WorkspaceTable import WorkspaceTable
 from Planner import Planner
-from MotionExecutor import MotionExecutor
+# from MotionExecutor import MotionExecutor
 
 import rospy
 import rospkg
@@ -20,8 +20,6 @@ from std_msgs.msg import String
 from sensor_msgs.msg import JointState
 
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningResponse
-from pybullet_motoman.msg import PoseSequence3D, ObjectEstimate3D
-from pybullet_motoman.msg import Pose3D, BoundingBox3D
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryRequest
 
 ### This class defines a PybulletPlanScene class which
@@ -117,15 +115,15 @@ class PybulletPlanScene(object):
     def motion_plan_callback(self, req):
 
         ### given the request data: object_estimate
-        ### update the object geometry in the plan scene 
+        ### update the object geometry in the plan scene
         ### (either for target or collision check)
         self.workspace_p.updateObjectGeomeotry_BoundingBox(
-            req.object_estimate.pose, req.object_estimate.dim)
+            req.bbox_pose, req.bbox_dims)
 
         ### analyze the target configuration of the robot given the grasp pose
         ### so far we only care about the best grasp pose
         target_config = self.planner_p.generateConfigFromPose(
-            req.grasp_pose_candidates.pose_sequence[0], self.robot_p, self.workspace_p, "Left")
+            req.grasp_pose_candidates[0], self.robot_p, self.workspace_p, "Left")
 
         ### get the current robot config from real scene by looking at the topic "joint_states"
         joint_states_msg = rospy.wait_for_message('joint_states', JointState)
@@ -136,7 +134,7 @@ class PybulletPlanScene(object):
 
         ### with target_config and current arm config, we can send a planning query
         result_path = self.planner_p.shortestPathPlanning(
-                            self.robot_p.leftArmCurrConfiguration, target_config, 
+                            self.robot_p.leftArmCurrConfiguration, target_config,
                             "LeftPick", self.robot_p, self.workspace_p, "Left")
 
         if result_path != None:
@@ -168,15 +166,15 @@ class PybulletPlanScene(object):
                 leftArmHomeConfiguration, rightArmHomeConfiguration):
         ### This function configures the robot in the planning scene ###
         self.robot_p = MotomanRobot(
-            os.path.join(self.rospack.get_path("pybullet_motoman"), urdfFile), 
-            basePosition, baseOrientation, leftArmHomeConfiguration, rightArmHomeConfiguration, 
+            os.path.join(self.rospack.get_path("pybullet_motoman"), urdfFile),
+            basePosition, baseOrientation, leftArmHomeConfiguration, rightArmHomeConfiguration,
             self.planningClientID)
 
     def setupWorkspace(self,
-            standingBase_dim, table_dim, table_offset_x, 
+            standingBase_dim, table_dim, table_offset_x,
             transitCenterHeight, object_mesh_path):
         ### The function sets up the workspace
-        self.workspace_p = WorkspaceTable(self.robot_p.basePosition, 
+        self.workspace_p = WorkspaceTable(self.robot_p.basePosition,
             standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
             os.path.join(self.rospack.get_path("pybullet_motoman"), object_mesh_path),
             self.planningClientID)

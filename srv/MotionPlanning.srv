@@ -1,8 +1,9 @@
 # This srv file defines the servce
-# for a single motion planning query 
+# for a single motion planning query
 # given the updated object pose and robot grasp pose
 
-pybullet_motoman/PoseSequence3D grasp_pose_candidates
-pybullet_motoman/ObjectEstimate3D object_estimate
+geometry_msgs/Pose[] grasp_pose_candidates
+geometry_msgs/Pose bbox_pose
+float32[] bbox_dims
 ---
 bool success

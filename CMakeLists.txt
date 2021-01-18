@@ -53,10 +53,6 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  Pose3D.msg
-  PoseSequence3D.msg
-  BoundingBox3D.msg
-  ObjectEstimate3D.msg
   ArmType.msg
 )
 
@@ -116,7 +112,7 @@ catkin_package(
 #  DEPENDS system_lib
 )
 
-catkin_install_python(PROGRAMS 
+catkin_install_python(PROGRAMS
 	script/PybulletExecutionScene.py
 	script/PybulletPlanScene.py
 	script/fake_perception.py
