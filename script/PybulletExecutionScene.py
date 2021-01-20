@@ -25,8 +25,10 @@ import rospkg
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import JointState
+from geometry_msgs.msg import Pose
 from pybullet_motoman.msg import ArmType
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryResponse
+from pybullet_motoman.msg import EEPoses
 
 ### This class defines a PybulletExecutionScene class which
 ### (1) sets up the robot, table and camera
@@ -43,6 +45,8 @@ class PybulletExecutionScene(object):
         camera_extrinsic, camera_intrinsic, object_mesh_path, dropHeight = self.readROSParam()
         self.rospack = rospkg.RosPack() ### https://wiki.ros.org/Packages
 
+        self.rosInit() ### initialize a ros node
+
         ### set the server for the pybullet real scene
         # self.executingClientID = p.connect(p.DIRECT)
         self.executingClientID = p.connect(p.GUI)
@@ -51,7 +55,9 @@ class PybulletExecutionScene(object):
         # print("plugin=", self.egl_plugin)
 
         ### create an executor assistant
-        self.executor_e = Executor(self.executingClientID)
+        self.executor_e = Executor(self.executingClientID,
+            isObjectInLeftHand=False, isObjectInRightHand=False,
+            objectInLeftHand=None, objectInRightHand=None)
 
         ### configure the robot
         self.configureMotomanRobot(urdfFile, basePosition, baseOrientation, \
@@ -66,11 +72,6 @@ class PybulletExecutionScene(object):
         ### randomize an object in the scene (drop an object on the table)
         self.object_name = args[3]
         self.workspace_e.dropObjectOnTable(self.object_name, dropHeight)
-
-
-        self.rosInit() ### initialize a ros node
-
-        # raw_input("press enter to continue")
 
     def readROSParam(self):
         ### This functions read in needed ROS parameters
@@ -131,16 +132,19 @@ class PybulletExecutionScene(object):
             standingBase_dim, table_dim, table_offset_x, transitCenterHeight, \
             camera_extrinsic, camera_intrinsic, object_mesh_path, dropHeight
 
+
     def rosInit(self):
         ### This function specifies the role of a node instance for this class ###
         ### and initialize a ros node ###
         ### specify the role of a node instance for this class
-        self.color_im_pub = rospy.Publisher('rgb_images', Image, queue_size=1)
-        self.depth_im_pub = rospy.Publisher('depth_images', Image, queue_size=1)
-
-        self.jointState_pub = rospy.Publisher("joint_states", JointState, queue_size=3)
-        execute_trajectory_server = rospy.Service("execute_trajectory", ExecuteTrajectory, self.execute_traj_callback)
+        self.rgbImg_pub = rospy.Publisher('rgb_images', Image, queue_size=10)
+        self.depthImg_pub = rospy.Publisher('depth_images', Image, queue_size=10)
+        self.jointState_pub = rospy.Publisher("joint_states", JointState, queue_size=10)
+        self.ee_poses_pub = rospy.Publisher('ee_poses', EEPoses, queue_size=10)
+        execute_trajectory_server = rospy.Service(
+                "execute_trajectory", ExecuteTrajectory, self.execute_traj_callback)
         rospy.init_node("pybullet_execution_scene", anonymous=True)
+
 
     def execute_traj_callback(self, req):
         ### given the request data: trajectory + armType
@@ -207,8 +211,11 @@ def main(args):
         joint_state_msg.header.frame_id = str(time_stamp)
         joint_state_msg.name = motomanRJointNames
         joint_state_msg.position = armCurrConfiguration
+
+        ### publish the message
         pybullet_execution_scene.jointState_pub.publish(joint_state_msg)
-        ### convert the image format to ros message
+        ee_poses_msgs = pybullet_execution_scene.executor_e.prepare_ee_poses_msgs(pybullet_execution_scene.robot_e)
+        pybullet_execution_scene.ee_poses_pub.publish(ee_poses_msgs)
 
         rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
         rgb_msg = bridge.cv2_to_imgmsg(rgbImg, 'rgb8')

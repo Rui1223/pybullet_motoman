@@ -56,9 +56,6 @@ class PybulletPlanScene(object):
 
         self.rosInit() ### initialize a ros node
 
-        # raw_input("press enter to continue")
-
-
     def readROSParam(self):
         ### This functions read in needed ROS parameters
         while not rospy.has_param('/motoman_robot/basePosition'):
