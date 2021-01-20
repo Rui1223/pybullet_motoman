@@ -7,8 +7,12 @@ import pybullet_data
 import time
 import sys
 import os
+import numpy as np
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
+
+# import pkgutil
+# egl = pkgutil.get_loader('eglRenderer')
 
 import utils
 from MotomanRobot import MotomanRobot
@@ -40,7 +44,12 @@ class PybulletExecutionScene(object):
         self.rospack = rospkg.RosPack() ### https://wiki.ros.org/Packages
 
         ### set the server for the pybullet real scene
+        # self.executingClientID = p.connect(p.DIRECT)
         self.executingClientID = p.connect(p.GUI)
+        # p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        # self.egl_plugin = p.loadPlugin(egl.get_filename(), "_eglRendererPlugin")
+        # print("plugin=", self.egl_plugin)
+
         ### create an executor assistant
         self.executor_e = Executor(self.executingClientID)
 
@@ -61,7 +70,7 @@ class PybulletExecutionScene(object):
 
         self.rosInit() ### initialize a ros node
 
-        raw_input("press enter to continue")
+        # raw_input("press enter to continue")
 
     def readROSParam(self):
         ### This functions read in needed ROS parameters
@@ -126,8 +135,9 @@ class PybulletExecutionScene(object):
         ### This function specifies the role of a node instance for this class ###
         ### and initialize a ros node ###
         ### specify the role of a node instance for this class
-        self.rgbImg_pub = rospy.Publisher('rgb_images', Image, queue_size=10)
-        self.depthImg_pub = rospy.Publisher('depth_images', Image, queue_size=10)
+        self.color_im_pub = rospy.Publisher('rgb_images', Image, queue_size=1)
+        self.depth_im_pub = rospy.Publisher('depth_images', Image, queue_size=1)
+
         self.jointState_pub = rospy.Publisher("joint_states", JointState, queue_size=3)
         execute_trajectory_server = rospy.Service("execute_trajectory", ExecuteTrajectory, self.execute_traj_callback)
         rospy.init_node("pybullet_execution_scene", anonymous=True)
@@ -163,8 +173,7 @@ class PybulletExecutionScene(object):
             os.path.join(self.rospack.get_path("pybullet_motoman"), object_mesh_path),
             self.executingClientID)
 
-    def setupCamera(self,
-            camera_extrinsic, camera_intrinsic, args):
+    def setupCamera(self, camera_extrinsic, camera_intrinsic, args):
         ### This function sets up the camera ###
         ### indicate which scene you are working on and whether you want to save images
         self.scene_index = args[1]
@@ -173,22 +182,22 @@ class PybulletExecutionScene(object):
             self.workspace_e.tablePosition, self.workspace_e.table_dim,
             camera_extrinsic, camera_intrinsic,
             self.scene_index, self.saveImages,
-            self.executingClientID)
+            self.executingClientID
+        )
 
 
 def main(args):
-
     pybullet_execution_scene = PybulletExecutionScene(args)
     rate = rospy.Rate(10) ### 10hz
     bridge = CvBridge()
+
+    count = 0
 
     while not rospy.is_shutdown():
         ### get the time stamp
         time_stamp = rospy.get_time()
         # rospy.loginfo("time stamp for image and joint state publisher %s" % time_stamp)
 
-        ### get the image
-        rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
         ### get current joint state
         motomanRJointNames, armCurrConfiguration = pybullet_execution_scene.robot_e.getJointState()
 
@@ -198,23 +207,21 @@ def main(args):
         joint_state_msg.header.frame_id = str(time_stamp)
         joint_state_msg.name = motomanRJointNames
         joint_state_msg.position = armCurrConfiguration
-        ### convert the image format to ros message
-        rgb_msg = bridge.cv2_to_imgmsg(rgbImg, 'bgr8')
-        depth_msg = bridge.cv2_to_imgmsg(depthImg, 'passthrough')
-
-        ### publish the message
-        pybullet_execution_scene.rgbImg_pub.publish(rgb_msg)
-        pybullet_execution_scene.depthImg_pub.publish(depth_msg)
-        ### publish the message
         pybullet_execution_scene.jointState_pub.publish(joint_state_msg)
+        ### convert the image format to ros message
 
+        rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
+        rgb_msg = bridge.cv2_to_imgmsg(rgbImg, 'rgb8')
+        depth_msg = bridge.cv2_to_imgmsg((1000 * depthImg).astype(np.uint16), 'mono16')
+        pybullet_execution_scene.color_im_pub.publish(rgb_msg)
+        pybullet_execution_scene.depth_im_pub.publish(depth_msg)
+        if count == 0:
+            cv2.imwrite('/home/lsy/color.png', cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR))
+            cv2.imwrite('/home/lsy/depth.png', (1000 * depthImg).astype(np.uint16))
+
+        count += 1
 
         rate.sleep()
-
-
-    rospy.spin()
-
-
 
 if __name__ == '__main__':
     main(sys.argv)

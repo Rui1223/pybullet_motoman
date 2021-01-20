@@ -40,7 +40,9 @@ class PybulletPlanScene(object):
         self.rospack = rospkg.RosPack() ### https://wiki.ros.org/Packages
 
         ### set the server for the pybullet planning scene
-        self.planningClientID = p.connect(p.GUI)
+        self.planningClientID = p.connect(p.DIRECT)
+        # self.planningClientID = p.connect(p.GUI)
+
         ### create a planner assistant
         self.planner_p = Planner(self.planningClientID)
 
@@ -54,7 +56,7 @@ class PybulletPlanScene(object):
 
         self.rosInit() ### initialize a ros node
 
-        raw_input("press enter to continue")
+        # raw_input("press enter to continue")
 
 
     def readROSParam(self):
