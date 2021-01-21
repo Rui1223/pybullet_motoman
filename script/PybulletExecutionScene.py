@@ -223,8 +223,8 @@ def main(args):
         pybullet_execution_scene.color_im_pub.publish(rgb_msg)
         pybullet_execution_scene.depth_im_pub.publish(depth_msg)
         if count == 0:
-            cv2.imwrite('/home/lsy/color.png', cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR))
-            cv2.imwrite('/home/lsy/depth.png', (1000 * depthImg).astype(np.uint16))
+            cv2.imwrite(os.path.expanduser('~/color.png'), cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(os.path.expanduser('~/depth.png'), (1000 * depthImg).astype(np.uint16))
 
         count += 1
 

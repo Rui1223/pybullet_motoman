@@ -12,8 +12,6 @@ import time
 import cv2
 
 import rospkg
-from PIL import Image
-from skimage.io import imread, imsave
 
 ### This file defines the camera for the purpose of getting the images of the simulated scene ###
 

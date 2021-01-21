@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import print_function
 import pybullet as p
 import pybullet_data
 
@@ -16,7 +17,7 @@ import utils
 from CollisionChecker import CollisionChecker
 
 import rospy
-import rospkg
+from rospkg import RosPack
 
 class Planner(object):
     def __init__(self, server):
@@ -32,9 +33,8 @@ class Planner(object):
         ### use k_n to decide the number of neighbors: #neighbors = k_n * log(#samples)
         self.num_neighbors = int(neighbors_const * math.log(self.nsamples))
 
-
     def loadRoadmap(self, armType):
-        rospack = rospkg.RosPack()
+        rospack = RosPack()
         samplesFile = os.path.join(rospack.get_path("pybullet_motoman"), "roadmaps/samples_" + armType + ".txt")
         f_samples = open(samplesFile, "r")
         for line in f_samples:
@@ -46,7 +46,7 @@ class Planner(object):
     def generateConfigFromPose(self, pose3D, robot, workspace, armType):
         ### This function convert a pose3D object into a robot arm configuration
         ### Output: a configuration of a single arm (7*1 list)
-        pose = [[pose3D.position.x, pose3D.position.y, pose3D.position.z], 
+        pose = [[pose3D.position.x, pose3D.position.y, pose3D.position.z],
                 [pose3D.orientation.x, pose3D.orientation.y, pose3D.orientation.z, pose3D.orientation.w]]
 
         if armType == "Left":
@@ -69,9 +69,9 @@ class Planner(object):
         trials = 0
         while (not isValid) and (trials < 5):
             ### reset arm configuration
-            resetSingleArmConfiguration = [0.0]*len(leftArmCurrConfiguration)
+            resetSingleArmConfiguration = [0.0]*len(robot.leftArmCurrConfiguration)
             robot.setSingleArmToConfig(resetSingleArmConfiguration, armType)
-            
+
             config_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
                                     endEffectorLinkIndex=ee_idx,
                                     targetPosition=pose[0],
@@ -149,8 +149,8 @@ class Planner(object):
         return isEdgeValid
 
 
-    def shortestPathPlanning(self, 
-            initialSingleArmConfig, targetSingleArmConfig, 
+    def shortestPathPlanning(self,
+            initialSingleArmConfig, targetSingleArmConfig,
             theme, robot, workspace, armType):
         ### The output is a traj ( a list of waypoints (7*1 list))
         ### first prepare the start_goal file
@@ -161,7 +161,10 @@ class Planner(object):
 
         ### call the planning algorithm
         executeCommand = "./main_planner" + " " + theme + " " + armType + " " + str(self.nsamples) + " shortestPath"
-        subprocess.call(executeCommand, cwd="/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src", shell=True)
+        # subprocess.call(executeCommand, cwd="/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src", shell=True)
+        rospack = RosPack()
+        cwd = os.path.join(rospack.get_path("pybullet_motoman"), 'src')
+        subprocess.call(executeCommand, cwd=cwd, shell=True)
         ### Now read in the trajectory
         traj = self.readTrajectory(theme)
 
@@ -170,7 +173,9 @@ class Planner(object):
 
     def readTrajectory(self, theme):
         traj = []
-        traj_file = "/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/" + theme + "_traj.txt"
+        # traj_file = "/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/" + theme + "_traj.txt"
+        rospack = RosPack()
+        traj_file = os.path.join(rospack.get_path("pybullet_motoman"), theme + '_traj.txt')
         f = open(traj_file, "r")
         nline = 0
         for line in f:
@@ -191,7 +196,9 @@ class Planner(object):
 
 
     def writeStartGoal(self, initialSingleArmConfig, targetSingleArmConfig, theme):
-        start_goal_file = "/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/" + theme + ".txt"
+        rospack = RosPack()
+        start_goal_file = os.path.join(rospack.get_path("pybullet_motoman"), theme + '.txt')
+        # start_goal_file = "/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/" + theme + ".txt"
         f = open(start_goal_file, "w")
         f.write(str(self.nsamples) + " ")
         for e in initialSingleArmConfig:
@@ -205,7 +212,7 @@ class Planner(object):
         return f
 
 
-    def connectStartGoalToArmRoadmap(self, 
+    def connectStartGoalToArmRoadmap(self,
         f, initialSingleArmConfig, targetSingleArmConfig, robot, workspace, armType):
         startConnectSuccess = False
         start_id = self.nsamples
@@ -220,7 +227,7 @@ class Planner(object):
         ### for each potential neighbor
         for j in range(len(knn[1])):
             ### first check if this query node has already connected to enough neighbors
-            if neighbors_connected >= self.num_neighbors: 
+            if neighbors_connected >= self.num_neighbors:
                 break
             if knn[1][j] == len(self.nodes[armType])-1:
                 ### if the neighbor is the query node itself
@@ -247,7 +254,7 @@ class Planner(object):
         ### for each potential neighbor
         for j in range(len(knn[1])):
             ### first check if this query node has already connected to enough neighbors
-            if neighbors_connected >= self.num_neighbors: 
+            if neighbors_connected >= self.num_neighbors:
                 break
             if knn[1][j] == len(self.nodes[armType])-1:
                 ### if the neighbor is the query node itself
@@ -265,4 +272,4 @@ class Planner(object):
         self.nodes[armType].remove(self.nodes[armType][-1])
         ##############################################################################
 
-        f.close()        
+        f.close()

@@ -14,6 +14,7 @@ import IPython
 from MotomanRobot import MotomanRobot
 from Workspace import Workspace
 from CollisionChecker import CollisionChecker
+from rospkg import RosPack
 
 class RoadmapGenerator(object):
     def __init__(self, nsamples, robotName, sceneType):
@@ -23,16 +24,18 @@ class RoadmapGenerator(object):
         self.executingServer = p.connect(p.DIRECT)
         self.servers = [self.planningServer, self.executingServer]
         ### set the robot ready
+        ros_pack = RosPack()
         if robotName == "Motoman":
-            self.robot = MotomanRobot(
-                self.servers, "/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/urdf/motoman.urdf")
+            motoman_urdf = os.path.join(ros_pack.get_path('pybullet_motoman'), 'urdf', 'motoman.urdf')
+            # self.robot = MotomanRobot(self.servers, "/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/urdf/motoman.urdf")
+            self.robot = MotomanRobot(self.servers, motoman_urdf)
         ### set the workspace (table, shelf, or whatever specified)
         if sceneType == "Table":
             self.workspace = Workspace("Table", self.robot.BasePosition, self.servers)
         ### get all the geometries from the robot and the workspace
         self.planningGeometries = self.robot.known_geometries_planning + self.workspace.known_geometries_planning
         self.executingGeometries = self.robot.known_geometries_executing + self.workspace.known_geometries_executing
-        
+
         self.roadmapFolder = os.getcwd() + "/roadmaps"
         self.nodes = {}
         self.nodes["Left"] = []
@@ -49,7 +52,7 @@ class RoadmapGenerator(object):
         self.samplingNodes(ee_idx, handType)
         self.saveSamplesToFile(self.samplesFile, handType)
         self.roadmapConnect(self.connectionsFile, ee_idx, handType)
-      
+
 
 
     def roadmapConnect(self, connectionsFile, ee_idx, handType):
@@ -69,12 +72,12 @@ class RoadmapGenerator(object):
         for i in range(len(self.nodes[handType])):
             queryNode = self.nodes[handType][i]
             knn = tree.query(queryNode, k=nsamples-1, p=2)
-            
+
             neighbors_connected = 0
             ### for each potential neighbor
             for j in range(len(knn[1])):
                 ### first check if this query node has already connected to enough neighbors
-                if neighbors_connected >= self.num_neighbors: 
+                if neighbors_connected >= self.num_neighbors:
                     break
                 if knn[1][j] == i:
                     ### if the neighbor is the query node itself
@@ -134,7 +137,7 @@ class RoadmapGenerator(object):
     def checkEdgeValidity(self, n1, n2, handType):
         nseg = 5
 
-        isEdgeValid = False        
+        isEdgeValid = False
         for i in range(1, nseg):
             interm_j0 = n1[0] + (n2[0]-n1[0]) / nseg * i
             interm_j1 = n1[1] + (n2[1]-n1[1]) / nseg * i
@@ -208,4 +211,3 @@ if __name__ == '__main__':
     roadmap_generator.generateRoadmap("Left")
     roadmap_generator.generateRoadmap("Right")
     raw_input("Enter to quit.")
-
