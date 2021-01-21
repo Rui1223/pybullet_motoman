@@ -137,8 +137,8 @@ class PybulletExecutionScene(object):
         ### This function specifies the role of a node instance for this class ###
         ### and initialize a ros node ###
         ### specify the role of a node instance for this class
-        self.rgbImg_pub = rospy.Publisher('rgb_images', Image, queue_size=10)
-        self.depthImg_pub = rospy.Publisher('depth_images', Image, queue_size=10)
+        self.color_im_pub = rospy.Publisher('rgb_images', Image, queue_size=10)
+        self.depth_im_pub = rospy.Publisher('depth_images', Image, queue_size=10)
         self.jointState_pub = rospy.Publisher("joint_states", JointState, queue_size=10)
         self.ee_poses_pub = rospy.Publisher('ee_poses', EEPoses, queue_size=10)
         execute_trajectory_server = rospy.Service(
