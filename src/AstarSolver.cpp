@@ -152,7 +152,22 @@ void AstarSolver_t::writeTrajectory(std::string trajectory_file)
 
     }
     m_outFile_.close();
+}
 
+void AstarSolver_t::writePath(std::string path_file)
+{
+    m_outFile_.open(path_file);
+    if (m_outFile_.is_open()) {
+        // first write in failure indicator
+        m_outFile_ << m_isFailure << "\n";
+        if (m_isFailure == false) {
+            for (auto const &t : m_path) {
+                m_outFile_ << t << " ";
+            }
+            m_outFile_ << "\n";
+        }
+    }
+    m_outFile_.close();
 }
 
 void AstarSolver_t::printAll()

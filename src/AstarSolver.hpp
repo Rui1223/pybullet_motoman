@@ -63,6 +63,7 @@ public:
     void back_track_path();
     void pathToTrajectory(Graph_t &g);
     void writeTrajectory(std::string task_trajectory_file);
+    void writePath(std::string task_path_file);
 
     // printer
     void print_path();

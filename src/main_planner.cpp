@@ -13,10 +13,9 @@ int main(int argc, char** argv)
     std::string armType = std::string(argv[2]);
     int nsamples = atoi(argv[3]);
     std::string method = std::string(argv[4]);
-    std::string task_file = "../" + task_name + ".txt";
-    std::string samples_file = "../roadmaps/samples_" + armType + ".txt";
+    std::string samples_file = "../roadmaps/samplesWorkspace_" + armType + ".txt";
     std::string connections_file = "../roadmaps/connections_" + armType + ".txt";
-
+    std::string task_file = "../src/" + task_name + ".txt";
 
     // construct the graph given these files
     Timer t;
@@ -32,8 +31,12 @@ int main(int argc, char** argv)
             std::cout << "\n";
         }
         // write the trajectory
-        std::string task_trajectory_file = "../" + task_name + "_traj.txt";
-        astar_solver.writeTrajectory(task_trajectory_file);
+        // std::string task_trajectory_file = "../src/" + task_name + "_traj.txt";
+        // astar_solver.writeTrajectory(task_trajectory_file);
+
+        // write the path directly
+        std::string task_path_file = "../src/" + task_name + "_traj.txt";
+        astar_solver.writePath(task_path_file);
 
     }
 

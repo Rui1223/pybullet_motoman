@@ -2,7 +2,7 @@
 # for a need to execute a given trajectory
 # on a specified arm
 
-sensor_msgs/JointState[] joint_trajectory
+geometry_msgs/Pose[] poses
 pybullet_motoman/ArmType armType
 ---
 bool success
