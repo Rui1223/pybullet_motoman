@@ -20,8 +20,6 @@ from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Pose
 
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningResponse
-from pybullet_motoman.msg import PoseSequence3D, ObjectEstimate3D
-from pybullet_motoman.msg import Pose3D, BoundingBox3D
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryRequest
 
 ### This class defines a PybulletPlanScene class which
@@ -45,6 +43,7 @@ class PybulletPlanScene(object):
         
         ### set the server for the pybullet planning scene
         self.planningClientID = p.connect(p.DIRECT)
+
         ### create a planner assistant
         self.planner_p = Planner(self.rosPackagePath, self.planningClientID)
 
@@ -54,7 +53,6 @@ class PybulletPlanScene(object):
         ### set up the workspace
         self.setupWorkspace(standingBase_dim, table_dim, table_offset_x, \
                 transitCenterHeight, object_mesh_path)
-
 
 
     def readROSParam(self):
@@ -116,10 +114,10 @@ class PybulletPlanScene(object):
     def motion_plan_callback(self, req):
 
         ### given the request data: object_estimate
-        ### update the object geometry in the plan scene 
+        ### update the object geometry in the plan scene
         ### (either for target or collision check)
         self.workspace_p.updateObjectGeomeotry_BoundingBox(
-            req.object_estimate.pose, req.object_estimate.dim)
+            req.bbox_pose, req.bbox_dims)
 
         ### analyze the target configuration of the robot given the grasp pose
         ### so far we only care about the best grasp pose
@@ -228,10 +226,10 @@ class PybulletPlanScene(object):
 
 
     def setupWorkspace(self,
-            standingBase_dim, table_dim, table_offset_x, 
+            standingBase_dim, table_dim, table_offset_x,
             transitCenterHeight, object_mesh_path):
         ### The function sets up the workspace
-        self.workspace_p = WorkspaceTable(self.robot_p.basePosition, 
+        self.workspace_p = WorkspaceTable(self.robot_p.basePosition,
             standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
             os.path.join(self.rosPackagePath, object_mesh_path),
             self.planningClientID)

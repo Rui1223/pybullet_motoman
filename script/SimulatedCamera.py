@@ -12,48 +12,49 @@ import time
 import cv2
 
 import rospkg
-from PIL import Image
-from skimage.io import imread, imsave
 
 ### This file defines the camera for the purpose of getting the images of the simulated scene ###
 
 class SimulatedCamera(object):
 
-    def __init__(self, tablePosition, table_dim, 
-        camera_extrinsic, camera_intrinsic,
-        scene_index, saveImages,
-        server):
+    def __init__(self, tablePosition, table_dim, camera_extrinsic, camera_intrinsic, scene_index, saveImages, server):
         ### get the server
         self.server = server
         self.scene_index = scene_index
         self.camera_extrinsic = np.array(camera_extrinsic)
+
         self.viewMatrix = p.computeViewMatrix(
-                cameraEyePosition=[self.camera_extrinsic[0][3], self.camera_extrinsic[1][3], self.camera_extrinsic[2][3]],
-                cameraTargetPosition=[tablePosition[0]+table_dim[0]/2+0.3, tablePosition[1], tablePosition[2]+table_dim[2]/2],
-                cameraUpVector=[-self.camera_extrinsic[0][1], -self.camera_extrinsic[1][1], -self.camera_extrinsic[2][1]])
+            cameraEyePosition=[0.35, 0, 1.25],
+            cameraTargetPosition=[1.35, 0, 0.58],
+            cameraUpVector=[1.25 - 0.58, 0, 1.35 - 0.35]
+        )
+
+        # https://stackoverflow.com/questions/60430958/understanding-the-view-and-projection-matrix-from-pybullet
+        # https://stackoverflow.com/questions/39992968/how-to-calculate-field-of-view-of-the-camera-from-camera-intrinsic-matrix
+        # https://github.com/bulletphysics/bullet3/blob/master/examples/SharedMemory/PhysicsClientC_API.cpp#L4372
         self.projectionMatrix = p.computeProjectionMatrixFOV(
-                fov=camera_intrinsic[0],
-                aspect=camera_intrinsic[1],
-                nearVal=camera_intrinsic[2],
-                farVal=camera_intrinsic[3])
+            fov=90,
+            aspect=1,
+            nearVal=0.01,
+            farVal=1.5
+        )
 
         if saveImages:
             self.createImageDataFolder()
 
-
     def takeRGBImage(self):
-
-        ### get the image
         width, height, rgbImg, depthImg, segImg = p.getCameraImage(
-            width=1280,
-            height=720,
+            width=640,
+            height=640,
             viewMatrix=self.viewMatrix,
             projectionMatrix=self.projectionMatrix,
             physicsClientId=self.server
         )
-
-        return cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR), depthImg
-
+        rgbImg = cv2.cvtColor(rgbImg, cv2.COLOR_RGBA2RGB)
+        far=1.5
+        near=0.01
+        depthImg = far * near / (far - (far - near) * depthImg)
+        return rgbImg, depthImg
 
     def saveImage(imageType, Img, frame_idx):
         if imageType == 'rgb':

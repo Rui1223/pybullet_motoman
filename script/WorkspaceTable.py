@@ -15,7 +15,7 @@ import IPython
 ### This file defines workspace for the table ###
 
 class WorkspaceTable(object):
-    def __init__(self, 
+    def __init__(self,
         robotBasePosition,
         standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
         mesh_path, server):
@@ -74,7 +74,7 @@ class WorkspaceTable(object):
         ###          table_dim: np.array([x, y, z(height)])
         ###          dropHeight: float value, indicating at what height will the object be dropped
         ###          server: specified which server to use
-        ### Output -> object mesh produced which is on the table 
+        ### Output -> object mesh produced which is on the table
         ###           (but you should no access to the ground truth pose so as to mimic the reality)
 
 
@@ -193,18 +193,18 @@ class WorkspaceTable(object):
     def updateObjectGeomeotry_BoundingBox(self, object_pose, object_dim):
         ### This function update the object given
         ### (1) object_pose Pose3D (position(x,y,z), orientation(x,y,z,w))
-        ### (2) object_dim BoundingBox3D (x, y, z) 
+        ### (2) object_dim BoundingBox3D (x, y, z)
         ### we assume the object is modelled as the bounding box in the planning scene
-        object_dim = np.array([object_dim.x, object_dim.y, object_dim.z])
+        object_dim = np.array([object_dim[0], object_dim[1], object_dim[2]])
         object_pose = [[object_pose.position.x, object_pose.position.y, object_pose.position.z], \
             [object_pose.orientation.x, object_pose.orientation.y, object_pose.orientation.z, object_pose.orientation.w]]
 
         if not bool(self.object_geometries):
             ### no object geometries has been introduced before
             ### then create the object geometry
-            geo_c = p.createCollisionShape(shapeType=p.GEOM_BOX, 
+            geo_c = p.createCollisionShape(shapeType=p.GEOM_BOX,
                                 halfExtents=object_dim/2, physicsClientId=self.server)
-            geo_v = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=object_dim/2, 
+            geo_v = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=object_dim/2,
                         rgbaColor=[128.0/255.0, 128.0/255.0, 128.0/255.0, 0.8], physicsClientId=self.server)
             tableM = p.createMultiBody(baseCollisionShapeIndex=geo_c, baseVisualShapeIndex=geo_v,
                     basePosition=object_pose[0], baseOrientation=object_pose[1], physicsClientId=self.server)

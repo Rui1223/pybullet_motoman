@@ -7,8 +7,12 @@ import pybullet_data
 import time
 import sys
 import os
+import numpy as np
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
+
+# import pkgutil
+# egl = pkgutil.get_loader('eglRenderer')
 
 import utils
 from MotomanRobot import MotomanRobot
@@ -43,7 +47,12 @@ class PybulletExecutionScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet real scene
+        # self.executingClientID = p.connect(p.DIRECT)
         self.executingClientID = p.connect(p.GUI)
+        # p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        # self.egl_plugin = p.loadPlugin(egl.get_filename(), "_eglRendererPlugin")
+        # print("plugin=", self.egl_plugin)
+
         ### create an executor assistant
         self.executor_e = Executor(self.executingClientID,
             isObjectInLeftHand=False, isObjectInRightHand=False,
@@ -58,16 +67,14 @@ class PybulletExecutionScene(object):
         ### set up the camera
         self.setupCamera(camera_extrinsic, camera_intrinsic, args)
 
-        ### after initialize the scene, 
+        ### after initialize the scene,
         ### randomize an object in the scene (drop an object on the table)
         self.object_name = args[3]
         # self.workspace_e.dropObjectOnTable(self.object_name, dropHeight)
         self.workspace_e.fixAnObjectOnTable(self.object_name)
 
-
-
     def readROSParam(self):
-        ### This functions read in needed ROS parameters    
+        ### This functions read in needed ROS parameters
         while not rospy.has_param('/motoman_robot/basePosition'):
             rospy.sleep(0.2)
         basePosition = rospy.get_param('/motoman_robot/basePosition')
@@ -130,8 +137,8 @@ class PybulletExecutionScene(object):
         ### This function specifies the role of a node instance for this class ###
         ### and initialize a ros node ###
         ### specify the role of a node instance for this class
-        self.rgbImg_pub = rospy.Publisher('rgb_images', Image, queue_size=10)
-        self.depthImg_pub = rospy.Publisher('depth_images', Image, queue_size=10)
+        self.color_im_pub = rospy.Publisher('rgb_images', Image, queue_size=10)
+        self.depth_im_pub = rospy.Publisher('depth_images', Image, queue_size=10)
         self.jointState_pub = rospy.Publisher("joint_states", JointState, queue_size=10)
         self.ee_poses_pub = rospy.Publisher('ee_poses', EEPoses, queue_size=10)
         execute_trajectory_server = rospy.Service(
@@ -156,7 +163,6 @@ class PybulletExecutionScene(object):
         return ExecuteTrajectoryResponse(True)
 
 
-
     # def execute_traj_callback(self, req):
     #     ### given the request data: trajectory + armType
     #     ### execute the trajectory on a specified arm
@@ -179,35 +185,35 @@ class PybulletExecutionScene(object):
             basePosition, baseOrientation, leftArmHomeConfiguration, rightArmHomeConfiguration, 
             isPhysicsTurnOn, self.executingClientID)
 
-
     def setupWorkspace(self,
-            standingBase_dim, table_dim, table_offset_x, 
+            standingBase_dim, table_dim, table_offset_x,
             transitCenterHeight, object_mesh_path):
         ### This function sets up the workspace ###
-        self.workspace_e = WorkspaceTable(self.robot_e.basePosition, 
+        self.workspace_e = WorkspaceTable(self.robot_e.basePosition,
             standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
             os.path.join(self.rosPackagePath, object_mesh_path),
             self.executingClientID)
 
-
-    def setupCamera(self,
-            camera_extrinsic, camera_intrinsic, args):
+    def setupCamera(self, camera_extrinsic, camera_intrinsic, args):
         ### This function sets up the camera ###
         ### indicate which scene you are working on and whether you want to save images
         self.scene_index = args[1]
         self.saveImages = (args[2] in ('y', 'Y')) ### decide whether to save images or not
         self.camera_e = SimulatedCamera(
-            self.workspace_e.tablePosition, self.workspace_e.table_dim, 
+            self.workspace_e.tablePosition, self.workspace_e.table_dim,
             camera_extrinsic, camera_intrinsic,
             self.scene_index, self.saveImages,
-            self.executingClientID)
+            self.executingClientID
+        )
 
 
 def main(args):
-
     pybullet_execution_scene = PybulletExecutionScene(args)
     pybullet_execution_scene.rosInit()
     rate = rospy.Rate(10) ### 10hz
+    bridge = CvBridge()
+
+    count = 0
 
     while not rospy.is_shutdown():
         ### get the time stamp
@@ -236,13 +242,18 @@ def main(args):
         ee_poses_msgs = pybullet_execution_scene.executor_e.prepare_ee_poses_msgs(pybullet_execution_scene.robot_e)
         pybullet_execution_scene.ee_poses_pub.publish(ee_poses_msgs)
 
-        
+        rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
+        rgb_msg = bridge.cv2_to_imgmsg(rgbImg, 'rgb8')
+        depth_msg = bridge.cv2_to_imgmsg((1000 * depthImg).astype(np.uint16), 'mono16')
+        pybullet_execution_scene.color_im_pub.publish(rgb_msg)
+        pybullet_execution_scene.depth_im_pub.publish(depth_msg)
+        if count == 0:
+            cv2.imwrite(os.path.expanduser('~/color.png'), cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(os.path.expanduser('~/depth.png'), (1000 * depthImg).astype(np.uint16))
+
+        count += 1
+
         rate.sleep()
-
-
-    rospy.spin()
-
-
 
 if __name__ == '__main__':
     main(sys.argv)

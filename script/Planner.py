@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import print_function
 import pybullet as p
 import pybullet_data
 
@@ -18,7 +19,7 @@ import utils
 from CollisionChecker import CollisionChecker
 
 import rospy
-import rospkg
+from rospkg import RosPack
 
 class Planner(object):
     def __init__(self, rosPackagePath, server):
@@ -228,7 +229,7 @@ class Planner(object):
     def generateConfigFromPose(self, pose3D, robot, workspace, armType):
         ### This function convert a pose3D object into a robot arm configuration
         ### Output: a configuration of a single arm (7*1 list)
-        pose = [[pose3D.position.x, pose3D.position.y, pose3D.position.z], 
+        pose = [[pose3D.position.x, pose3D.position.y, pose3D.position.z],
                 [pose3D.orientation.x, pose3D.orientation.y, pose3D.orientation.z, pose3D.orientation.w]]
 
         if armType == "Left":
@@ -253,7 +254,7 @@ class Planner(object):
             ### reset arm configuration
             resetSingleArmConfiguration = [0.0]*len(robot.leftArmCurrConfiguration)
             robot.setSingleArmToConfig(resetSingleArmConfiguration, armType)
-            
+
             config_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
                                     endEffectorLinkIndex=ee_idx,
                                     targetPosition=pose[0],
@@ -383,8 +384,7 @@ class Planner(object):
         return isEdgeValid
 
 
-    def shortestPathPlanning(self, 
-            initialPose, targetPose, theme, robot, workspace, armType):
+    def shortestPathPlanning(self, initialPose, targetPose, theme, robot, workspace, armType):
         ### first prepare the start_goal file
         f = self.writeStartGoal(initialPose[0:3], targetPose[0:3], theme)
         self.connectStartGoalToArmRoadmap(f, 
@@ -394,7 +394,10 @@ class Planner(object):
 
         ### call the planning algorithm
         executeCommand = "./main_planner" + " " + theme + " " + armType + " " + str(self.nsamples) + " shortestPath"
-        subprocess.call(executeCommand, cwd="/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src", shell=True)
+        # subprocess.call(executeCommand, cwd="/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src", shell=True)
+        rospack = RosPack()
+        cwd = os.path.join(rospack.get_path("pybullet_motoman"), 'src')
+        subprocess.call(executeCommand, cwd=cwd, shell=True)
         ### Now read in the trajectory
         # traj = self.readTrajectory(theme)
         path, traj = self.readPath(theme, armType)
@@ -505,9 +508,7 @@ class Planner(object):
         return f
 
 
-    def connectStartGoalToArmRoadmap(self, f, 
-        initialPose, targetPose, robot, workspace, armType):
-
+    def connectStartGoalToArmRoadmap(self, f, initialPose, targetPose, robot, workspace, armType):
         startGoalConnect = False
         start_id = self.nsamples
         target_id = self.nsamples + 1
@@ -527,7 +528,7 @@ class Planner(object):
         ### for each potential neighbor
         for j in range(len(knn[1])):
             ### first check if this query node has already connected to enough neighbors
-            if neighbors_connected >= self.num_neighbors: 
+            if neighbors_connected >= self.num_neighbors:
                 break
             elif knn[1][j] == start_id:
                 ### if the neighbor is the start itself
@@ -553,7 +554,7 @@ class Planner(object):
         ### for each potential neighbor
         for j in range(len(knn[1])):
             ### first check if this query node has already connected to enough neighbors
-            if neighbors_connected >= self.num_neighbors: 
+            if neighbors_connected >= self.num_neighbors:
                 break
             elif knn[1][j] == target_id:
                 ### if the neighbor is the target itself
