@@ -16,7 +16,7 @@ class MotomanRobot(object):
     def __init__(self, 
         urdf_filepath, 
         basePosition, baseOrientation, leftArmHomeConfiguration, rightArmHomeConfiguration,
-        server):
+        isPhysicsTurnOn, server):
         ### get the server
         self.server = server
         ### get the urdf file
@@ -27,10 +27,16 @@ class MotomanRobot(object):
         self.baseOrientation = baseOrientation
 
         ### load the urdf of the robot
-        self.motomanGEO = p.loadURDF(
-                fileName=self.urdf_filepath, 
-                basePosition=self.basePosition, baseOrientation=self.baseOrientation, useFixedBase=True, 
-                physicsClientId=self.server)
+        if isPhysicsTurnOn == False:
+            self.motomanGEO = p.loadURDF(
+                    fileName=self.urdf_filepath, 
+                    basePosition=self.basePosition, baseOrientation=self.baseOrientation, 
+                    useFixedBase=True, flags=p.URDF_USE_SELF_COLLISION, physicsClientId=self.server)
+        else:
+            self.motomanGEO = p.loadURDF(
+                    fileName=self.urdf_filepath, 
+                    basePosition=self.basePosition, baseOrientation=self.baseOrientation, 
+                    useFixedBase=True, physicsClientId=self.server)            
         self.known_geometries = []
         self.known_geometries.append(self.motomanGEO)
 
@@ -38,10 +44,6 @@ class MotomanRobot(object):
         self.leftArmHomeConfiguration = leftArmHomeConfiguration
         self.rightArmHomeConfiguration = rightArmHomeConfiguration
         self.homeConfiguration = self.leftArmHomeConfiguration + self.rightArmHomeConfiguration
-        ### initialize the robot's configuration at its home configuration
-        self.updateSingleArmConfig(self.leftArmHomeConfiguration, "Left")
-        self.updateSingleArmConfig(self.rightArmHomeConfiguration, "Right")
-        self.resetArmConfig(self.leftArmCurrConfiguration + self.rightArmCurrConfiguration)
 
         ################### intrinsic value of the motoman_sda10f ###################
         ### joint and end effector information
@@ -53,17 +55,31 @@ class MotomanRobot(object):
         ### For each arm, there are 10 joints and 7 of them are revolute joints
         ### There are total 14 revolute joints for each arm
         ### lower limits for null space
-        self.ll = [-3.13, -1.90, -2.95, -2.36, -3.13, -1.90, -3.13, -3.13, -1.90, -2.95, -2.36, -3.13, -1.90, -3.13]
+        # self.ll = [-3.13, -1.90, -2.95, -2.36, -3.13, -1.90, -3.13, -3.13, -1.90, -2.95, -2.36, -3.13, -1.90, -3.13]
+        # ### upper limits for null space
+        # self.ul = [3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13, 3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13]
+        # ### joint ranges for null space
+        # self.jr = [6.26, 3.80, 5.90, 4.72, 6.26, 3.80, 6.26, 6.26, 3.80, 5.90, 4.72, 6.26, 3.80, 6.26]
+        # ### restposes for null space
+        # self.rp = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+        ################## new joint limits ##################
+        self.ll = [-3.13, -1.90, -2.95, -1.80, -3.13, -1.90, -3.13, -3.13, -1.90, -2.95, -1.80, -3.13, -1.90, -3.13]
         ### upper limits for null space
         self.ul = [3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13, 3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13]
         ### joint ranges for null space
-        self.jr = [6.26, 3.80, 5.90, 4.72, 6.26, 3.80, 6.26, 6.26, 3.80, 5.90, 4.72, 6.26, 3.80, 6.26]
+        self.jr = [6.26, 3.80, 5.90, 4.16, 6.26, 3.80, 6.26, 6.26, 3.80, 5.90, 4.16, 6.26, 3.80, 6.26]
         ### restposes for null space
         self.rp = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
         ### get all controllable joints (for motoman, they are all revolute joints)
         self.getRobotJointInfo()
         # self.printRJointNames()
+
+        ### initialize the robot's configuration at its home configuration
+        self.updateSingleArmConfig(self.leftArmHomeConfiguration, "Left")
+        self.updateSingleArmConfig(self.rightArmHomeConfiguration, "Right")
+        self.resetArmConfig(self.leftArmCurrConfiguration + self.rightArmCurrConfiguration)
 
 
     def updateSingleArmConfig(self, currSingleArmConfig, armType):
@@ -80,6 +96,10 @@ class MotomanRobot(object):
             p.resetJointState(self.motomanGEO, j, resetConfiguration[j-4], physicsClientId=self.server)
 
         p.stepSimulation(physicsClientId=self.server)
+        left_ee_pos_quat = p.getLinkState(self.motomanGEO, self.left_ee_idx, physicsClientId=self.server)
+        self.left_ee_pose = list(left_ee_pos_quat[0]) + list(left_ee_pos_quat[1])
+        right_ee_pos_quat = p.getLinkState(self.motomanGEO, self.right_ee_idx, physicsClientId=self.server)
+        self.right_ee_pose = list(right_ee_pos_quat[0]) + list(right_ee_pos_quat[1])
 
 
     def setSingleArmToConfig(self, singleArmConfig, armType):
@@ -96,6 +116,10 @@ class MotomanRobot(object):
                 p.resetJointState(self.motomanGEO, j, singleArmConfig[j-11], physicsClientId=self.server)
 
         p.stepSimulation(physicsClientId=self.server)
+        left_ee_pos_quat = p.getLinkState(self.motomanGEO, self.left_ee_idx, physicsClientId=self.server)
+        self.left_ee_pose = list(left_ee_pos_quat[0]) + list(left_ee_pos_quat[1])
+        right_ee_pos_quat = p.getLinkState(self.motomanGEO, self.right_ee_idx, physicsClientId=self.server)
+        self.right_ee_pose = list(right_ee_pos_quat[0]) + list(right_ee_pos_quat[1])
 
 
     def moveSingleArm(self, singleArmConfiguration, armType):
@@ -109,6 +133,13 @@ class MotomanRobot(object):
             for j in range(11, 18):
                 p.resetJointState(self.motomanGEO, j, singleArmConfiguration[j-11], physicsClientId=self.server)
             self.updateSingleArmConfig(singleArmConfiguration, armType)
+
+        ###### This function is in maintenance ###### 
+        p.stepSimulation(physicsClientId=self.server)
+        left_ee_pos_quat = p.getLinkState(self.motomanGEO, self.left_ee_idx, physicsClientId=self.server)
+        self.left_ee_pose = list(left_ee_pos_quat[0]) + list(left_ee_pos_quat[1])
+        right_ee_pos_quat = p.getLinkState(self.motomanGEO, self.right_ee_idx, physicsClientId=self.server)
+        self.right_ee_pose = list(right_ee_pos_quat[0]) + list(right_ee_pos_quat[1])
 
 
     def getJointState(self):

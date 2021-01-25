@@ -39,9 +39,8 @@ class PybulletExecutionScene(object):
         leftArmHomeConfiguration, rightArmHomeConfiguration, \
         standingBase_dim, table_dim, table_offset_x, transitCenterHeight, \
         camera_extrinsic, camera_intrinsic, object_mesh_path, dropHeight = self.readROSParam()
-        self.rospack = rospkg.RosPack() ### https://wiki.ros.org/Packages
-
-        self.rosInit() ### initialize a ros node
+        rospack = rospkg.RosPack() ### https://wiki.ros.org/Packages
+        self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet real scene
         self.executingClientID = p.connect(p.GUI)
@@ -52,7 +51,7 @@ class PybulletExecutionScene(object):
 
         ### configure the robot
         self.configureMotomanRobot(urdfFile, basePosition, baseOrientation, \
-                leftArmHomeConfiguration, rightArmHomeConfiguration)
+                leftArmHomeConfiguration, rightArmHomeConfiguration, True)
         ### set up the workspace
         self.setupWorkspace(standingBase_dim, table_dim, table_offset_x, \
                 transitCenterHeight, object_mesh_path)
@@ -62,7 +61,8 @@ class PybulletExecutionScene(object):
         ### after initialize the scene, 
         ### randomize an object in the scene (drop an object on the table)
         self.object_name = args[3]
-        self.workspace_e.dropObjectOnTable(self.object_name, dropHeight)
+        # self.workspace_e.dropObjectOnTable(self.object_name, dropHeight)
+        self.workspace_e.fixAnObjectOnTable(self.object_name)
 
 
 
@@ -140,26 +140,45 @@ class PybulletExecutionScene(object):
 
 
     def execute_traj_callback(self, req):
-        ### given the request data: trajectory + armType
+        ### given the request data: poses + targetConfig + armType
         ### execute the trajectory on a specified arm
 
-        path = []
-        for joint_state in req.joint_trajectory:
-            path.append(joint_state.position)
-        print("path: ", path)
+        poses_path = []
+        for pose in req.poses:
+            poses_path.append([pose.position.x, pose.position.y, pose.position.z, \
+                pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w])
 
-        self.executor_e.executePath(path, self.robot_e, req.armType.armType)
+        self.executor_e.executePath_cartesian(poses_path, self.robot_e, req.armType.armType)
+
+        ### temporary put the attach object behavior here, it should be move to high level pipeline
+        self.executor_e.attachObject(self.workspace_e, self.robot_e, req.armType.armType)
+
         return ExecuteTrajectoryResponse(True)
+
+
+
+    # def execute_traj_callback(self, req):
+    #     ### given the request data: trajectory + armType
+    #     ### execute the trajectory on a specified arm
+
+    #     path = []
+    #     for joint_state in req.joint_trajectory:
+    #         path.append(joint_state.position)
+    #     print("path: ", path)
+
+    #     self.executor_e.executePath(path, self.robot_e, req.armType.armType)
+    #     return ExecuteTrajectoryResponse(True)
 
 
     def configureMotomanRobot(self, 
                 urdfFile, basePosition, baseOrientation,
-                leftArmHomeConfiguration, rightArmHomeConfiguration):
+                leftArmHomeConfiguration, rightArmHomeConfiguration, isPhysicsTurnOn):
         ### This function configures the robot in the real scene ###
         self.robot_e = MotomanRobot(
-            os.path.join(self.rospack.get_path("pybullet_motoman"), urdfFile), 
+            os.path.join(self.rosPackagePath, urdfFile), 
             basePosition, baseOrientation, leftArmHomeConfiguration, rightArmHomeConfiguration, 
-            self.executingClientID)
+            isPhysicsTurnOn, self.executingClientID)
+
 
     def setupWorkspace(self,
             standingBase_dim, table_dim, table_offset_x, 
@@ -167,8 +186,9 @@ class PybulletExecutionScene(object):
         ### This function sets up the workspace ###
         self.workspace_e = WorkspaceTable(self.robot_e.basePosition, 
             standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
-            os.path.join(self.rospack.get_path("pybullet_motoman"), object_mesh_path),
+            os.path.join(self.rosPackagePath, object_mesh_path),
             self.executingClientID)
+
 
     def setupCamera(self,
             camera_extrinsic, camera_intrinsic, args):
@@ -186,6 +206,7 @@ class PybulletExecutionScene(object):
 def main(args):
 
     pybullet_execution_scene = PybulletExecutionScene(args)
+    pybullet_execution_scene.rosInit()
     rate = rospy.Rate(10) ### 10hz
 
     while not rospy.is_shutdown():
@@ -194,7 +215,7 @@ def main(args):
         # rospy.loginfo("time stamp for image and joint state publisher %s" % time_stamp)
 
         ### get the image
-        rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
+        # rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
         ### get current joint state
         motomanRJointNames, armCurrConfiguration = pybullet_execution_scene.robot_e.getJointState()
 
@@ -205,12 +226,12 @@ def main(args):
         joint_state_msg.name = motomanRJointNames
         joint_state_msg.position = armCurrConfiguration
         ### convert the image format to ros message
-        rgb_msg = CvBridge().cv2_to_imgmsg(rgbImg)
-        depth_msg = CvBridge().cv2_to_imgmsg(depthImg)
+        # rgb_msg = CvBridge().cv2_to_imgmsg(rgbImg)
+        # depth_msg = CvBridge().cv2_to_imgmsg(depthImg)
 
         ### publish the message
-        pybullet_execution_scene.rgbImg_pub.publish(rgb_msg)
-        pybullet_execution_scene.depthImg_pub.publish(rgb_msg)
+        # pybullet_execution_scene.rgbImg_pub.publish(rgb_msg)
+        # pybullet_execution_scene.depthImg_pub.publish(rgb_msg)
         pybullet_execution_scene.jointState_pub.publish(joint_state_msg)
         ee_poses_msgs = pybullet_execution_scene.executor_e.prepare_ee_poses_msgs(pybullet_execution_scene.robot_e)
         pybullet_execution_scene.ee_poses_pub.publish(ee_poses_msgs)

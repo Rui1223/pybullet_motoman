@@ -15,6 +15,21 @@ import time
 import IPython
 
 
+def norm2(v):
+    norm = 0.0
+    for i in range(len(v)):
+        norm += v[i]*v[i]
+    norm = math.sqrt(norm)
+    return norm
+
+
+def calculateInnerProduct(v1, v2):
+    ip = 0.0
+    for i in range(len(v1)):
+        ip += v1[i]*v2[i]
+    return ip
+
+
 def computePoseDist(actual_pose, desired_pose):
     temp_dist = 0.0
     for i in range(len(actual_pose)):
@@ -22,6 +37,53 @@ def computePoseDist(actual_pose, desired_pose):
     temp_dist = math.sqrt(temp_dist)
 
     return temp_dist
+
+
+def interpolateQuaternion(Q1, Q2, f):
+    epsilon = 0.1
+    ### Here quat Q: [x,y,z,w]
+    x1 = Q1[0]
+    y1 = Q1[1]
+    z1 = Q1[2]
+    w1 = Q1[3]
+    x2 = Q2[0]
+    y2 = Q2[1]
+    z2 = Q2[2]
+    w2 = Q2[3]
+    ### compute the quaternion inner product
+    lamb = calculateInnerProduct(Q1, Q2) 
+    if lamb < 0:
+        w2 = -w2
+        x2 = -x2
+        y2 = -y2
+        z2 = -z2
+        lamb = -lamb
+    ### calculate interpolation factors (r, s)
+    if abs(1-lamb) < epsilon:
+        ### the quaternions are nearly parallel, so use linear interpolation
+        r = 1 - f
+        s = f
+    else:
+        ### calcuate spherical linear interpolation factors
+        alpha = math.acos(lamb)
+        gamma = 1.0 / math.sin(alpha)
+        r = math.sin((1-f)*alpha) * gamma
+        s = math.sin(f*alpha) * gamma
+
+    ### set the interpolated quaternion
+    w = r * w1 + s * w2
+    x = r * x1 + s * x2
+    y = r * y1 + s * y2
+    z = r * z1 + s * z2
+    Q = [x, y, z, w]
+    ### normalize the result
+    Q_norm = norm2(Q)
+    Q = [x / Q_norm, y / Q_norm, z / Q_norm, w / Q_norm]
+
+    return Q
+
+
+
 
 def convertRobotConfig_dualArm(config, robot, server):
     if server == 0:

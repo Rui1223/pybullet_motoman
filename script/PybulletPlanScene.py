@@ -17,6 +17,7 @@ import rospy
 import rospkg
 from std_msgs.msg import String
 from sensor_msgs.msg import JointState
+from geometry_msgs.msg import Pose
 
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningResponse
 from pybullet_motoman.msg import PoseSequence3D, ObjectEstimate3D
@@ -39,22 +40,21 @@ class PybulletPlanScene(object):
         basePosition, baseOrientation, urdfFile, object_mesh_path, \
         leftArmHomeConfiguration, rightArmHomeConfiguration, \
         standingBase_dim, table_dim, table_offset_x, transitCenterHeight = self.readROSParam()
-        self.rospack = rospkg.RosPack() ### https://wiki.ros.org/Packages
-
+        rospack = rospkg.RosPack() ### https://wiki.ros.org/Packages
+        self.rosPackagePath = rospack.get_path("pybullet_motoman")
+        
         ### set the server for the pybullet planning scene
-        self.planningClientID = p.connect(p.GUI)
+        self.planningClientID = p.connect(p.DIRECT)
         ### create a planner assistant
-        self.planner_p = Planner(self.planningClientID)
+        self.planner_p = Planner(self.rosPackagePath, self.planningClientID)
 
         ### configure the robot
         self.configureMotomanRobot(urdfFile, basePosition, baseOrientation, \
-                leftArmHomeConfiguration, rightArmHomeConfiguration)
+                leftArmHomeConfiguration, rightArmHomeConfiguration, False)
         ### set up the workspace
         self.setupWorkspace(standingBase_dim, table_dim, table_offset_x, \
                 transitCenterHeight, object_mesh_path)
 
-
-        self.rosInit() ### initialize a ros node
 
 
     def readROSParam(self):
@@ -123,8 +123,11 @@ class PybulletPlanScene(object):
 
         ### analyze the target configuration of the robot given the grasp pose
         ### so far we only care about the best grasp pose
+        pose_3D = req.grasp_pose_candidates.pose_sequence[0]
+        targetPose = [pose_3D.position.x, pose_3D.position.y, pose_3D.position.z, \
+            pose_3D.orientation.x, pose_3D.orientation.y, pose_3D.orientation.z, pose_3D.orientation.w]
         target_config = self.planner_p.generateConfigFromPose(
-            req.grasp_pose_candidates.pose_sequence[0], self.robot_p, self.workspace_p, "Left")
+            pose_3D, self.robot_p, self.workspace_p, "Left")
 
         ### get the current robot config from real scene by looking at the topic "joint_states"
         joint_states_msg = rospy.wait_for_message('joint_states', JointState)
@@ -134,42 +137,95 @@ class PybulletPlanScene(object):
         self.robot_p.updateSingleArmConfig(joint_values[7:14], "Right")
 
         ### with target_config and current arm config, we can send a planning query
-        result_path = self.planner_p.shortestPathPlanning(
-                            self.robot_p.leftArmCurrConfiguration, target_config, 
-                            "LeftPick", self.robot_p, self.workspace_p, "Left")
+        result_path, result_traj = self.planner_p.shortestPathPlanning(
+                self.robot_p.left_ee_pose, targetPose,
+                "LeftPick", self.robot_p, self.workspace_p, "Left")
+
+        ### get the current robot config from real scene by looking at the topic "joint_states"
+        joint_states_msg = rospy.wait_for_message('joint_states', JointState)
+        joint_values = list(joint_states_msg.position)
+        self.robot_p.resetArmConfig(joint_values)
+        self.robot_p.updateSingleArmConfig(joint_values[0:7], "Left")
+        self.robot_p.updateSingleArmConfig(joint_values[7:14], "Right")
 
         if result_path != None:
             print("the path is successfully found")
             ### Now we need to call a service call to execute the path in the execution scene
-            execute_success = self.serviceCall_execute_trajectory(result_path, "Left")
+            execute_success = self.serviceCall_execute_trajectory(
+                            result_traj, self.robot_p.left_ee_pose, targetPose, "Left")
 
         return MotionPlanningResponse(True)
 
 
-    def serviceCall_execute_trajectory(self, result_path, armType):
+    def serviceCall_execute_trajectory(self, result_traj, initialPose, targetPose, armType):
         rospy.wait_for_service("execute_trajectory")
         request = ExecuteTrajectoryRequest()
         request.armType.armType = armType
-        for waypoint in result_path:
-            temp_joint_state = JointState()
-            temp_joint_state.position = waypoint
-            request.joint_trajectory.append(temp_joint_state)
+
+        initial_pose = Pose()
+        initial_pose.position.x = initialPose[0]
+        initial_pose.position.y = initialPose[1]
+        initial_pose.position.z = initialPose[2]
+        initial_pose.orientation.x = initialPose[3]
+        initial_pose.orientation.y = initialPose[4]
+        initial_pose.orientation.z = initialPose[5]
+        initial_pose.orientation.w = initialPose[6]
+        request.poses.append(initial_pose)
+
+        for waypoint in result_traj:
+            temp_pose = Pose()
+            temp_pose.position.x = waypoint[0]
+            temp_pose.position.y = waypoint[1]
+            temp_pose.position.z = waypoint[2]
+            temp_pose.orientation.x = waypoint[3]
+            temp_pose.orientation.y = waypoint[4]
+            temp_pose.orientation.z = waypoint[5]
+            temp_pose.orientation.w = waypoint[6]
+            request.poses.append(temp_pose)
+
+        target_pose = Pose()
+        target_pose.position.x = targetPose[0]
+        target_pose.position.y = targetPose[1]
+        target_pose.position.z = targetPose[2]
+        target_pose.orientation.x = targetPose[3]
+        target_pose.orientation.y = targetPose[4]
+        target_pose.orientation.z = targetPose[5]
+        target_pose.orientation.w = targetPose[6]
+        request.poses.append(target_pose)
+
         try:
             executeIt = rospy.ServiceProxy("execute_trajectory", ExecuteTrajectory)
-            success = executeIt(request.joint_trajectory, request.armType)
+            success = executeIt(request.poses, request.armType)
             return success
         except rospy.ServiceException as e:
             print("Service call failed: %s" % e)
 
 
+    # def serviceCall_execute_trajectory(self, result_path, armType):
+    #     rospy.wait_for_service("execute_trajectory")
+    #     request = ExecuteTrajectoryRequest()
+    #     request.armType.armType = armType
+    #     for waypoint in result_path:
+    #         temp_joint_state = JointState()
+    #         temp_joint_state.position = waypoint
+    #         request.joint_trajectory.append(temp_joint_state)
+    #     try:
+    #         executeIt = rospy.ServiceProxy("execute_trajectory", ExecuteTrajectory)
+    #         success = executeIt(request.joint_trajectory, request.armType)
+    #         return success
+    #     except rospy.ServiceException as e:
+    #         print("Service call failed: %s" % e)
+
+
     def configureMotomanRobot(self,
                 urdfFile, basePosition, baseOrientation,
-                leftArmHomeConfiguration, rightArmHomeConfiguration):
+                leftArmHomeConfiguration, rightArmHomeConfiguration, isPhysicsTurnOn):
         ### This function configures the robot in the planning scene ###
         self.robot_p = MotomanRobot(
-            os.path.join(self.rospack.get_path("pybullet_motoman"), urdfFile), 
+            os.path.join(self.rosPackagePath, urdfFile), 
             basePosition, baseOrientation, leftArmHomeConfiguration, rightArmHomeConfiguration, 
-            self.planningClientID)
+            isPhysicsTurnOn, self.planningClientID)
+
 
     def setupWorkspace(self,
             standingBase_dim, table_dim, table_offset_x, 
@@ -177,16 +233,15 @@ class PybulletPlanScene(object):
         ### The function sets up the workspace
         self.workspace_p = WorkspaceTable(self.robot_p.basePosition, 
             standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
-            os.path.join(self.rospack.get_path("pybullet_motoman"), object_mesh_path),
+            os.path.join(self.rosPackagePath, object_mesh_path),
             self.planningClientID)
 
 
 def main(args):
-
     pybullet_plan_scene = PybulletPlanScene(args)
+    pybullet_plan_scene.planner_p.loadSamples()
+    pybullet_plan_scene.rosInit()
     rate = rospy.Rate(10) ### 10hz
-
-
 
     rospy.spin()
 

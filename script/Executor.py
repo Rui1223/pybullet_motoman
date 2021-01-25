@@ -19,11 +19,105 @@ class Executor(object):
     def __init__(self, server, 
         isObjectInLeftHand, isObjectInRightHand,
         objectInLeftHand, objectInRightHand):
-        self.executingServer = server
+        self.server = server
         self.isObjectInLeftHand = isObjectInLeftHand
         self.isObjectInRightHand = isObjectInRightHand
         self.objectInLeftHand = objectInLeftHand
         self.objectInRightHand = objectInRightHand
+
+
+    def attachObject(self, workspace, robot, armType):
+        if armType == "Left":
+            self.isObjectInLeftHand = True
+            self.objectInLeftHand = workspace.object_geometries.items()[0] ### mesh: name
+        else:
+            self.isObjectInRightHand = True
+            self.objectInRightHand = workspace.object_geometries.items()[0] ### mesh: name
+
+        ### get the object pose relative to the frame of the end effector 
+        ### since once the object is attached to the end effector, 
+        ### it will remain constant (may add some noice)
+        if armType == "Left":
+            curr_ee_pose = robot.left_ee_pose
+            ls = p.getBasePositionAndOrientation(
+                    self.objectInLeftHand[0], physicsClientId=self.server)
+            curr_object_global_pose = list(ls[0]) + list(ls[1])
+        else:
+            curr_ee_pose = robot.right_ee_pose
+            ls = p.getBasePositionAndOrientation(
+                    self.objectInRightHand[0], physicsClientId=self.server)
+            curr_object_global_pose = list(ls[0]) + list(ls[1])
+
+        # print("curr_ee_pose: ", curr_ee_pose)
+        # print("curr_object_global_pose: ", curr_object_global_pose)
+
+        inverse_ee_global = p.invertTransform(curr_ee_pose[0:3], curr_ee_pose[3:7])
+        self.localPose = p.multiplyTransforms(
+            list(inverse_ee_global[0]), list(inverse_ee_global[1]),
+            curr_object_global_pose[0:3], curr_object_global_pose[3:7])
+        self.localPose = list(self.localPose[0]) + list(self.localPose[1])
+        print(self.localPose)
+
+        ##################################################################################
+
+
+    def getObjectGlobalPose(self, local_pose, ee_global_pose):
+        temp_object_global_pose = p.multiplyTransforms(
+            ee_global_pose[0:3], ee_global_pose[3:7],
+            local_pose[0:3], local_pose[3:7])
+        object_global_pose = list(temp_object_global_pose[0]) + list(temp_object_global_pose[1])
+
+        return object_global_pose
+
+
+    def updateRealObjectBasedonLocalPose(self, robot, armType):
+        if armType == "Left":
+            ee_idx = robot.left_ee_idx
+            objectInHand = self.objectInLeftHand[0]
+            curr_ee_pose = robot.left_ee_pose
+            object_global_pose = self.getObjectGlobalPose(self.localPose, curr_ee_pose)
+
+        else:
+            ee_idx = robot.right_ee_idx
+            objectInHand = self.objectInRightHand[0]
+            curr_ee_pose = robot.right_ee_idx
+            object_global_pose = self.getObjectGlobalPose(self.localPose, curr_ee_pose)
+
+        p.resetBasePositionAndOrientation(
+            objectInHand, object_global_pose[0:3], object_global_pose[3:7], physicsClientId=self.server)
+
+        
+        
+    def executePath_cartesian(self, poses_path, robot, armType):
+        ### path is a list of poses
+        for i in range(len(poses_path)-1):
+            current_pose = poses_path[i]
+            next_pose = poses_path[i+1]
+            self.pose_transition(current_pose, next_pose, robot, armType)
+            time.sleep(0.05)
+
+        ### final adjustment
+        if armType == "Left":
+            ee_idx = robot.left_ee_idx
+        else:
+            ee_idx = robot.right_ee_idx
+        pose_quat = p.getLinkState(robot.motomanGEO, ee_idx, physicsClientId=robot.server)
+        curr_pose = list(pose_quat[0]) + list(pose_quat[1])
+
+        self.final_adjustment(curr_pose, poses_path[-1], robot, armType)
+
+        # curr_config = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
+        #                         endEffectorLinkIndex=ee_idx,
+        #                         targetPosition=pose[0:3],
+        #                         targetOrientation=pose[3:7],
+        #                         lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr,
+        #                         maxNumIterations=20000, residualThreshold=0.0000001,
+        #                         physicsClientId=robot.server)
+        # if armType == "Left":
+        #     curr_config = curr_config[0:7]
+        # else:
+        #     curr_config = curr_config[7:14]
+        # self.state_transition(curr_config, targetConfig, robot, armType)
 
 
     def executePath(self, path, robot, armType):
@@ -32,6 +126,80 @@ class Executor(object):
             current_state = path[i]
             next_state = path[i+1]
             self.state_transition(current_state, next_state, robot, armType)
+            time.sleep(0.05)
+
+
+    def final_adjustment(self, w1, w2, robot, armType):
+        nseg = 20
+        if armType == "Left":
+            ee_idx = robot.left_ee_idx
+        else:
+            ee_idx = robot.right_ee_idx
+        # min_dist = 0.05
+        # nseg = int(max(
+        #     abs(w1[0]-w2[0]), abs(w1[1]-w2[1]), abs(w1[2]-w2[2])) / min_dist)
+        # if nseg == 0: nseg += 1
+        # print("nseg: " + str(nseg))
+
+        for i in range(1, nseg+1):
+            interm_w0 = w1[0] + (w2[0]-w1[0]) / nseg * i
+            interm_w1 = w1[1] + (w2[1]-w1[1]) / nseg * i
+            interm_w2 = w1[2] + (w2[2]-w1[2]) / nseg * i
+            interm_pos = [interm_w0, interm_w1, interm_w2]
+            interm_quat = utils.interpolateQuaternion(w1[3:7], w2[3:7], 1 / nseg *i)
+            interm_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
+                                    endEffectorLinkIndex=ee_idx,
+                                    targetPosition=interm_pos,
+                                    targetOrientation=interm_quat,
+                                    lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr,
+                                    maxNumIterations=20000, residualThreshold=0.0000001,
+                                    physicsClientId=robot.server)
+            if armType == "Left": 
+                interm_IK = interm_IK[0:7]
+            else:
+                interm_IK = interm_IK[7:14]
+            robot.moveSingleArm(interm_IK, armType)
+            if (self.isObjectInLeftHand and armType == "Left") or (self.isObjectInRightHand and armType == "Right"):
+                self.updateRealObjectBasedonLocalPose(robot, armType)
+
+            p.stepSimulation(physicsClientId=self.server)
+            time.sleep(0.05)
+
+
+    def pose_transition(self, w1, w2, robot, armType):
+        # nseg = 5
+        if armType == "Left":
+            ee_idx = robot.left_ee_idx
+        else:
+            ee_idx = robot.right_ee_idx
+        min_dist = 0.01
+        nseg = int(max(
+            abs(w1[0]-w2[0]), abs(w1[1]-w2[1]), abs(w1[2]-w2[2])) / min_dist)
+        if nseg == 0: nseg += 1
+        # print("nseg: " + str(nseg))
+
+        for i in range(1, nseg+1):
+            interm_w0 = w1[0] + (w2[0]-w1[0]) / nseg * i
+            interm_w1 = w1[1] + (w2[1]-w1[1]) / nseg * i
+            interm_w2 = w1[2] + (w2[2]-w1[2]) / nseg * i
+            interm_pos = [interm_w0, interm_w1, interm_w2]
+            # interm_quat = utils.interpolateQuaternion(w1[3:7], w2[3:7], 1 / nseg *i)
+            interm_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
+                                    endEffectorLinkIndex=ee_idx,
+                                    targetPosition=interm_pos,
+                                    lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr,
+                                    maxNumIterations=20000, residualThreshold=0.0000001,
+                                    physicsClientId=robot.server)
+            if armType == "Left": 
+                interm_IK = interm_IK[0:7]
+            else:
+                interm_IK = interm_IK[7:14]
+            robot.moveSingleArm(interm_IK, armType)
+            # print("isObjectInRightHand: ", self.isObjectInRightHand)
+            if (self.isObjectInLeftHand and armType == "Left") or (self.isObjectInRightHand and armType == "Right"):
+                self.updateRealObjectBasedonLocalPose(robot, armType)
+            p.stepSimulation(physicsClientId=self.server)
+            time.sleep(0.05)
 
 
     def state_transition(self, n1, n2, robot, armType):
@@ -55,12 +223,12 @@ class Executor(object):
             intermNode = [interm_j0, interm_j1, interm_j2, interm_j3, interm_j4, interm_j5, interm_j6]
 
             robot.moveSingleArm(intermNode, armType)
-            # curr_waypoint = utils.convertRobotConfig_singleArm(intermNode, robot, armType, self.executingServer)
+            # curr_waypoint = utils.convertRobotConfig_singleArm(intermNode, robot, armType, self.server)
             # self.traj.append(curr_waypoint)
             # if (self.isObjectInLeftHand and armType == "Left") or (self.isObjectInRightHand and armType == "Right"):
             #     self.updateRealObjectBasedonLocalPose(robot, armType)
 
-            p.stepSimulation(physicsClientId=self.executingServer)
+            p.stepSimulation(physicsClientId=self.server)
             time.sleep(0.05)
 
 
@@ -95,7 +263,8 @@ class Executor(object):
             ee_idx = robot.left_ee_idx
         else:
             ee_idx = robot.right_ee_idx
-        ls = p.getLinkState(robot.motomanGEO, ee_idx, physicsClientId=self.executingServer)
+        ls = p.getLinkState(robot.motomanGEO, ee_idx, physicsClientId=self.server)
 
-        return list(ls[0]), list(ls[1]) 
+        return list(ls[0]), list(ls[1])
+
 

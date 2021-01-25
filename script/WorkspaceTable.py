@@ -127,7 +127,67 @@ class WorkspaceTable(object):
         p.setRealTimeSimulation(enableRealTimeSimulation=0, physicsClientId=self.server)
 
         ### register this object
-        self.object_geometries[_m] = obj_name
+        self.obj_name = obj_name
+        self.object_geometries[_m] = self.obj_name
+
+
+    def fixAnObjectOnTable(self, obj_name):
+
+        ### This is just a test function
+
+        object_configs_angles = {
+            "003_cracker_box": [[-0.035, -0.336, 87.775], [89.801, -2.119, 112.705], [-25.498, -84.700, 110.177]],
+            "004_sugar_box": [[-0.166, -0.100, -144.075], [90.822, -1.909, 67.882], [-7.177, -79.030, 102.698]],
+            "006_mustard_bottle": [[0.006, 0.061, -135.114], [87.134, -1.560, 89.805]],
+            "008_pudding_box": [[89.426, 0.412, -96.268], [-0.721, 0.300, -138.733]],
+            "010_potted_meat_can": [[-0.131, -0.061, 97.479], [87.863, -1.266, -65.330]],
+            "021_bleach_cleanser": [[-0.103, -0.082, -39.439], [-84.349, -1.891, -177.925]]
+        }
+
+        massList = {
+            "003_cracker_box": 2.8,
+            "004_sugar_box": 1.7,
+            "005_tomato_soup_can": 3.5,
+            "006_mustard_bottle": 1.9,
+            "008_pudding_box": 1.1,
+            "009_gelatin_box": 0.8,
+            "010_potted_meat_can": 2.8,
+            "011_banana": 1.0,
+            "019_pitcher_base": 1.6,
+            "021_bleach_cleanser": 2.7
+        }
+
+        obj_path = os.path.join(self.mesh_path, obj_name, "google_16k/textured.obj")
+        _c = p.createCollisionShape(shapeType=p.GEOM_MESH, fileName=obj_path, meshScale=[1, 1, 1], physicsClientId=self.server)
+        _v = p.createVisualShape(shapeType=p.GEOM_MESH, fileName=obj_path, meshScale=[1, 1, 1], physicsClientId=self.server)
+        ### random position given the table position and table_dim
+        # temp_pos = [random.uniform(self.tablePosition[0]-self.table_dim[0]/2+0.1, self.tablePosition[0]+self.table_dim[0]/2-0.1), \
+        #             random.uniform(self.tablePosition[1]+0.1, self.tablePosition[1]+self.table_dim[1]/2-0.1), \
+        #             self.tablePosition[2]+self.table_dim[2]/2]
+        temp_pos = [0.80, 0.45, 0.62]
+        temp_quat = [0.0, 1.0, 0.0, 1.0]
+
+        ### select one configuration
+        # temp_angles = object_configs_angles[obj_name][0]
+        ### add some randomness on the orientation around z-axis
+        # temp_angles[2] = temp_angles[2] + random.uniform(-180, 180)
+        # temp_quat = p.getQuaternionFromEuler([i*math.pi/180 for i in temp_angles])
+        ### create the mesh for the object
+        # _m = p.createMultiBody(baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
+        #                         basePosition=pos, baseOrientation=quat, physicsClientId=server)
+        _m = p.createMultiBody(baseMass=massList[obj_name], baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
+                                basePosition=temp_pos, baseOrientation=temp_quat, physicsClientId=self.server)
+
+        ### ready to drop the object
+        # p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.server)
+        # p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=self.server)
+        ### wait for one second after the drop
+        time.sleep(1.5)
+        # p.setRealTimeSimulation(enableRealTimeSimulation=0, physicsClientId=self.server)
+
+        ### register this object
+        self.obj_name = obj_name
+        self.object_geometries[_m] = self.obj_name
 
 
     def updateObjectGeomeotry_BoundingBox(self, object_pose, object_dim):
