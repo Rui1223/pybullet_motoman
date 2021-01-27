@@ -62,6 +62,7 @@ add_service_files(
   FILES
   MotionPlanning.srv
   ExecuteTrajectory.srv
+  AttachObject.srv
 )
 
 ## Generate actions in the 'action' folder

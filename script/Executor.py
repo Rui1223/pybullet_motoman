@@ -61,6 +61,15 @@ class Executor(object):
         ##################################################################################
 
 
+    def detachObject(self, workspace, robot, armType):
+        if armType == "Left":
+            self.isObjectInLeftHand = False
+            self.objectInLeftHand = None
+        else:
+            self.isObjectInRightHand = False
+            self.objectInRightHand = None
+
+
     def getObjectGlobalPose(self, local_pose, ee_global_pose):
         temp_object_global_pose = p.multiplyTransforms(
             ee_global_pose[0:3], ee_global_pose[3:7],

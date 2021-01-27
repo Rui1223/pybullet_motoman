@@ -1,9 +1,8 @@
-# This srv file defines the servce
+# This srv file defines the service
 # for a single motion planning query
-# given the updated object pose and robot grasp pose
+# given the updated gripper pose and armType specified
 
-geometry_msgs/Pose[] grasp_pose_candidates
-geometry_msgs/Pose bbox_pose
-float32[] bbox_dims
+geometry_msgs/Pose[] gripper_pose_candidates
+pybullet_motoman/ArmType armType
 ---
 bool success

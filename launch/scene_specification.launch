@@ -38,6 +38,9 @@
 	<node pkg="pybullet_motoman" type="PybulletPlanScene.py" name="pybullet_plan_scene"
 		output="screen" required="True" />
 
+	<node pkg="pybullet_motoman" type="TestPipeline.py" name="test_pipeline"
+		output="screen" required="True" />
+
 	<!-- <node pkg="pybullet_motoman" type="fake_perception.py" name="fake_perception"
 		output="screen" required="True" /> -->
 

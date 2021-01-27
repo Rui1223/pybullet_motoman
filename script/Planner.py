@@ -12,8 +12,8 @@ from scipy import spatial
 import time
 import IPython
 import subprocess
-import sklearn
-from sklearn.neighbors import NearestNeighbors
+# import sklearn
+# from sklearn.neighbors import NearestNeighbors
 
 import utils
 from CollisionChecker import CollisionChecker
@@ -269,6 +269,7 @@ class Planner(object):
             trials += 1
 
         print("forget about pre-grasp at this moment. Will come back later")
+        print("singleArmConfig_IK: ", singleArmConfig_IK)
 
         return singleArmConfig_IK
 
@@ -297,18 +298,14 @@ class Planner(object):
         isValid = False
         ### check if there is collision
         if self.collisionAgent_p.collisionCheck_selfCollision(robot.motomanGEO) == True:
-            # print("self collision!")
             return isValid
         else:
             pass
-            # print("no self collsion!")
         if self.collisionAgent_p.collisionCheck_knownGEO(
                     robot.motomanGEO, workspace.known_geometries) == True:
-            # print("collision with known GEO")
             return isValid
         else:
             pass
-            # print("no collision with known GEO")
 
         ### If you reach here, the configuration passes collision check with known geometry
         isValid = True

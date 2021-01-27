@@ -10,9 +10,21 @@ class CollisionChecker(object):
     def collisionCheck_selfCollision(self, robotGEO):
         isCollision = False
         contacts = p.getContactPoints(bodyA=robotGEO, bodyB=robotGEO, physicsClientId=self.server)
-        if len(contacts) != 0:
+        if len(contacts) == 0:
+            pass
+        else:
             # print("self collision!")
-            isCollision = True
+            ### check each contact
+            for contact in contacts:
+                # print("link-to-link collision: ")
+                # print(str(contact[3]) + ": " + str(contact[4]))
+                if (contact[3] == 23 and contact[4] == 25) or (contact[3] == 28 and contact[4] == 30):
+                    ### we can allow collisions among the links of the robotiq hand 
+                    ### (mounted on the right arm)
+                    pass
+                else:
+                    isCollision = True
+                    break
 
         return isCollision
 

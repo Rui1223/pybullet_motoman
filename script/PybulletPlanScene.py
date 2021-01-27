@@ -116,16 +116,17 @@ class PybulletPlanScene(object):
         ### given the request data: object_estimate
         ### update the object geometry in the plan scene
         ### (either for target or collision check)
-        self.workspace_p.updateObjectGeomeotry_BoundingBox(
-            req.bbox_pose, req.bbox_dims)
+        # self.workspace_p.updateObjectGeomeotry_BoundingBox(
+        #     req.bbox_pose, req.bbox_dims)
 
         ### analyze the target configuration of the robot given the grasp pose
         ### so far we only care about the best grasp pose
-        pose_3D = req.grasp_pose_candidates[0]
+        pose_3D = req.gripper_pose_candidates[0]
+        armType = req.armType.armType
         targetPose = [pose_3D.position.x, pose_3D.position.y, pose_3D.position.z, \
             pose_3D.orientation.x, pose_3D.orientation.y, pose_3D.orientation.z, pose_3D.orientation.w]
         target_config = self.planner_p.generateConfigFromPose(
-            pose_3D, self.robot_p, self.workspace_p, "Left")
+            pose_3D, self.robot_p, self.workspace_p, armType)
 
         ### get the current robot config from real scene by looking at the topic "joint_states"
         joint_states_msg = rospy.wait_for_message('joint_states', JointState)
@@ -135,9 +136,16 @@ class PybulletPlanScene(object):
         self.robot_p.updateSingleArmConfig(joint_values[7:14], "Right")
 
         ### with target_config and current arm config, we can send a planning query
+        if armType == "Left":
+            task_name = "LeftPick"
+        else:
+            task_name = "RightPick"
+
         result_path, result_traj = self.planner_p.shortestPathPlanning(
                 self.robot_p.left_ee_pose, targetPose,
-                "LeftPick", self.robot_p, self.workspace_p, "Left")
+                task_name, self.robot_p, self.workspace_p, armType)
+        print("result path: ", result_path)
+        print("result_traj: ", result_traj)
 
         ### get the current robot config from real scene by looking at the topic "joint_states"
         joint_states_msg = rospy.wait_for_message('joint_states', JointState)
@@ -146,13 +154,17 @@ class PybulletPlanScene(object):
         self.robot_p.updateSingleArmConfig(joint_values[0:7], "Left")
         self.robot_p.updateSingleArmConfig(joint_values[7:14], "Right")
 
-        if result_path != None:
+        if result_path != []:
             print("the path is successfully found")
             ### Now we need to call a service call to execute the path in the execution scene
             execute_success = self.serviceCall_execute_trajectory(
-                            result_traj, self.robot_p.left_ee_pose, targetPose, "Left")
+                            result_traj, self.robot_p.left_ee_pose, targetPose, armType)
+            return MotionPlanningResponse(True)
+        else:
+            print("the path is not successfully found")
+            return MotionPlanningResponse(False)
 
-        return MotionPlanningResponse(True)
+        
 
 
     def serviceCall_execute_trajectory(self, result_traj, initialPose, targetPose, armType):
@@ -197,22 +209,6 @@ class PybulletPlanScene(object):
             return success
         except rospy.ServiceException as e:
             print("Service call failed: %s" % e)
-
-
-    # def serviceCall_execute_trajectory(self, result_path, armType):
-    #     rospy.wait_for_service("execute_trajectory")
-    #     request = ExecuteTrajectoryRequest()
-    #     request.armType.armType = armType
-    #     for waypoint in result_path:
-    #         temp_joint_state = JointState()
-    #         temp_joint_state.position = waypoint
-    #         request.joint_trajectory.append(temp_joint_state)
-    #     try:
-    #         executeIt = rospy.ServiceProxy("execute_trajectory", ExecuteTrajectory)
-    #         success = executeIt(request.joint_trajectory, request.armType)
-    #         return success
-    #     except rospy.ServiceException as e:
-    #         print("Service call failed: %s" % e)
 
 
     def configureMotomanRobot(self,

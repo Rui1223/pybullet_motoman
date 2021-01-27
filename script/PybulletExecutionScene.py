@@ -29,6 +29,7 @@ from geometry_msgs.msg import Pose
 from pybullet_motoman.msg import ArmType
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryResponse
 from pybullet_motoman.msg import EEPoses
+from pybullet_motoman.srv import AttachObject, AttachObjectResponse
 
 ### This class defines a PybulletExecutionScene class which
 ### (1) sets up the robot, table and camera
@@ -143,11 +144,29 @@ class PybulletExecutionScene(object):
         self.ee_poses_pub = rospy.Publisher('ee_poses', EEPoses, queue_size=10)
         execute_trajectory_server = rospy.Service(
                 "execute_trajectory", ExecuteTrajectory, self.execute_traj_callback)
+        attach_object_server = rospy.Service(
+                "attach_object", AttachObject, self.attach_object_callback)
         rospy.init_node("pybullet_execution_scene", anonymous=True)
 
 
+    def attach_object_callback(self, req):
+        ### given the request data: isAttached(bool) + armType
+        if req.isAttached == True:
+            self.executor_e.attachObject(self.workspace_e, self.robot_e, req.armType.armType)
+            print("successfully attached the object")
+            return AttachObjectResponse(True)
+        else:
+            ### isAttached == False (we want detach the object)
+            self.executor_e.detachObject(self.workspace_e, self.robot_e, req.armType.armType)
+            p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.executingClientID)
+            p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=self.executingClientID)
+            time.sleep(10)
+            print("successfully detached the object")
+            return AttachObjectResponse(True)
+
+
     def execute_traj_callback(self, req):
-        ### given the request data: poses + targetConfig + armType
+        ### given the request data: poses + armType
         ### execute the trajectory on a specified arm
 
         poses_path = []
@@ -157,23 +176,7 @@ class PybulletExecutionScene(object):
 
         self.executor_e.executePath_cartesian(poses_path, self.robot_e, req.armType.armType)
 
-        ### temporary put the attach object behavior here, it should be move to high level pipeline
-        self.executor_e.attachObject(self.workspace_e, self.robot_e, req.armType.armType)
-
         return ExecuteTrajectoryResponse(True)
-
-
-    # def execute_traj_callback(self, req):
-    #     ### given the request data: trajectory + armType
-    #     ### execute the trajectory on a specified arm
-
-    #     path = []
-    #     for joint_state in req.joint_trajectory:
-    #         path.append(joint_state.position)
-    #     print("path: ", path)
-
-    #     self.executor_e.executePath(path, self.robot_e, req.armType.armType)
-    #     return ExecuteTrajectoryResponse(True)
 
 
     def configureMotomanRobot(self, 
