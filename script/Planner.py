@@ -130,11 +130,11 @@ class Planner(object):
             ### for each potential neighbor
             for j in range(len(knn[1])):
                 ### first check if this query node has already connected to enough neighbors
-                if neighbors_connected >= self.num_neighbors: 
+                if neighbors_connected >= self.num_neighbors:
                     break
                 if knn[1][j] == i:
                     ### if the neighbor is the query node itself
-                    continue                
+                    continue
                 if connectivity[i][knn[1][j]] == 1:
                     ### the connectivity has been checked before
                     neighbors_connected += 1
@@ -172,11 +172,11 @@ class Planner(object):
             ### for each potential neighbor
             for j in range(len(knn[1])):
                 ### first check if this query node has already connected to enough neighbors
-                if neighbors_connected >= self.num_neighbors: 
+                if neighbors_connected >= self.num_neighbors:
                     break
                 if knn[1][j] == i:
                     ### if the neighbor is the query node itself
-                    continue                
+                    continue
                 if connectivity[i][knn[1][j]] == 1:
                     ### the connectivity has been checked before
                     neighbors_connected += 1
@@ -309,7 +309,7 @@ class Planner(object):
         else:
             pass
             # print("no collision with known GEO")
-        
+
         ### If you reach here, the configuration passes collision check with known geometry
         isValid = True
         # print("pass IK collision checker with known GEO")
@@ -341,7 +341,7 @@ class Planner(object):
                                     lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr,
                                     maxNumIterations=20000, residualThreshold=0.0000001,
                                     physicsClientId=robot.server)
-            if armType == "Left": 
+            if armType == "Left":
                 interm_IK = interm_IK[0:7]
             else:
                 interm_IK = interm_IK[7:14]
@@ -359,7 +359,7 @@ class Planner(object):
         # nseg = 5
         min_degree = math.pi / 90
         nseg = int(max(
-            abs(n1[0]-n2[0]), abs(n1[1]-n2[1]), abs(n1[2]-n2[2]), abs(n1[3]-n2[3]), 
+            abs(n1[0]-n2[0]), abs(n1[1]-n2[1]), abs(n1[2]-n2[2]), abs(n1[3]-n2[3]),
             abs(n1[4]-n2[4]), abs(n1[5]-n2[5]), abs(n1[6]-n2[6])) / min_degree)
         if nseg == 0: nseg += 1
         # print("nseg: " + str(nseg))
@@ -387,7 +387,7 @@ class Planner(object):
     def shortestPathPlanning(self, initialPose, targetPose, theme, robot, workspace, armType):
         ### first prepare the start_goal file
         f = self.writeStartGoal(initialPose[0:3], targetPose[0:3], theme)
-        self.connectStartGoalToArmRoadmap(f, 
+        self.connectStartGoalToArmRoadmap(f,
                 initialPose, targetPose, robot, workspace, armType)
         # ### move back the robot arm back to its current configuration after collision check
         # robot.resetArmConfig(robot.leftArmCurrConfiguration + robot.rightArmCurrConfiguration)
@@ -400,8 +400,8 @@ class Planner(object):
         subprocess.call(executeCommand, cwd=cwd, shell=True)
         ### Now read in the trajectory
         # traj = self.readTrajectory(theme)
-        path, traj = self.readPath(theme, armType)
 
+        path, traj = self.readPath(theme, armType)
         return path, traj
 
 
@@ -418,7 +418,7 @@ class Planner(object):
                 isFailure = bool(int(line[0]))
                 if isFailure:
                     f.close()
-                    return traj
+                    return path, traj
             else:
                 line = line.split()
                 # line = [int(e) for e in line]
@@ -520,7 +520,7 @@ class Planner(object):
         self.workspaceNodes[armType].append(initialPose[0:3])
         self.workspaceNodes[armType].append(targetPose[0:3])
         tree = spatial.KDTree(self.workspaceNodes[armType])
-        
+
         ###### for start ######
         start_workspaceNode = self.workspaceNodes[armType][-2]
         knn = tree.query(start_workspaceNode, k=self.num_neighbors, p=2)
@@ -561,7 +561,7 @@ class Planner(object):
                 continue
             elif knn[1][j] == start_id:
                 ### if the neighbor is the start
-                if startGoalConnect == True: 
+                if startGoalConnect == True:
                     continue
                 else:
                     neighbor = initialPose
@@ -644,7 +644,7 @@ class Planner(object):
 #     f_connection.close()
 
 
-# def connectStartGoalToArmRoadmap_notused(self, 
+# def connectStartGoalToArmRoadmap_notused(self,
 #     f, initialSingleArmConfig, targetSingleArmConfig, robot, workspace, armType):
 
 #     startGoalConnect = False

@@ -40,7 +40,7 @@ class PybulletPlanScene(object):
         standingBase_dim, table_dim, table_offset_x, transitCenterHeight = self.readROSParam()
         rospack = rospkg.RosPack() ### https://wiki.ros.org/Packages
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
-        
+
         ### set the server for the pybullet planning scene
         self.planningClientID = p.connect(p.DIRECT)
 
@@ -121,7 +121,7 @@ class PybulletPlanScene(object):
 
         ### analyze the target configuration of the robot given the grasp pose
         ### so far we only care about the best grasp pose
-        pose_3D = req.grasp_pose_candidates.pose_sequence[0]
+        pose_3D = req.grasp_pose_candidates[0]
         targetPose = [pose_3D.position.x, pose_3D.position.y, pose_3D.position.z, \
             pose_3D.orientation.x, pose_3D.orientation.y, pose_3D.orientation.z, pose_3D.orientation.w]
         target_config = self.planner_p.generateConfigFromPose(
@@ -220,8 +220,8 @@ class PybulletPlanScene(object):
                 leftArmHomeConfiguration, rightArmHomeConfiguration, isPhysicsTurnOn):
         ### This function configures the robot in the planning scene ###
         self.robot_p = MotomanRobot(
-            os.path.join(self.rosPackagePath, urdfFile), 
-            basePosition, baseOrientation, leftArmHomeConfiguration, rightArmHomeConfiguration, 
+            os.path.join(self.rosPackagePath, urdfFile),
+            basePosition, baseOrientation, leftArmHomeConfiguration, rightArmHomeConfiguration,
             isPhysicsTurnOn, self.planningClientID)
 
 
