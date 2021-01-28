@@ -53,7 +53,6 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  ArmType.msg
   EEPoses.msg
 )
 
@@ -117,7 +116,6 @@ catkin_package(
 catkin_install_python(PROGRAMS
 	script/PybulletExecutionScene.py
 	script/PybulletPlanScene.py
-	script/fake_perception.py
     	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 ###########

@@ -3,6 +3,6 @@
 # given the updated gripper pose and armType specified
 
 geometry_msgs/Pose[] gripper_pose_candidates
-pybullet_motoman/ArmType armType
+string armType
 ---
 bool success

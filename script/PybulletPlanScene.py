@@ -122,7 +122,7 @@ class PybulletPlanScene(object):
         ### analyze the target configuration of the robot given the grasp pose
         ### so far we only care about the best grasp pose
         pose_3D = req.gripper_pose_candidates[0]
-        armType = req.armType.armType
+        armType = req.armType
         targetPose = [pose_3D.position.x, pose_3D.position.y, pose_3D.position.z, \
             pose_3D.orientation.x, pose_3D.orientation.y, pose_3D.orientation.z, pose_3D.orientation.w]
         target_config = self.planner_p.generateConfigFromPose(
@@ -170,7 +170,7 @@ class PybulletPlanScene(object):
     def serviceCall_execute_trajectory(self, result_traj, initialPose, targetPose, armType):
         rospy.wait_for_service("execute_trajectory")
         request = ExecuteTrajectoryRequest()
-        request.armType.armType = armType
+        request.armType = armType
 
         initial_pose = Pose()
         initial_pose.position.x = initialPose[0]

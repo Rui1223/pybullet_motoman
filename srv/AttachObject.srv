@@ -2,7 +2,7 @@
 # for attaching or detaching an object
 # given attach/detach command and armType specified
 
-bool isAttached
-pybullet_motoman/ArmType armType
+bool isAttachEnabled
+string armType
 ---
 bool success

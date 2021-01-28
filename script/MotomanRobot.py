@@ -167,7 +167,7 @@ class MotomanRobot(object):
         num_joints = p.getNumJoints(self.motomanGEO, self.server)
         for i in range(num_joints):
             jointInfo = p.getJointInfo(self.motomanGEO, i, self.server)
-            print(jointInfo)
+            # print(jointInfo)
             if jointInfo[2] == 0:
                 ### only get revolute joint
                 self.motomanRJointNames.append(jointInfo[1])

@@ -26,7 +26,6 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Pose
-from pybullet_motoman.msg import ArmType
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryResponse
 from pybullet_motoman.msg import EEPoses
 from pybullet_motoman.srv import AttachObject, AttachObjectResponse
@@ -150,14 +149,14 @@ class PybulletExecutionScene(object):
 
 
     def attach_object_callback(self, req):
-        ### given the request data: isAttached(bool) + armType
-        if req.isAttached == True:
-            self.executor_e.attachObject(self.workspace_e, self.robot_e, req.armType.armType)
+        ### given the request data: isAttachEnabled(bool) + armType
+        if req.isAttachEnabled == True:
+            self.executor_e.attachObject(self.workspace_e, self.robot_e, req.armType)
             print("successfully attached the object")
             return AttachObjectResponse(True)
         else:
-            ### isAttached == False (we want detach the object)
-            self.executor_e.detachObject(self.workspace_e, self.robot_e, req.armType.armType)
+            ### isAttachEnabled == False (we want detach the object)
+            self.executor_e.detachObject(self.workspace_e, self.robot_e, req.armType)
             p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.executingClientID)
             p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=self.executingClientID)
             time.sleep(10)
@@ -174,7 +173,7 @@ class PybulletExecutionScene(object):
             poses_path.append([pose.position.x, pose.position.y, pose.position.z, \
                 pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w])
 
-        self.executor_e.executePath_cartesian(poses_path, self.robot_e, req.armType.armType)
+        self.executor_e.executePath_cartesian(poses_path, self.robot_e, req.armType)
 
         return ExecuteTrajectoryResponse(True)
 

@@ -3,6 +3,6 @@
 # on a specified arm
 
 geometry_msgs/Pose[] poses
-pybullet_motoman/ArmType armType
+string armType
 ---
 bool success
