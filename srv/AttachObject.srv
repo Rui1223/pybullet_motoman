@@ -2,7 +2,7 @@
 # for attaching or detaching an object
 # given attach/detach command and armType specified
 
-bool isAttachEnabled
+bool attach
 string armType
 ---
 bool success

@@ -76,14 +76,14 @@ def serviceCall_motion_planning(poseInfo):
         print("Service call failed: %s" % e)
 
 
-def serviceCall_attachObject(isAttachEnabled, armType):
+def serviceCall_attachObject(attach, armType):
     rospy.wait_for_service("attach_object")
     request = AttachObjectRequest()
-    request.isAttachEnabled = isAttachEnabled
+    request.attach = attach
     request.armType = armType
     try:
         attachObject = rospy.ServiceProxy('attach_object', AttachObject)
-        success  = attachObject(request.isAttachEnabled, request.armType)
+        success  = attachObject(request.attach, request.armType)
         return success
     except rospy.ServiceException as e:
         print("Service call failed: %s" % e)
@@ -101,13 +101,13 @@ def main(args):
     plan_success = serviceCall_motion_planning(gripper_poses)
 
     ## before next plan, we want the object to be attached to the gripper
-    attach_success = serviceCall_attachObject(isAttachEnabled=True, armType="Left")
+    attach_success = serviceCall_attachObject(attach=True, armType="Left")
 
     new_gripper_pose = obtain_gripper_pose_at_transit_center(armType="Left")
     plan_success = serviceCall_motion_planning(new_gripper_pose)
 
     ### detach the object to see if it falls
-    detach_success = serviceCall_attachObject(isAttachEnabled=False, armType="Right")
+    detach_success = serviceCall_attachObject(attach=False, armType="Right")
 
     rospy.spin()
 

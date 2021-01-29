@@ -149,13 +149,12 @@ class PybulletExecutionScene(object):
 
 
     def attach_object_callback(self, req):
-        ### given the request data: isAttachEnabled(bool) + armType
-        if req.isAttachEnabled == True:
+        ### given the request data: attach(bool) + armType
+        if req.attach:
             self.executor_e.attachObject(self.workspace_e, self.robot_e, req.armType)
             print("successfully attached the object")
             return AttachObjectResponse(True)
         else:
-            ### isAttachEnabled == False (we want detach the object)
             self.executor_e.detachObject(self.workspace_e, self.robot_e, req.armType)
             p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.executingClientID)
             p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=self.executingClientID)
