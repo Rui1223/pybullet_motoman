@@ -226,12 +226,27 @@ class Planner(object):
         f_samplesWorkspace.close()
 
 
-    def generateConfigFromPose(self, pose3D, robot, workspace, armType):
-        ### This function convert a pose3D object into a robot arm configuration
-        ### Output: a configuration of a single arm (7*1 list)
-        pose = [[pose3D.position.x, pose3D.position.y, pose3D.position.z],
-                [pose3D.orientation.x, pose3D.orientation.y, pose3D.orientation.z, pose3D.orientation.w]]
+    def IKresetForSingleArm(self, robot, armType):
+        if armType == "Left":
+            first_joint_index = 0
+            config_length = len(robot.leftArmCurrConfiguration)
+        else:
+            first_joint_index = 7
+            config_length = len(robot.rightArmCurrConfiguration)
 
+        ### reset arm configuration
+        resetSingleArmConfiguration = []
+        for i in range(config_length):
+            resetSingleArmConfiguration.append(
+                    random.uniform(robot.ll[first_joint_index + i], robot.ul[first_joint_index + i]))
+
+        return resetSingleArmConfiguration
+
+
+    def checkPoseBasedOnConfig(self, pose, robot, workspace, armType):
+        ### This function check the validity of a pose by checking its corresponding config (IK)
+        ### Input: pose [[x,y,z],[x,y,z,w]]
+        ### Output: isPoseValid (bool)
         if armType == "Left":
             ee_idx = robot.left_ee_idx
             first_joint_index = 0
@@ -247,12 +262,16 @@ class Planner(object):
                                 maxNumIterations=20000, residualThreshold=0.0000001,
                                 physicsClientId=robot.server)
         singleArmConfig_IK = config_IK[first_joint_index:first_joint_index+7]
-        isValid = self.checkIK(singleArmConfig_IK, ee_idx, pose[0], robot, workspace, armType)
+        isPoseValid = self.checkIK(singleArmConfig_IK, ee_idx, pose[0], robot, workspace, armType)
+
+        # print("Let's look at what happened after first IK check")
+        # time.sleep(5)
 
         trials = 0
-        while (not isValid) and (trials < 5):
+        while (not isPoseValid) and (trials < 5):
             ### reset arm configuration
-            resetSingleArmConfiguration = [0.0]*len(robot.leftArmCurrConfiguration)
+            resetSingleArmConfiguration = self.IKresetForSingleArm(robot, armType)
+            # resetSingleArmConfiguration = [0.0]*len(robot.leftArmCurrConfiguration)
             robot.setSingleArmToConfig(resetSingleArmConfiguration, armType)
 
             config_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
@@ -263,28 +282,24 @@ class Planner(object):
                                     maxNumIterations=20000, residualThreshold=0.0000001,
                                     physicsClientId=robot.server)
             singleArmConfig_IK = config_IK[first_joint_index:first_joint_index+7]
-            isValid = self.checkIK(singleArmConfig_IK, ee_idx, pose[0], robot, workspace, armType)
-            if isValid: break
+            isPoseValid = self.checkIK(singleArmConfig_IK, ee_idx, pose[0], robot, workspace, armType)
+            if isPoseValid: break
             ### otherwise
             trials += 1
 
-        print("forget about pre-grasp at this moment. Will come back later")
-        print("singleArmConfig_IK: ", singleArmConfig_IK)
-
-        return singleArmConfig_IK
+        return isPoseValid
 
 
-    def checkIK(self, singleArmConfig_IK, ee_idx, desired_ee_pose, robot, workspace, armType):
+    def checkIK(self, singleArmConfig_IK, ee_idx, desired_ee_pose_pos, robot, workspace, armType):
         ### This function checks if an IK solution is valid in terms of
-        ### (0) if the joint values exceed the limit
-        ### (1) no collision with the robot and the workspace
-        ### (2) small error from the desired pose (so far only check position error)
+        ### (1) small error from the desired pose (so far only check position error)
+        ### (2) no collision with the robot and the workspace
         robot.setSingleArmToConfig(singleArmConfig_IK, armType)
         isValid = False
         ### first check if IK success
         ### if the ee_idx is within 2.0cm(0.02m) Euclidean distance from the desired one, we accept it
-        actual_ee_pose = p.getLinkState(robot.motomanGEO, ee_idx, physicsClientId=robot.server)[0]
-        ee_dist = utils.computePoseDist(actual_ee_pose, desired_ee_pose)
+        actual_ee_pose_pos = p.getLinkState(robot.motomanGEO, ee_idx, physicsClientId=robot.server)[0]
+        ee_dist = utils.computePoseDist(actual_ee_pose_pos, desired_ee_pose_pos)
         if ee_dist > 0.02:
             print("Not reachable as expected")
             return isValid
@@ -298,11 +313,13 @@ class Planner(object):
         isValid = False
         ### check if there is collision
         if self.collisionAgent_p.collisionCheck_selfCollision(robot.motomanGEO) == True:
+            print("self collision")
             return isValid
         else:
             pass
         if self.collisionAgent_p.collisionCheck_knownGEO(
                     robot.motomanGEO, workspace.known_geometries) == True:
+            print("collide with known geometry")
             return isValid
         else:
             pass
@@ -321,15 +338,15 @@ class Planner(object):
         # nseg = 5
         min_dist = 0.2
         nseg = int(max(
-            abs(w1[0]-w2[0]), abs(w1[1]-w2[1]), abs(w1[2]-w2[2])) / min_dist)
+            abs(w1[0][0]-w2[0][0]), abs(w1[0][1]-w2[0][1]), abs(w1[0][2]-w2[0][2])) / min_dist)
         if nseg == 0: nseg += 1
         # print("nseg: " + str(nseg))
 
         isEdgeValid = False
         for i in range(1, nseg):
-            interm_w0 = w1[0] + (w2[0]-w1[0]) / nseg * i
-            interm_w1 = w1[1] + (w2[1]-w1[1]) / nseg * i
-            interm_w2 = w1[2] + (w2[2]-w1[2]) / nseg * i
+            interm_w0 = w1[0][0] + (w2[0][0]-w1[0][0]) / nseg * i
+            interm_w1 = w1[0][1] + (w2[0][1]-w1[0][1]) / nseg * i
+            interm_w2 = w1[0][2] + (w2[0][2]-w1[0][2]) / nseg * i
             interm_pos = [interm_w0, interm_w1, interm_w2]
             # interm_quat = utils.interpolateQuaternion(w1[3:7], w2[3:7], 1 / nseg *i)
             interm_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
@@ -382,8 +399,9 @@ class Planner(object):
 
 
     def shortestPathPlanning(self, initialPose, targetPose, theme, robot, workspace, armType):
+        ### Input: initialPose, targetPose [[x,y,z], [x,y,z,w]]
         ### first prepare the start_goal file
-        f = self.writeStartGoal(initialPose[0:3], targetPose[0:3], theme)
+        f = self.writeStartGoal(initialPose[0], targetPose[0], theme)
         self.connectStartGoalToArmRoadmap(f,
                 initialPose, targetPose, robot, workspace, armType)
         # ### move back the robot arm back to its current configuration after collision check
@@ -430,66 +448,6 @@ class Planner(object):
         return path, traj
 
 
-    # def readTrajectory(self, theme, initialConfig, targetConfig, armType):
-    #     path = []
-    #     traj = []
-    #     traj_file = os.path.join(self.rosPackagePath, "src/") + theme + "_traj.txt"
-    #     f = open(traj_file, "r")
-    #     nline = 0
-    #     for line in f:
-    #         nline += 1
-    #         if nline == 1:
-    #             line = line.split()
-    #             isFailure = bool(int(line[0]))
-    #             if isFailure:
-    #                 f.close()
-    #                 return traj
-    #         else:
-    #             line = line.split()
-    #             # line = [int(e) for e in line]
-    #             # path.append(line)
-    #             path = [int(e) for e in line]
-    #             path.reverse()
-    #     f.close()
-
-    #     print("path please confirm: ", path)
-
-    #     ### covert path to traj
-    #     traj.append(initialConfig)
-    #     print("initialConfig:", initialConfig)
-    #     for node_idx in path[1:-1]:
-    #         print("node_idx: ")
-    #         traj.append(self.nodes[armType][node_idx])
-    #     print("targetConfig:", targetConfig)
-    #     traj.append(targetConfig)
-    #     print("length of traj")
-    #     print(len(traj))
-
-    #     return traj
-
-
-    # def readTrajectory_old(self, theme):
-    #     traj = []
-    #     traj_file = os.path.join(self.rosPackagePath, "src/") + theme + "_traj.txt"
-    #     f = open(traj_file, "r")
-    #     nline = 0
-    #     for line in f:
-    #         nline += 1
-    #         if nline == 1:
-    #             line = line.split()
-    #             isFailure = bool(int(line[0]))
-    #             if isFailure:
-    #                 f.close()
-    #                 return traj
-    #         else:
-    #             line = line.split()
-    #             line = [float(e) for e in line]
-    #             traj.append(line)
-    #     f.close()
-
-    #     return traj
-
-
     def writeStartGoal(self, initialPose, targetPose, theme):
         start_goal_file = os.path.join(self.rosPackagePath, "src/") + theme + ".txt"
         f = open(start_goal_file, "w")
@@ -514,8 +472,8 @@ class Planner(object):
         else:
             ee_idx = robot.right_ee_idx
 
-        self.workspaceNodes[armType].append(initialPose[0:3])
-        self.workspaceNodes[armType].append(targetPose[0:3])
+        self.workspaceNodes[armType].append(initialPose[0])
+        self.workspaceNodes[armType].append(targetPose[0])
         tree = spatial.KDTree(self.workspaceNodes[armType])
 
         ###### for start ######
@@ -537,8 +495,9 @@ class Planner(object):
             else:
                 ### otherwise, find the neighbor
                 neighbor = self.nodes[armType][knn[1][j]]
+                neighbor = [neighbor[0:3], neighbor[3:7]]
             ### check the edge validity
-            isEdgeValid = self.checkEdgeValidity(initialPose, neighbor, robot, workspace, armType)
+            isEdgeValid = self.checkEdgeValidity_cartesian(initialPose, neighbor, robot, workspace, armType)
             if isEdgeValid:
                 f.write(str(start_id) + " " + str(knn[1][j]) + " " + str(knn[0][j]) + "\n")
                 neighbors_connected += 1
@@ -565,8 +524,9 @@ class Planner(object):
             else:
                 ### otherwise, find the neighbor
                 neighbor = self.nodes[armType][knn[1][j]]
+                neighbor = [neighbor[0:3], neighbor[3:7]]
             ### check the edge validity
-            isEdgeValid = self.checkEdgeValidity(targetPose, neighbor, robot, workspace, armType)
+            isEdgeValid = self.checkEdgeValidity_cartesian(targetPose, neighbor, robot, workspace, armType)
             if isEdgeValid:
                 f.write(str(target_id) + " " + str(knn[1][j]) + " " + str(knn[0][j]) + "\n")
                 neighbors_connected += 1

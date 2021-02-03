@@ -18,7 +18,8 @@ class CollisionChecker(object):
             for contact in contacts:
                 # print("link-to-link collision: ")
                 # print(str(contact[3]) + ": " + str(contact[4]))
-                if (contact[3] == 23 and contact[4] == 25) or (contact[3] == 28 and contact[4] == 30):
+                if (contact[3] == 23 and contact[4] == 25) or (contact[3] == 28 and contact[4] == 30) \
+                    or (contact[3] == 24 and contact[4] == 25) or (contact[3] == 29 and contact[4] == 30):
                     ### we can allow collisions among the links of the robotiq hand 
                     ### (mounted on the right arm)
                     pass

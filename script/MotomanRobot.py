@@ -97,9 +97,9 @@ class MotomanRobot(object):
 
         p.stepSimulation(physicsClientId=self.server)
         left_ee_pos_quat = p.getLinkState(self.motomanGEO, self.left_ee_idx, physicsClientId=self.server)
-        self.left_ee_pose = list(left_ee_pos_quat[0]) + list(left_ee_pos_quat[1])
+        self.left_ee_pose = [list(left_ee_pos_quat[0]), list(left_ee_pos_quat[1])]
         right_ee_pos_quat = p.getLinkState(self.motomanGEO, self.right_ee_idx, physicsClientId=self.server)
-        self.right_ee_pose = list(right_ee_pos_quat[0]) + list(right_ee_pos_quat[1])
+        self.right_ee_pose = [list(right_ee_pos_quat[0]), list(right_ee_pos_quat[1])]
 
 
     def setSingleArmToConfig(self, singleArmConfig, armType):
@@ -117,9 +117,9 @@ class MotomanRobot(object):
 
         p.stepSimulation(physicsClientId=self.server)
         left_ee_pos_quat = p.getLinkState(self.motomanGEO, self.left_ee_idx, physicsClientId=self.server)
-        self.left_ee_pose = list(left_ee_pos_quat[0]) + list(left_ee_pos_quat[1])
+        self.left_ee_pose = [list(left_ee_pos_quat[0]), list(left_ee_pos_quat[1])]
         right_ee_pos_quat = p.getLinkState(self.motomanGEO, self.right_ee_idx, physicsClientId=self.server)
-        self.right_ee_pose = list(right_ee_pos_quat[0]) + list(right_ee_pos_quat[1])
+        self.right_ee_pose = [list(right_ee_pos_quat[0]), list(right_ee_pos_quat[1])]
 
 
     def moveSingleArm(self, singleArmConfiguration, armType):
@@ -135,11 +135,11 @@ class MotomanRobot(object):
             self.updateSingleArmConfig(singleArmConfiguration, armType)
 
         ###### This function is in maintenance ###### 
-        p.stepSimulation(physicsClientId=self.server)
+        # p.stepSimulation(physicsClientId=self.server)
         left_ee_pos_quat = p.getLinkState(self.motomanGEO, self.left_ee_idx, physicsClientId=self.server)
-        self.left_ee_pose = list(left_ee_pos_quat[0]) + list(left_ee_pos_quat[1])
+        self.left_ee_pose = [list(left_ee_pos_quat[0]), list(left_ee_pos_quat[1])]
         right_ee_pos_quat = p.getLinkState(self.motomanGEO, self.right_ee_idx, physicsClientId=self.server)
-        self.right_ee_pose = list(right_ee_pos_quat[0]) + list(right_ee_pos_quat[1])
+        self.right_ee_pose = [list(right_ee_pos_quat[0]), list(right_ee_pos_quat[1])]
 
 
     def getJointState(self):

@@ -21,6 +21,7 @@ from geometry_msgs.msg import Pose
 
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningResponse
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryRequest
+from pybullet_motoman.msg import ObjectPose
 
 ### This class defines a PybulletPlanScene class which
 ### sets up the robot, table in the planning scene (known geometries)
@@ -43,6 +44,7 @@ class PybulletPlanScene(object):
 
         ### set the server for the pybullet planning scene
         self.planningClientID = p.connect(p.DIRECT)
+        # self.planningClientID = p.connect(p.GUI)
 
         ### create a planner assistant
         self.planner_p = Planner(self.rosPackagePath, self.planningClientID)
@@ -108,25 +110,48 @@ class PybulletPlanScene(object):
         ### specify the role of a node instance for this class
         ### claim the service
         motion_planning_server = rospy.Service("motion_planning", MotionPlanning, self.motion_plan_callback)
+        # object_pose_sub = rospy.Subscriber("object_pose", ObjectPose, self.objectPose_callback)
         rospy.init_node("pybullet_plan_scene", anonymous=True)
+
+    # def objectPose_callback(self, data):
+    #     # print(data)
+    #     # print("do nothing")
+    #     pass
 
 
     def motion_plan_callback(self, req):
 
-        ### given the request data: object_estimate
-        ### update the object geometry in the plan scene
-        ### (either for target or collision check)
-        # self.workspace_p.updateObjectGeomeotry_BoundingBox(
-        #     req.bbox_pose, req.bbox_dims)
+        ### update the object location first
+        object_pose_msg = rospy.wait_for_message("object_pose", ObjectPose)
+        object_name = object_pose_msg.object_name
+        object_pose = [[object_pose_msg.object_pose.position.x, 
+                object_pose_msg.object_pose.position.y, object_pose_msg.object_pose.position.z], 
+                [object_pose_msg.object_pose.orientation.x, object_pose_msg.object_pose.orientation.y, 
+                object_pose_msg.object_pose.orientation.z, object_pose_msg.object_pose.orientation.w]]
+        self.workspace_p.updateObjectMesh(object_name, object_pose)
+
+
+        # ### get the current robot config from real scene by looking at the topic "joint_states"
+        # joint_states_msg = rospy.wait_for_message('joint_states', JointState)
+        # joint_values = list(joint_states_msg.position)
+        # self.robot_p.resetArmConfig(joint_values)
+        # self.robot_p.updateSingleArmConfig(joint_values[0:7], "Left")
+        # self.robot_p.updateSingleArmConfig(joint_values[7:14], "Right")
+
 
         ### analyze the target configuration of the robot given the grasp pose
-        ### so far we only care about the best grasp pose
-        pose_3D = req.gripper_pose_candidates[0]
         armType = req.armType
-        targetPose = [pose_3D.position.x, pose_3D.position.y, pose_3D.position.z, \
-            pose_3D.orientation.x, pose_3D.orientation.y, pose_3D.orientation.z, pose_3D.orientation.w]
-        target_config = self.planner_p.generateConfigFromPose(
-            pose_3D, self.robot_p, self.workspace_p, armType)
+        targetPose = [[req.gripper_pose.position.x, req.gripper_pose.position.y, req.gripper_pose.position.z], 
+            [req.gripper_pose.orientation.x, req.gripper_pose.orientation.y, \
+                                        req.gripper_pose.orientation.z, req.gripper_pose.orientation.w]]
+        isPoseValid = self.planner_p.checkPoseBasedOnConfig(
+            targetPose, self.robot_p, self.workspace_p, armType)
+        if not isPoseValid:
+            print("this pose is not even valid, let alone motion planning")
+            return MotionPlanningResponse(False)
+        else:
+            print("the pose is valid, we will deal with pre-grasp later")
+            print("now proceed to motion planning")
 
         ### get the current robot config from real scene by looking at the topic "joint_states"
         joint_states_msg = rospy.wait_for_message('joint_states', JointState)
@@ -135,7 +160,6 @@ class PybulletPlanScene(object):
         self.robot_p.updateSingleArmConfig(joint_values[0:7], "Left")
         self.robot_p.updateSingleArmConfig(joint_values[7:14], "Right")
 
-        ### with target_config and current arm config, we can send a planning query
         if armType == "Left":
             task_name = "LeftPick"
         else:
@@ -147,18 +171,23 @@ class PybulletPlanScene(object):
         print("result path: ", result_path)
         print("result_traj: ", result_traj)
 
-        ### get the current robot config from real scene by looking at the topic "joint_states"
+        ## get the current robot config from real scene by looking at the topic "joint_states"
         joint_states_msg = rospy.wait_for_message('joint_states', JointState)
         joint_values = list(joint_states_msg.position)
         self.robot_p.resetArmConfig(joint_values)
         self.robot_p.updateSingleArmConfig(joint_values[0:7], "Left")
         self.robot_p.updateSingleArmConfig(joint_values[7:14], "Right")
 
+
         if result_path != []:
             print("the path is successfully found")
             ### Now we need to call a service call to execute the path in the execution scene
-            execute_success = self.serviceCall_execute_trajectory(
-                            result_traj, self.robot_p.left_ee_pose, targetPose, armType)
+            if armType == "Left":
+                execute_success = self.serviceCall_execute_trajectory(
+                                result_traj, self.robot_p.left_ee_pose, targetPose, armType)
+            else:
+                execute_success = self.serviceCall_execute_trajectory(
+                                result_traj, self.robot_p.right_ee_pose, targetPose, armType)                
             return MotionPlanningResponse(True)
         else:
             print("the path is not successfully found")
@@ -166,20 +195,19 @@ class PybulletPlanScene(object):
 
         
 
-
     def serviceCall_execute_trajectory(self, result_traj, initialPose, targetPose, armType):
         rospy.wait_for_service("execute_trajectory")
         request = ExecuteTrajectoryRequest()
         request.armType = armType
 
         initial_pose = Pose()
-        initial_pose.position.x = initialPose[0]
-        initial_pose.position.y = initialPose[1]
-        initial_pose.position.z = initialPose[2]
-        initial_pose.orientation.x = initialPose[3]
-        initial_pose.orientation.y = initialPose[4]
-        initial_pose.orientation.z = initialPose[5]
-        initial_pose.orientation.w = initialPose[6]
+        initial_pose.position.x = initialPose[0][0]
+        initial_pose.position.y = initialPose[0][1]
+        initial_pose.position.z = initialPose[0][2]
+        initial_pose.orientation.x = initialPose[1][0]
+        initial_pose.orientation.y = initialPose[1][1]
+        initial_pose.orientation.z = initialPose[1][2]
+        initial_pose.orientation.w = initialPose[1][3]
         request.poses.append(initial_pose)
 
         for waypoint in result_traj:
@@ -194,13 +222,13 @@ class PybulletPlanScene(object):
             request.poses.append(temp_pose)
 
         target_pose = Pose()
-        target_pose.position.x = targetPose[0]
-        target_pose.position.y = targetPose[1]
-        target_pose.position.z = targetPose[2]
-        target_pose.orientation.x = targetPose[3]
-        target_pose.orientation.y = targetPose[4]
-        target_pose.orientation.z = targetPose[5]
-        target_pose.orientation.w = targetPose[6]
+        target_pose.position.x = targetPose[0][0]
+        target_pose.position.y = targetPose[0][1]
+        target_pose.position.z = targetPose[0][2]
+        target_pose.orientation.x = targetPose[1][0]
+        target_pose.orientation.y = targetPose[1][1]
+        target_pose.orientation.z = targetPose[1][2]
+        target_pose.orientation.w = targetPose[1][3]
         request.poses.append(target_pose)
 
         try:

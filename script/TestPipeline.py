@@ -19,59 +19,84 @@ from pybullet_motoman.srv import AttachObject, AttachObjectRequest
 ### (2) plan node
 ### (3) perception node
 
-def prepare_gripper_poses(armType):
+def obtain_gripper_poses_for_left_hand(armType):
     ### In reality, the pose is provided by Shiyang's perception process
     ### here is just for a test
-    poseInfo = MotionPlanningRequest()
-    grasp_pose1 = Pose()
-    grasp_pose1.position.x = 0.8
-    grasp_pose1.position.y = 0.45
-    grasp_pose1.position.z = 0.68
-    grasp_pose1.orientation.x = 0.0
-    grasp_pose1.orientation.y = 0.8
-    grasp_pose1.orientation.z = 0.0
-    grasp_pose1.orientation.w = 0.0
-    poseInfo.gripper_pose_candidates.append(grasp_pose1)
-    grasp_pose2 = Pose()
-    grasp_pose2.position.x = 0.3
-    grasp_pose2.position.y = 0.6
-    grasp_pose2.position.z = 0.68
-    grasp_pose2.orientation.x = 0.0
-    grasp_pose2.orientation.y = 1.0
-    grasp_pose2.orientation.z = 0.0
-    grasp_pose2.orientation.w = 0.0
-    poseInfo.gripper_pose_candidates.append(grasp_pose2)
 
-    poseInfo.armType = armType
+    planning_requests = [] ### a list of MotionPlanningRequest
 
-    return poseInfo
+    request1 = MotionPlanningRequest()
+    request1.gripper_pose.position.x = 0.8
+    request1.gripper_pose.position.y = 0.45
+    request1.gripper_pose.position.z = 0.66
+    request1.gripper_pose.orientation.x = 0.0
+    request1.gripper_pose.orientation.y = 0.8
+    request1.gripper_pose.orientation.z = 0.0
+    request1.gripper_pose.orientation.w = 0.0
+    request1.armType = armType
+    planning_requests.append(request1)
+
+    request2 = MotionPlanningRequest()
+    request2.gripper_pose.position.x = 0.8
+    request2.gripper_pose.position.y = 0.45
+    request2.gripper_pose.position.z = 0.69
+    request2.gripper_pose.orientation.x = 0.0
+    request2.gripper_pose.orientation.y = 0.4
+    request2.gripper_pose.orientation.z = 0.0
+    request2.gripper_pose.orientation.w = 0.0
+    request2.armType = armType
+    planning_requests.append(request2)
+
+    return planning_requests
 
 
-def obtain_gripper_pose_at_transit_center(armType):
+def obtain_gripper_poses_at_transit_center(armType):
     ### In reality, the pose is provided by Shiyang's perception process
     ### here is just for a test
-    poseInfo = MotionPlanningRequest()
-    grasp_pose1 = Pose()
-    grasp_pose1.position.x = 0.8
-    grasp_pose1.position.y = 0.0
-    grasp_pose1.position.z = 0.9925
-    grasp_pose1.orientation.x = 0.0
-    grasp_pose1.orientation.y = 0.8
-    grasp_pose1.orientation.z = 0.0
-    grasp_pose1.orientation.w = 0.0
-    poseInfo.gripper_pose_candidates.append(grasp_pose1)
 
-    poseInfo.armType = armType
+    planning_requests = []
 
-    return poseInfo
+    request1 = MotionPlanningRequest()
+    request1.gripper_pose.position.x = 0.8
+    request1.gripper_pose.position.y = 0.0
+    request1.gripper_pose.position.z = 0.9925
+    request1.gripper_pose.orientation.x = 0.0
+    request1.gripper_pose.orientation.y = 0.8
+    request1.gripper_pose.orientation.z = 0.0
+    request1.gripper_pose.orientation.w = 0.0
+    request1.armType = armType
+    planning_requests.append(request1)
+
+    return planning_requests
 
 
-def serviceCall_motion_planning(poseInfo):
+def obtain_gripper_poses_for_right_hand(armType):
+    ### In reality, the pose is provided by Shiyang's perception process
+    ### here is just for a test
+
+    planning_requests = [] ### a list of MotionPlanningRequest
+
+    request1 = MotionPlanningRequest()
+    request1.gripper_pose.position.x = 0.8
+    request1.gripper_pose.position.y = -0.07
+    request1.gripper_pose.position.z = 0.9525
+    request1.gripper_pose.orientation.x = 0.0
+    request1.gripper_pose.orientation.y = 0.707
+    request1.gripper_pose.orientation.z = 0.707
+    request1.gripper_pose.orientation.w = 0.0
+    request1.armType = armType
+    planning_requests.append(request1)
+
+
+    return planning_requests
+
+
+def serviceCall_motion_planning(planning_request):
     rospy.wait_for_service("motion_planning")
     try:
         plan = rospy.ServiceProxy('motion_planning', MotionPlanning)
-        success = plan(poseInfo.gripper_pose_candidates, poseInfo.armType)
-        return success
+        success = plan(planning_request.gripper_pose, planning_request.armType)
+        return success.success
     except rospy.ServiceException as e:
         print("Service call failed: %s" % e)
 
@@ -84,7 +109,7 @@ def serviceCall_attachObject(isAttachEnabled, armType):
     try:
         attachObject = rospy.ServiceProxy('attach_object', AttachObject)
         success  = attachObject(request.isAttachEnabled, request.armType)
-        return success
+        return success.success
     except rospy.ServiceException as e:
         print("Service call failed: %s" % e)
 
@@ -97,17 +122,27 @@ def main(args):
     rospy.init_node("test_pipeline", anonymous=True)
 
     ### request the service to plan
-    gripper_poses = prepare_gripper_poses(armType="Left")
-    plan_success = serviceCall_motion_planning(gripper_poses)
+    planning_requests = obtain_gripper_poses_for_left_hand(armType="Left") ### MotionPlanningRequest[]
+    for planning_request in planning_requests:
+        plan_success = serviceCall_motion_planning(planning_request)
+        if plan_success: break
 
     ## before next plan, we want the object to be attached to the gripper
     attach_success = serviceCall_attachObject(isAttachEnabled=True, armType="Left")
 
-    new_gripper_pose = obtain_gripper_pose_at_transit_center(armType="Left")
-    plan_success = serviceCall_motion_planning(new_gripper_pose)
+    planning_requests = obtain_gripper_poses_at_transit_center(armType="Left")
+    for planning_request in planning_requests:
+        plan_success = serviceCall_motion_planning(planning_request)
+        if plan_success: break
 
-    ### detach the object to see if it falls
-    detach_success = serviceCall_attachObject(isAttachEnabled=False, armType="Right")
+    ## request the service to plan
+    planning_requests = obtain_gripper_poses_for_right_hand(armType="Right") ### MotionPlanningRequest[]
+    for planning_request in planning_requests:
+        plan_success = serviceCall_motion_planning(planning_request)
+        if plan_success: break
+
+    # ### detach the object to see if it falls
+    # detach_success = serviceCall_attachObject(isAttachEnabled=False, armType="Right")
 
     rospy.spin()
 

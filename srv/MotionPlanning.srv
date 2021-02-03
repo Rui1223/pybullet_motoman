@@ -2,7 +2,7 @@
 # for a single motion planning query
 # given the updated gripper pose and armType specified
 
-geometry_msgs/Pose[] gripper_pose_candidates
+geometry_msgs/Pose gripper_pose
 string armType
 ---
 bool success
