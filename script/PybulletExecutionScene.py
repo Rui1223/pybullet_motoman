@@ -47,8 +47,8 @@ class PybulletExecutionScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet real scene
-        # self.executingClientID = p.connect(p.DIRECT)
-        self.executingClientID = p.connect(p.GUI)
+        self.executingClientID = p.connect(p.DIRECT)
+        # self.executingClientID = p.connect(p.GUI)
         # p.setAdditionalSearchPath(pybullet_data.getDataPath())
         # self.egl_plugin = p.loadPlugin(egl.get_filename(), "_eglRendererPlugin")
         # print("plugin=", self.egl_plugin)

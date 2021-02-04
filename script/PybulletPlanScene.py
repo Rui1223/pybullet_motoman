@@ -43,8 +43,8 @@ class PybulletPlanScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet planning scene
-        self.planningClientID = p.connect(p.DIRECT)
-        # self.planningClientID = p.connect(p.GUI)
+        # self.planningClientID = p.connect(p.DIRECT)
+        self.planningClientID = p.connect(p.GUI)
 
         ### create a planner assistant
         self.planner_p = Planner(self.rosPackagePath, self.planningClientID)
@@ -113,15 +113,10 @@ class PybulletPlanScene(object):
         # object_pose_sub = rospy.Subscriber("object_pose", ObjectPose, self.objectPose_callback)
         rospy.init_node("pybullet_plan_scene", anonymous=True)
 
-    # def objectPose_callback(self, data):
-    #     # print(data)
-    #     # print("do nothing")
-    #     pass
 
-
-    def motion_plan_callback(self, req):
-
-        ### update the object location first
+    def updateRobotAndObjectInPlanScene(self):
+        ### update the object in the plan scene based on real scene
+        ### get the current object pose from real scene by looking at the topic "object_pose"
         object_pose_msg = rospy.wait_for_message("object_pose", ObjectPose)
         object_name = object_pose_msg.object_name
         object_pose = [[object_pose_msg.object_pose.position.x, 
@@ -130,6 +125,112 @@ class PybulletPlanScene(object):
                 object_pose_msg.object_pose.orientation.z, object_pose_msg.object_pose.orientation.w]]
         self.workspace_p.updateObjectMesh(object_name, object_pose)
 
+        ### update the robot in the plan scene based on real scene
+        ### get the current robot config from real scene by looking at the topic "joint_states"
+        joint_states_msg = rospy.wait_for_message('joint_states', JointState)
+        joint_values = list(joint_states_msg.position)
+        self.robot_p.resetArmConfig(joint_values)
+        self.robot_p.updateSingleArmConfig(joint_values[0:7], "Left")
+        self.robot_p.updateSingleArmConfig(joint_values[7:14], "Right")
+
+
+    def transit_motion_planning(self, req):
+
+        armType = req.armType
+        motionType = req.motionType
+        ### synchronize with the real scene so as to get the object and robot initial pose
+        self.updateRobotAndObjectInPlanScene()
+
+        if armType == "Left":
+            initialPose = self.robot_p.left_ee_pose
+            theme = "LeftTransit"
+        else:
+            initialPose = self.robot_p.right_ee_pose
+            theme = "RightTransit"
+
+        targetPose = [[req.gripper_pose.position.x, req.gripper_pose.position.y, 
+            req.gripper_pose.position.z], [req.gripper_pose.orientation.x, 
+            req.gripper_pose.orientation.y, req.gripper_pose.orientation.z, 
+            req.gripper_pose.orientation.w]]
+        ### check if the target pose is valid
+        isPoseValid, configToGraspPose = self.planner_p.checkPoseBasedOnConfig(
+                    targetPose, self.robot_p, self.workspace_p, armType, motionType, "discrete")
+        if not isPoseValid:
+            print("this pose is not even valid, let alone motion planning")
+            return False
+        else:
+            print("the grasp pose is valid, generate pre-grasp")
+            isPoseValid, preGraspPose, configToPreGraspPose = self.planner_p.generatePreGrasp(
+                                targetPose, self.robot_p, self.workspace_p, armType, motionType)
+            if not isPoseValid:
+                print("the pre-grasp pose is not valid, thus the grasp pose is deemed as invalid as well")
+                return False
+        print("both grasp pose and pre-grasp pose are legitimate")
+        print("proceed to planning")
+
+        ### first check if we can direct connect current pose to pre-grasp_pose
+        isDirectPathValid, config_edge_traj = self.planner_p.checkEdgeValidity_SGPoses(
+            initialPose, preGraspPose, self.robot_p, self.workspace_p, armType, motionType)
+        if isDirectPathValid:
+            ### it is feasible to directly move from current pose to pre-grasp pose
+            print("the poses can be directly connected")
+            config_edge_traj.append(configToPreGraspPose) ### add the target config
+            result_traj = []
+            result_traj.append(config_edge_traj)
+        else:
+            ### if it's not possible, then we have to trigger motion planning
+            result_path = self.planner_p.shortestPathPlanning(initialPose, preGraspPose, theme, 
+                    self.robot_p, self.workspace_p, armType, motionType)
+            if result_path != []:
+                ### result_traj is a list of list (joint-values)
+                result_traj = self.planner_p.getTrajFromPath(result_path, initialPose, preGraspPose, 
+                                        self.robot_p, self.workspace_p, armType)
+                result_traj[-1][-1] = configToPreGraspPose ### add the target config
+            else:
+                result_traj = []
+
+        ### the planning has been finished, either success or failure
+        # if result_traj != []:
+        #     print("the path is successfully found")
+        #     ### now we need to call a service call to execute the path in the execution scene
+        #     execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
+        # else:
+        #     print("the path is not successfully found")
+        #     return False
+
+        # ### you are reaching here since pre-grasp pose has been reached
+        # ### just do a translation to reach the final grasp pose
+        # execute_success = self.serviceCall_execute_trajectory(
+        #     result_traj, preGraspPose, targetPose, configToGraspPose, armType)
+        # print("the execution has been finished")
+        return True
+
+
+
+
+    def motion_plan_callback(self, req):
+
+        if req.motionType == "transit":
+            isSuccess = self.transit_motion_planning(req)
+            print("isSuccess: ", isSuccess)
+            return MotionPlanningResponse(isSuccess)
+
+
+
+
+        # ### analyze the target configuration of the robot given the grasp pose
+        # armType = req.armType
+        # targetPose = [[req.gripper_pose.position.x, req.gripper_pose.position.y, req.gripper_pose.position.z], 
+        #     [req.gripper_pose.orientation.x, req.gripper_pose.orientation.y, \
+        #                                 req.gripper_pose.orientation.z, req.gripper_pose.orientation.w]]
+        # isPoseValid = self.planner_p.checkPoseBasedOnConfig(
+        #     targetPose, self.robot_p, self.workspace_p, armType)
+        # if not isPoseValid:
+        #     print("this pose is not even valid, let alone motion planning")
+        #     return MotionPlanningResponse(False)
+        # else:
+        #     print("the pose is valid, we will deal with pre-grasp later")
+        #     print("now proceed to motion planning")
 
         # ### get the current robot config from real scene by looking at the topic "joint_states"
         # joint_states_msg = rospy.wait_for_message('joint_states', JointState)
@@ -138,64 +239,42 @@ class PybulletPlanScene(object):
         # self.robot_p.updateSingleArmConfig(joint_values[0:7], "Left")
         # self.robot_p.updateSingleArmConfig(joint_values[7:14], "Right")
 
+        # if armType == "Left":
+        #     task_name = "LeftPick"
+        # else:
+        #     task_name = "RightPick"
 
-        ### analyze the target configuration of the robot given the grasp pose
-        armType = req.armType
-        targetPose = [[req.gripper_pose.position.x, req.gripper_pose.position.y, req.gripper_pose.position.z], 
-            [req.gripper_pose.orientation.x, req.gripper_pose.orientation.y, \
-                                        req.gripper_pose.orientation.z, req.gripper_pose.orientation.w]]
-        isPoseValid = self.planner_p.checkPoseBasedOnConfig(
-            targetPose, self.robot_p, self.workspace_p, armType)
-        if not isPoseValid:
-            print("this pose is not even valid, let alone motion planning")
-            return MotionPlanningResponse(False)
-        else:
-            print("the pose is valid, we will deal with pre-grasp later")
-            print("now proceed to motion planning")
+        # result_path, result_traj = self.planner_p.shortestPathPlanning(
+        #         self.robot_p.left_ee_pose, targetPose,
+        #         task_name, self.robot_p, self.workspace_p, armType)
+        # print("result path: ", result_path)
+        # print("result_traj: ", result_traj)
 
-        ### get the current robot config from real scene by looking at the topic "joint_states"
-        joint_states_msg = rospy.wait_for_message('joint_states', JointState)
-        joint_values = list(joint_states_msg.position)
-        self.robot_p.resetArmConfig(joint_values)
-        self.robot_p.updateSingleArmConfig(joint_values[0:7], "Left")
-        self.robot_p.updateSingleArmConfig(joint_values[7:14], "Right")
-
-        if armType == "Left":
-            task_name = "LeftPick"
-        else:
-            task_name = "RightPick"
-
-        result_path, result_traj = self.planner_p.shortestPathPlanning(
-                self.robot_p.left_ee_pose, targetPose,
-                task_name, self.robot_p, self.workspace_p, armType)
-        print("result path: ", result_path)
-        print("result_traj: ", result_traj)
-
-        ## get the current robot config from real scene by looking at the topic "joint_states"
-        joint_states_msg = rospy.wait_for_message('joint_states', JointState)
-        joint_values = list(joint_states_msg.position)
-        self.robot_p.resetArmConfig(joint_values)
-        self.robot_p.updateSingleArmConfig(joint_values[0:7], "Left")
-        self.robot_p.updateSingleArmConfig(joint_values[7:14], "Right")
+        # ## get the current robot config from real scene by looking at the topic "joint_states"
+        # joint_states_msg = rospy.wait_for_message('joint_states', JointState)
+        # joint_values = list(joint_states_msg.position)
+        # self.robot_p.resetArmConfig(joint_values)
+        # self.robot_p.updateSingleArmConfig(joint_values[0:7], "Left")
+        # self.robot_p.updateSingleArmConfig(joint_values[7:14], "Right")
 
 
-        if result_path != []:
-            print("the path is successfully found")
-            ### Now we need to call a service call to execute the path in the execution scene
-            if armType == "Left":
-                execute_success = self.serviceCall_execute_trajectory(
-                                result_traj, self.robot_p.left_ee_pose, targetPose, armType)
-            else:
-                execute_success = self.serviceCall_execute_trajectory(
-                                result_traj, self.robot_p.right_ee_pose, targetPose, armType)                
-            return MotionPlanningResponse(True)
-        else:
-            print("the path is not successfully found")
-            return MotionPlanningResponse(False)
+        # if result_path != []:
+        #     print("the path is successfully found")
+        #     ### Now we need to call a service call to execute the path in the execution scene
+        #     if armType == "Left":
+        #         execute_success = self.serviceCall_execute_trajectory(
+        #                         result_traj, self.robot_p.left_ee_pose, targetPose, armType)
+        #     else:
+        #         execute_success = self.serviceCall_execute_trajectory(
+        #                         result_traj, self.robot_p.right_ee_pose, targetPose, armType)                
+        #     return MotionPlanningResponse(True)
+        # else:
+        #     print("the path is not successfully found")
+        #     return MotionPlanningResponse(False)
 
         
 
-    def serviceCall_execute_trajectory(self, result_traj, initialPose, targetPose, armType):
+    def serviceCall_execute_trajectory(self, result_traj, armType):
         rospy.wait_for_service("execute_trajectory")
         request = ExecuteTrajectoryRequest()
         request.armType = armType

@@ -149,10 +149,7 @@ class Executor(object):
         # print("nseg: " + str(nseg))
 
         for i in range(1, nseg+1):
-            interm_w0 = w1[0][0] + (w2[0][0]-w1[0][0]) / nseg * i
-            interm_w1 = w1[0][1] + (w2[0][1]-w1[0][1]) / nseg * i
-            interm_w2 = w1[0][2] + (w2[0][2]-w1[0][2]) / nseg * i
-            interm_pos = [interm_w0, interm_w1, interm_w2]
+            interm_pos = utils.interpolatePosition(w1[0], w2[0], 1 / nseg * i)
             interm_quat = utils.interpolateQuaternion(w1[1], w2[1], 1 / nseg *i)
             interm_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
                                     endEffectorLinkIndex=ee_idx,

@@ -30,10 +30,10 @@ class CollisionChecker(object):
         return isCollision
 
 
-    def collisionCheck_knownGEO(self, robotGEO, knownGEO):
+    def collisionCheck_robot_geometries(self, robotGEO, GEO):
         isCollision = False
         ### loop through all known geometries in the workspace
-        for g in knownGEO:
+        for g in GEO:
             contacts = p.getContactPoints(robotGEO, g, physicsClientId=self.server)
             if len(contacts) != 0:
                 isCollision = True

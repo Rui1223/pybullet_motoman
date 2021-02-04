@@ -115,7 +115,7 @@ class MotomanRobot(object):
             for j in range(11, 18):
                 p.resetJointState(self.motomanGEO, j, singleArmConfig[j-11], physicsClientId=self.server)
 
-        p.stepSimulation(physicsClientId=self.server)
+        # p.stepSimulation(physicsClientId=self.server)
         left_ee_pos_quat = p.getLinkState(self.motomanGEO, self.left_ee_idx, physicsClientId=self.server)
         self.left_ee_pose = [list(left_ee_pos_quat[0]), list(left_ee_pos_quat[1])]
         right_ee_pos_quat = p.getLinkState(self.motomanGEO, self.right_ee_idx, physicsClientId=self.server)
