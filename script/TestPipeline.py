@@ -56,12 +56,18 @@ def shiyang_obtain_gripper_poses_at_transit_center(armType, motionType):
     ### In reality, the pose is provided by Shiyang's perception process
     ### here is just for a test
 
+    ### here I set the transit center height to be (position.z = 0.9)
+    ###      I also set the distance from the robot body to the front table 
+    ###      (position.x = 0.8) make sure the robot arm will not collide its torso body 
+    ### feel free to change their values according to your interest
+
+
     planning_requests = []
 
     request1 = MotionPlanningRequest()
     request1.gripper_pose.position.x = 0.8
     request1.gripper_pose.position.y = 0.0
-    request1.gripper_pose.position.z = 0.9925
+    request1.gripper_pose.position.z = 0.9
     request1.gripper_pose.orientation.x = 0.0
     request1.gripper_pose.orientation.y = 0.8
     request1.gripper_pose.orientation.z = 0.0
@@ -133,14 +139,14 @@ def main(args):
         print("plan_success: ", plan_success)
         if plan_success: break
 
-    # ## before next plan, we want the object to be attached to the gripper
-    # attach_success = serviceCall_attachObject(isAttachEnabled=True, armType="Left")
+    ## before next plan, we want the object to be attached to the gripper
+    attach_success = serviceCall_attachObject(isAttachEnabled=True, armType="Left")
 
-    # planning_requests = shiyang_obtain_gripper_poses_at_transit_center(
-    #                 armType="Left", motionType="transfer") ### MotionPlanningRequest[]
-    # for planning_request in planning_requests:
-    #     plan_success = serviceCall_motion_planning(planning_request)
-    #     if plan_success: break
+    planning_requests = shiyang_obtain_gripper_poses_at_transit_center(
+                    armType="Left", motionType="transfer") ### MotionPlanningRequest[]
+    for planning_request in planning_requests:
+        plan_success = serviceCall_motion_planning(planning_request)
+        if plan_success: break
 
     # ## request the service to plan
     # planning_requests = obtain_gripper_poses_for_right_hand(

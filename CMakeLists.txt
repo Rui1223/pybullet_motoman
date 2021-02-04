@@ -55,6 +55,7 @@ add_message_files(
   FILES
   ObjectPose.msg
   EEPoses.msg
+  EdgeConfigs.msg
 )
 
 ## Generate services in the 'srv' folder

@@ -94,7 +94,6 @@ class Executor(object):
             objectInHand, object_global_pose[0], object_global_pose[1], physicsClientId=self.server)
 
         
-        
     def executePath_cartesian(self, poses_path, robot, armType):
         ### path is a list of poses
         for i in range(len(poses_path)-1):
@@ -168,6 +167,16 @@ class Executor(object):
 
             # p.stepSimulation(physicsClientId=self.server)
             time.sleep(0.005)
+
+
+    def justExecute(self, trajectory, robot, armType):
+        for edge_configs in trajectory:
+            for config in edge_configs:
+                robot.moveSingleArm(config, armType)
+                if (self.isObjectInLeftHand and armType == "Left") or (self.isObjectInRightHand and armType == "Right"):
+                    self.updateRealObjectBasedonLocalPose(robot, armType)
+                time.sleep(0.1)
+            time.sleep(0.1)
 
 
     def pose_transition(self, w1, w2, robot, armType):

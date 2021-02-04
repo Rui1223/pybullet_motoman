@@ -450,7 +450,7 @@ class Planner(object):
                 pose1 = self.nodes[armType][path[edge_idx]]
                 pose2 = self.nodes[armType][path[edge_idx+1]]
 
-            min_dist = 0.2
+            min_dist = 0.01
             nseg = int(max(abs(pose1[0][0]-pose2[0][0]), 
                         abs(pose1[0][1]-pose2[0][1]), abs(pose1[0][2]-pose2[0][2])) / min_dist)
             if nseg == 0: nseg += 1
@@ -474,10 +474,41 @@ class Planner(object):
         return config_traj
 
 
+    def translate_between_poses(self, pose1, pose2, robot, workspace, armType):
+        ### pose1, pose2: [[x,y,z], [x,y,z,w]]
+        ### Output: config_traj = [[config_edge_traj]]
+        config_edge_traj = [] ### a list of joint values
+        if armType == "Left":
+            ee_idx = robot.left_ee_idx
+            first_joint_index = 0
+        else:
+            ee_idx = robot.right_ee_idx
+            first_joint_index = 7
+        min_dist = 0.01
+        nseg = int(max(abs(pose1[0][0]-pose2[0][0]), 
+                    abs(pose1[0][1]-pose2[0][1]), abs(pose1[0][2]-pose2[0][2])) / min_dist)
+        if nseg == 0: nseg += 1
+        print("nseg: " + str(nseg))
+
+        for i in range(1, nseg):
+            interm_pos = utils.interpolatePosition(pose1[0], pose2[0], 1 / nseg * i)
+            interm_quat = utils.interpolateQuaternion(pose1[1], pose2[1], 1 / nseg * i)
+            interm_pose = [interm_pos, interm_quat]
+            interm_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
+                                    endEffectorLinkIndex=ee_idx,
+                                    targetPosition=interm_pos,
+                                    targetOrientation=interm_quat,
+                                    lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr,
+                                    maxNumIterations=20000, residualThreshold=0.0000001,
+                                    physicsClientId=robot.server)
+            interm_IK = interm_IK[first_joint_index:first_joint_index+7]
+            config_edge_traj.append(interm_IK)
+
+        return config_edge_traj
+
 
     def checkEdgeValidity_SGPoses(self, pose1, pose2, robot, workspace, armType, motionType):
         ### pose1, pose2: [[x,y,z], [x,y,z,w]]
-        ### final_config: [q1,q2,q3,q4,q5,q6,q7] corresponds to pose2
         # if armType == "Left":
         #     ee_idx = robot.left_ee_idx
         #     first_joint_index = 0
@@ -486,7 +517,7 @@ class Planner(object):
         #     first_joint_index = 7
         # nseg = 5
         config_edge_traj = [] ### a list of joint values
-        min_dist = 0.2
+        min_dist = 0.01
         nseg = int(max(abs(pose1[0][0]-pose2[0][0]), 
                     abs(pose1[0][1]-pose2[0][1]), abs(pose1[0][2]-pose2[0][2])) / min_dist)
         if nseg == 0: nseg += 1
@@ -517,7 +548,7 @@ class Planner(object):
         else:
             ee_idx = robot.right_ee_idx
         # nseg = 5
-        min_dist = 0.2
+        min_dist = 0.01
         nseg = int(max(
             abs(w1[0][0]-w2[0][0]), abs(w1[0][1]-w2[0][1]), abs(w1[0][2]-w2[0][2])) / min_dist)
         if nseg == 0: nseg += 1

@@ -36,8 +36,12 @@ class CollisionChecker(object):
         for g in GEO:
             contacts = p.getContactPoints(robotGEO, g, physicsClientId=self.server)
             if len(contacts) != 0:
-                isCollision = True
-                # print("collision with known GEO")
-                break
+                for contact in contacts:
+                    if (contact[3] == 10 or contact[3] == 20):
+                        pass
+                    else:
+                        isCollision = True
+                        # print("collision with known GEO")
+                        break
 
         return isCollision

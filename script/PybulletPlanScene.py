@@ -22,6 +22,7 @@ from geometry_msgs.msg import Pose
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningResponse
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryRequest
 from pybullet_motoman.msg import ObjectPose
+from pybullet_motoman.msg import EdgeConfigs
 
 ### This class defines a PybulletPlanScene class which
 ### sets up the robot, table in the planning scene (known geometries)
@@ -43,8 +44,8 @@ class PybulletPlanScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet planning scene
-        # self.planningClientID = p.connect(p.DIRECT)
-        self.planningClientID = p.connect(p.GUI)
+        self.planningClientID = p.connect(p.DIRECT)
+        # self.planningClientID = p.connect(p.GUI)
 
         ### create a planner assistant
         self.planner_p = Planner(self.rosPackagePath, self.planningClientID)
@@ -189,22 +190,25 @@ class PybulletPlanScene(object):
             else:
                 result_traj = []
 
-        ### the planning has been finished, either success or failure
-        # if result_traj != []:
-        #     print("the path is successfully found")
-        #     ### now we need to call a service call to execute the path in the execution scene
-        #     execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
-        # else:
-        #     print("the path is not successfully found")
-        #     return False
+        ## the planning has been finished, either success or failure
+        if result_traj != []:
+            print("the path is successfully found")
+            ### now we need to call a service call to execute the path in the execution scene
+            execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
+        else:
+            print("the path is not successfully found")
+            return False
 
-        # ### you are reaching here since pre-grasp pose has been reached
-        # ### just do a translation to reach the final grasp pose
-        # execute_success = self.serviceCall_execute_trajectory(
-        #     result_traj, preGraspPose, targetPose, configToGraspPose, armType)
-        # print("the execution has been finished")
+        ### you are reaching here since pre-grasp pose has been reached
+        ### just do a translation to reach the final grasp pose
+        config_edge_traj = self.planner_p.translate_between_poses(
+            preGraspPose, targetPose, self.robot_p, self.workspace_p, armType)
+        config_edge_traj.append(configToGraspPose) ### add the target config
+        result_traj = []
+        result_traj.append(config_edge_traj)
+        execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
+        print("the execution has been finished")
         return True
-
 
 
 
@@ -212,6 +216,11 @@ class PybulletPlanScene(object):
 
         if req.motionType == "transit":
             isSuccess = self.transit_motion_planning(req)
+            print("isSuccess: ", isSuccess)
+            return MotionPlanningResponse(isSuccess)
+
+        elif req.motionType == "transfer":
+            isSuccess = self.transfer_motion_planning(req)
             print("isSuccess: ", isSuccess)
             return MotionPlanningResponse(isSuccess)
 
@@ -275,47 +284,57 @@ class PybulletPlanScene(object):
         
 
     def serviceCall_execute_trajectory(self, result_traj, armType):
+        ### here the result_traj has the format:
+        ### [[edge1_configs], [edge2_configs], ...]
         rospy.wait_for_service("execute_trajectory")
         request = ExecuteTrajectoryRequest()
         request.armType = armType
 
-        initial_pose = Pose()
-        initial_pose.position.x = initialPose[0][0]
-        initial_pose.position.y = initialPose[0][1]
-        initial_pose.position.z = initialPose[0][2]
-        initial_pose.orientation.x = initialPose[1][0]
-        initial_pose.orientation.y = initialPose[1][1]
-        initial_pose.orientation.z = initialPose[1][2]
-        initial_pose.orientation.w = initialPose[1][3]
-        request.poses.append(initial_pose)
-
-        for waypoint in result_traj:
-            temp_pose = Pose()
-            temp_pose.position.x = waypoint[0]
-            temp_pose.position.y = waypoint[1]
-            temp_pose.position.z = waypoint[2]
-            temp_pose.orientation.x = waypoint[3]
-            temp_pose.orientation.y = waypoint[4]
-            temp_pose.orientation.z = waypoint[5]
-            temp_pose.orientation.w = waypoint[6]
-            request.poses.append(temp_pose)
-
-        target_pose = Pose()
-        target_pose.position.x = targetPose[0][0]
-        target_pose.position.y = targetPose[0][1]
-        target_pose.position.z = targetPose[0][2]
-        target_pose.orientation.x = targetPose[1][0]
-        target_pose.orientation.y = targetPose[1][1]
-        target_pose.orientation.z = targetPose[1][2]
-        target_pose.orientation.w = targetPose[1][3]
-        request.poses.append(target_pose)
+        for edge_configs in result_traj:
+            temp_edge_configs = EdgeConfigs()
+            for config in edge_configs:
+                joint_state = JointState()
+                joint_state.position = config
+                temp_edge_configs.edge_configs.append(joint_state)
+            request.trajectory.append(temp_edge_configs)
 
         try:
             executeIt = rospy.ServiceProxy("execute_trajectory", ExecuteTrajectory)
-            success = executeIt(request.poses, request.armType)
+            success = executeIt(request.trajectory, request.armType)
             return success
         except rospy.ServiceException as e:
             print("Service call failed: %s" % e)
+
+        # initial_pose = Pose()
+        # initial_pose.position.x = initialPose[0][0]
+        # initial_pose.position.y = initialPose[0][1]
+        # initial_pose.position.z = initialPose[0][2]
+        # initial_pose.orientation.x = initialPose[1][0]
+        # initial_pose.orientation.y = initialPose[1][1]
+        # initial_pose.orientation.z = initialPose[1][2]
+        # initial_pose.orientation.w = initialPose[1][3]
+        # request.poses.append(initial_pose)
+
+        # for waypoint in result_traj:
+        #     temp_pose = Pose()
+        #     temp_pose.position.x = waypoint[0]
+        #     temp_pose.position.y = waypoint[1]
+        #     temp_pose.position.z = waypoint[2]
+        #     temp_pose.orientation.x = waypoint[3]
+        #     temp_pose.orientation.y = waypoint[4]
+        #     temp_pose.orientation.z = waypoint[5]
+        #     temp_pose.orientation.w = waypoint[6]
+        #     request.poses.append(temp_pose)
+
+        # target_pose = Pose()
+        # target_pose.position.x = targetPose[0][0]
+        # target_pose.position.y = targetPose[0][1]
+        # target_pose.position.z = targetPose[0][2]
+        # target_pose.orientation.x = targetPose[1][0]
+        # target_pose.orientation.y = targetPose[1][1]
+        # target_pose.orientation.z = targetPose[1][2]
+        # target_pose.orientation.w = targetPose[1][3]
+        # request.poses.append(target_pose)
 
 
     def configureMotomanRobot(self,

@@ -47,8 +47,8 @@ class PybulletExecutionScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet real scene
-        self.executingClientID = p.connect(p.DIRECT)
-        # self.executingClientID = p.connect(p.GUI)
+        # self.executingClientID = p.connect(p.DIRECT)
+        self.executingClientID = p.connect(p.GUI)
         # p.setAdditionalSearchPath(pybullet_data.getDataPath())
         # self.egl_plugin = p.loadPlugin(egl.get_filename(), "_eglRendererPlugin")
         # print("plugin=", self.egl_plugin)
@@ -163,15 +163,17 @@ class PybulletExecutionScene(object):
 
 
     def execute_traj_callback(self, req):
-        ### given the request data: poses + armType
+        ### given the request data: traj + armType
         ### execute the trajectory on a specified arm
 
-        poses_path = []
-        for pose in req.poses:
-            poses_path.append([[pose.position.x, pose.position.y, pose.position.z], \
-                [pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w]])
+        trajectory = []
+        for edgeConfigs in req.trajectory:
+            temp_configs = []
+            for joint_state in edgeConfigs.edge_configs:
+                temp_configs.append(joint_state.position)
+            trajectory.append(temp_configs)
 
-        self.executor_e.executePath_cartesian(poses_path, self.robot_e, req.armType)
+        self.executor_e.justExecute(trajectory, self.robot_e, req.armType)
 
         return ExecuteTrajectoryResponse(True)
 
