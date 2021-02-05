@@ -3,8 +3,10 @@
 		<!-- specification of the motoman robot -->
 		<rosparam param="basePosition">[0.0, 0.0, 0.0]</rosparam>
 		<rosparam param="baseOrientation">[0.0, 0.0, 0.0, 1.0]</rosparam>
-		<rosparam param="leftArmHomeConfiguration">[2.827, -1.257, 2.67, 0.000, -1.571, -1.571, 0.000]</rosparam>
-		<rosparam param="rightArmHomeConfiguration">[2.827, -1.257, 2.67, 0.000, -1.571, -1.571, 0.000]</rosparam>
+		<rosparam param="leftArmHomeConfiguration">[2.827, 0.000, 2.67, 0.000, -1.571, -1.571, 0.000]</rosparam>
+		<rosparam param="rightArmHomeConfiguration">[2.827, 0.000, 2.67, 0.000, -1.571, -1.571, 0.000]</rosparam>
+<!-- 		<rosparam param="leftArmHomeConfiguration">[2.827, -1.257, 2.67, 0.000, -1.571, -1.571, 0.000]</rosparam>
+		<rosparam param="rightArmHomeConfiguration">[2.827, -1.257, 2.67, 0.000, -1.571, -1.571, 0.000]</rosparam> -->
 		<rosparam param="urdfFile">urdf/motoman.urdf</rosparam>
 	</group>
 

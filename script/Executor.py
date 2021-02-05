@@ -17,13 +17,15 @@ from pybullet_motoman.msg import EEPoses
 class Executor(object):
 
     def __init__(self, server, 
-        isObjectInLeftHand, isObjectInRightHand,
-        objectInLeftHand, objectInRightHand):
+        isObjectInLeftHand=False, isObjectInRightHand=False,
+        objectInLeftHand=None, objectInRightHand=None):
         self.server = server
         self.isObjectInLeftHand = isObjectInLeftHand
         self.isObjectInRightHand = isObjectInRightHand
         self.objectInLeftHand = objectInLeftHand
         self.objectInRightHand = objectInRightHand
+        self.leftLocalPose = [[-1, -1, -1], [-1, -1, -1, -1]]
+        self.rightLocalPose = [[-1, -1, -1], [-1, -1, -1, -1]]
 
 
     def attachObject(self, workspace, robot, armType):
@@ -50,11 +52,15 @@ class Executor(object):
 
 
         inverse_ee_global = p.invertTransform(curr_ee_pose[0], curr_ee_pose[1])
-        self.localPose = p.multiplyTransforms(
+        temp_localPose = p.multiplyTransforms(
             list(inverse_ee_global[0]), list(inverse_ee_global[1]),
             curr_object_global_pose[0], curr_object_global_pose[1])
-        self.localPose = [list(self.localPose[0]), list(self.localPose[1])]
-        print(self.localPose)
+        temp_localPose = [list(temp_localPose[0]), list(temp_localPose[1])]
+
+        if armType == "Left":
+            self.leftLocalPose = temp_localPose
+        else:
+            self.rightLocalPose = temp_localPose
 
         ##################################################################################
 
@@ -82,13 +88,13 @@ class Executor(object):
             ee_idx = robot.left_ee_idx
             objectInHand = self.objectInLeftHand[0]
             curr_ee_pose = robot.left_ee_pose
-            object_global_pose = self.getObjectGlobalPose(self.localPose, curr_ee_pose)
+            object_global_pose = self.getObjectGlobalPose(self.leftLocalPose, curr_ee_pose)
 
         else:
             ee_idx = robot.right_ee_idx
             objectInHand = self.objectInRightHand[0]
             curr_ee_pose = robot.right_ee_idx
-            object_global_pose = self.getObjectGlobalPose(self.localPose, curr_ee_pose)
+            object_global_pose = self.getObjectGlobalPose(self.rightLocalPose, curr_ee_pose)
 
         p.resetBasePositionAndOrientation(
             objectInHand, object_global_pose[0], object_global_pose[1], physicsClientId=self.server)
@@ -175,8 +181,8 @@ class Executor(object):
                 robot.moveSingleArm(config, armType)
                 if (self.isObjectInLeftHand and armType == "Left") or (self.isObjectInRightHand and armType == "Right"):
                     self.updateRealObjectBasedonLocalPose(robot, armType)
-                time.sleep(0.1)
-            time.sleep(0.1)
+                time.sleep(0.05)
+            time.sleep(0.05)
 
 
     def pose_transition(self, w1, w2, robot, armType):
@@ -263,12 +269,26 @@ class Executor(object):
         ee_poses_msgs.right_ee_pose.orientation.y = right_ee_orientation[1]
         ee_poses_msgs.right_ee_pose.orientation.z = right_ee_orientation[2]
         ee_poses_msgs.right_ee_pose.orientation.w = right_ee_orientation[3]
+
         ee_poses_msgs.isObjectInLeftHand = self.isObjectInLeftHand
         ee_poses_msgs.isObjectInRightHand = self.isObjectInRightHand
 
+        ee_poses_msgs.left_local_pose.position.x = self.leftLocalPose[0][0]
+        ee_poses_msgs.left_local_pose.position.y = self.leftLocalPose[0][1]
+        ee_poses_msgs.left_local_pose.position.z = self.leftLocalPose[0][2]
+        ee_poses_msgs.left_local_pose.orientation.x = self.leftLocalPose[1][0]
+        ee_poses_msgs.left_local_pose.orientation.y = self.leftLocalPose[1][1]
+        ee_poses_msgs.left_local_pose.orientation.z = self.leftLocalPose[1][2]
+        ee_poses_msgs.left_local_pose.orientation.w = self.leftLocalPose[1][3]
+        ee_poses_msgs.right_local_pose.position.x = self.rightLocalPose[0][0]
+        ee_poses_msgs.right_local_pose.position.y = self.rightLocalPose[0][1]
+        ee_poses_msgs.right_local_pose.position.z = self.rightLocalPose[0][2]
+        ee_poses_msgs.right_local_pose.orientation.x = self.rightLocalPose[1][0]
+        ee_poses_msgs.right_local_pose.orientation.y = self.rightLocalPose[1][1]
+        ee_poses_msgs.right_local_pose.orientation.z = self.rightLocalPose[1][2]
+        ee_poses_msgs.right_local_pose.orientation.w = self.rightLocalPose[1][3]
+
         return ee_poses_msgs
-
-
 
 
     def get_ee_pos(self, robot, armType):

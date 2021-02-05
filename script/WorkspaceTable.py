@@ -214,11 +214,13 @@ class WorkspaceTable(object):
             _m = p.createMultiBody(baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
                                     basePosition=object_pose[0], baseOrientation=object_pose[1], physicsClientId=self.server)
             self.object_geometries[_m] = self.obj_name
+            # print("_m::::::::::: ", _m)
 
         else:
             ### the object is already registered, so we just need to update the object
             p.resetBasePositionAndOrientation(
                 self.object_geometries.keys()[0], object_pose[0], object_pose[1], physicsClientId=self.server)
+            print("existing mesh::::::::::", self.object_geometries.keys()[0])
 
 
 

@@ -37,17 +37,17 @@ def shiyang_obtain_gripper_poses_for_left_hand(armType, motionType):
     request1.motionType = motionType
     planning_requests.append(request1)
 
-    request2 = MotionPlanningRequest()
-    request2.gripper_pose.position.x = 0.8
-    request2.gripper_pose.position.y = 0.45
-    request2.gripper_pose.position.z = 0.69
-    request2.gripper_pose.orientation.x = 0.0
-    request2.gripper_pose.orientation.y = 0.4
-    request2.gripper_pose.orientation.z = 0.0
-    request2.gripper_pose.orientation.w = 0.0
-    request2.armType = armType
-    request2.motionType = motionType
-    planning_requests.append(request2)
+    # request2 = MotionPlanningRequest()
+    # request2.gripper_pose.position.x = 0.8
+    # request2.gripper_pose.position.y = 0.45
+    # request2.gripper_pose.position.z = 0.69
+    # request2.gripper_pose.orientation.x = 0.0
+    # request2.gripper_pose.orientation.y = 0.8
+    # request2.gripper_pose.orientation.z = 0.0
+    # request2.gripper_pose.orientation.w = 0.0
+    # request2.armType = armType
+    # request2.motionType = motionType
+    # planning_requests.append(request2)
 
     return planning_requests
 
@@ -88,7 +88,7 @@ def shiyang_obtain_gripper_poses_for_right_hand(armType, motionType):
     request1 = MotionPlanningRequest()
     request1.gripper_pose.position.x = 0.8
     request1.gripper_pose.position.y = -0.07
-    request1.gripper_pose.position.z = 0.9525
+    request1.gripper_pose.position.z = 0.8525
     request1.gripper_pose.orientation.x = 0.0
     request1.gripper_pose.orientation.y = 0.707
     request1.gripper_pose.orientation.z = 0.707
@@ -137,6 +137,7 @@ def main(args):
     for planning_request in planning_requests:
         plan_success = serviceCall_motion_planning(planning_request)
         print("plan_success: ", plan_success)
+        print("\n")
         if plan_success: break
 
     ## before next plan, we want the object to be attached to the gripper
@@ -148,15 +149,18 @@ def main(args):
         plan_success = serviceCall_motion_planning(planning_request)
         if plan_success: break
 
-    # ## request the service to plan
-    # planning_requests = obtain_gripper_poses_for_right_hand(
-    #                 armType="Right", motionType="transit") ### MotionPlanningRequest[]
-    # for planning_request in planning_requests:
-    #     plan_success = serviceCall_motion_planning(planning_request)
-    #     if plan_success: break
+    ## request the service to plan
+    planning_requests = shiyang_obtain_gripper_poses_for_right_hand(
+                    armType="Right", motionType="transit") ### MotionPlanningRequest[]
+    for planning_request in planning_requests:
+        plan_success = serviceCall_motion_planning(planning_request)
+        if plan_success: break
 
-    # # ### detach the object to see if it falls
-    # # detach_success = serviceCall_attachObject(isAttachEnabled=False, armType="Right")
+    ## before next plan, we want the object to be attached to the gripper
+    attach_success = serviceCall_attachObject(isAttachEnabled=True, armType="Right")
+
+    ### detach the object from left hand
+    detach_success = serviceCall_attachObject(isAttachEnabled=False, armType="Left")
 
     rospy.spin()
 
