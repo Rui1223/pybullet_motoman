@@ -4,7 +4,7 @@
 # motionType includes 3 categories
 # (1) "transit": on the way to grasp an object
 # (2) "transfer": transfer an object
-# (3) "others": such as move back to home position, etc.
+# (3) "reset": such as move back to home position, etc.
 
 geometry_msgs/Pose gripper_pose
 string armType
