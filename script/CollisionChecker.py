@@ -77,7 +77,7 @@ class CollisionChecker(object):
                         pass
                     else:
                         isCollision = True
-                        print("collision with object GEO")
+                        # print("collision with object GEO")
                         break
 
         return isCollision

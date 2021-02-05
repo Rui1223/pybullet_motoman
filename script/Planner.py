@@ -339,7 +339,7 @@ class Planner(object):
         else:
             ee_idx = robot.right_ee_idx
             objectInHand = self.objectInRightHand
-            curr_ee_pose = robot.right_ee_idx
+            curr_ee_pose = robot.right_ee_pose
             object_global_pose = self.getObjectGlobalPose(self.rightLocalPose, curr_ee_pose)
 
         p.resetBasePositionAndOrientation(
@@ -604,22 +604,17 @@ class Planner(object):
         if nseg == 0: nseg += 1
         print("nseg: " + str(nseg))
 
-        for i in range(1, nseg):
-            start_time = time.clock()
+        for i in range(1, nseg+1):
             interm_pos = utils.interpolatePosition(pose1[0], pose2[0], 1 / nseg * i)
-            print("time for interpolatePosition: ", str(time.clock() - start_time))
-            # start_time = time.clock()
             # interm_quat = utils.interpolateQuaternion(pose1[1], pose2[1], 1 / nseg * i)
-            # print("time for interpolateQuaternion: ", str(time.clock() - start_time))
-            # interm_pose = [interm_pos, interm_quat]
-            start_time = time.clock()
+            # start_time = time.clock()
             interm_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
                                     endEffectorLinkIndex=ee_idx,
                                     targetPosition=interm_pos,
                                     lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr,
                                     maxNumIterations=2000, residualThreshold=0.0000001,
                                     physicsClientId=robot.server)
-            print("time for IK calculation: ", str(time.clock() - start_time))
+            # print("time for IK calculation: ", str(time.clock() - start_time))
             interm_IK = interm_IK[first_joint_index:first_joint_index+7]
             config_edge_traj.append(interm_IK)
 

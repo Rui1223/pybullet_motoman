@@ -156,8 +156,17 @@ class MotomanRobot(object):
 
         self.updateSingleArmConfig(temp_left_arm_config, "Left")
         self.updateSingleArmConfig(temp_right_arm_config, "Right")
+        # print("leftArmCurrConfiguration: ")
+        # print(self.leftArmCurrConfiguration)
+        # print("rightArmCurrConfiguration: ")
+        # print(self.rightArmCurrConfiguration)
+        # print(type(self.leftArmCurrConfiguration))
+        # print(type(self.rightArmCurrConfiguration))
+        dualArmCurrConfiguration = list(self.leftArmCurrConfiguration) + list(self.rightArmCurrConfiguration)
+        # print("dualArmCurrConfiguration: ")
+        # print(dualArmCurrConfiguration)
 
-        return self.motomanRJointNames, self.leftArmCurrConfiguration + self.rightArmCurrConfiguration
+        return self.motomanRJointNames, dualArmCurrConfiguration
 
 
     def getRobotJointInfo(self):

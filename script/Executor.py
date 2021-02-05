@@ -93,7 +93,7 @@ class Executor(object):
         else:
             ee_idx = robot.right_ee_idx
             objectInHand = self.objectInRightHand[0]
-            curr_ee_pose = robot.right_ee_idx
+            curr_ee_pose = robot.right_ee_pose
             object_global_pose = self.getObjectGlobalPose(self.rightLocalPose, curr_ee_pose)
 
         p.resetBasePositionAndOrientation(

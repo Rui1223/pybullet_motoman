@@ -29,6 +29,7 @@ from geometry_msgs.msg import Pose
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryResponse
 from pybullet_motoman.msg import EEPoses, ObjectPose
 from pybullet_motoman.srv import AttachObject, AttachObjectResponse
+from pybullet_motoman.srv import EnablePhysics, EnablePhysicsResponse
 
 ### This class defines a PybulletExecutionScene class which
 ### (1) sets up the robot, table and camera
@@ -146,7 +147,21 @@ class PybulletExecutionScene(object):
                 "execute_trajectory", ExecuteTrajectory, self.execute_traj_callback)
         attach_object_server = rospy.Service(
                 "attach_object", AttachObject, self.attach_object_callback)
+        enable_physics_server = rospy.Service(
+                "enable_physics", EnablePhysics, self.enable_physics_callback)
         rospy.init_node("pybullet_execution_scene", anonymous=True)
+
+
+    def enable_physics_callback(self, req):
+        ### given the request data: isPhysicsEnabled (bool)
+        if req.isPhysicsEnabled == True:
+            self.workspace_e.enablePhysicsEnv()
+            print("physics enabled, gravity comes in")
+            return EnablePhysicsResponse(True)
+        else:
+            self.workspace_e.disablePhysicsEnv()
+            print("physics turned off")
+            return EnablePhysicsResponse(True)
 
 
     def attach_object_callback(self, req):

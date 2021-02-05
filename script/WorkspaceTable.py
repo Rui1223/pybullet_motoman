@@ -88,7 +88,7 @@ class WorkspaceTable(object):
         }
 
         massList = {
-            "003_cracker_box": 2.8,
+            "003_cracker_box": 40,
             "004_sugar_box": 1.7,
             "005_tomato_soup_can": 3.5,
             "006_mustard_bottle": 1.9,
@@ -145,7 +145,7 @@ class WorkspaceTable(object):
         }
 
         massList = {
-            "003_cracker_box": 2.8,
+            "003_cracker_box": 40,
             "004_sugar_box": 1.7,
             "005_tomato_soup_can": 3.5,
             "006_mustard_bottle": 1.9,
@@ -220,8 +220,7 @@ class WorkspaceTable(object):
             ### the object is already registered, so we just need to update the object
             p.resetBasePositionAndOrientation(
                 self.object_geometries.keys()[0], object_pose[0], object_pose[1], physicsClientId=self.server)
-            print("existing mesh::::::::::", self.object_geometries.keys()[0])
-
+            # print("existing mesh::::::::::", self.object_geometries.keys()[0])
 
 
     def updateObjectGeomeotry_BoundingBox(self, object_pose, object_dim):
@@ -245,3 +244,12 @@ class WorkspaceTable(object):
         else:
             print("The idea is to update the mesh")
             print("will come back later")
+
+
+    def enablePhysicsEnv(self):
+        p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.server)
+        p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=self.server)
+
+
+    def disablePhysicsEnv(self):
+        p.setRealTimeSimulation(enableRealTimeSimulation=0, physicsClientId=self.server)        

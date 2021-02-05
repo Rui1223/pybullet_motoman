@@ -45,8 +45,8 @@ class PybulletPlanScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet planning scene
-        # self.planningClientID = p.connect(p.DIRECT)
-        self.planningClientID = p.connect(p.GUI)
+        self.planningClientID = p.connect(p.DIRECT)
+        # self.planningClientID = p.connect(p.GUI)
 
         ### create a planner assistant
         self.planner_p = Planner(self.rosPackagePath, self.planningClientID,
@@ -238,7 +238,7 @@ class PybulletPlanScene(object):
         ### just do a translation to reach the final grasp pose
         config_edge_traj = self.planner_p.translate_between_poses(
             preGraspPose, targetPose, self.robot_p, self.workspace_p, armType)
-        config_edge_traj.append(configToGraspPose) ### add the target config
+        config_edge_traj[-1] = configToGraspPose ### add the target config
         result_traj = []
         result_traj.append(config_edge_traj)
         execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
@@ -307,6 +307,46 @@ class PybulletPlanScene(object):
             return False
 
 
+    def reset_motion_planning(self, req):
+        armType = req.armType
+        motionType = req.motionType
+        ### synchronize with the real scene so as to get the object and robot initial pose
+        self.updateInPlanSceneFromRealScene()
+        if armType == "Left":
+            initialPose = self.robot_p.left_ee_pose
+            theme = "LeftReset"
+        else:
+            initialPose = self.robot_p.right_ee_pose
+            theme = "RightReset"
+        ### lift up
+        targetPose = [[initialPose[0][0], initialPose[0][1], initialPose[0][2]+0.2], initialPose[1]]
+        config_edge_traj = self.planner_p.translate_between_poses(
+            initialPose, targetPose, self.robot_p, self.workspace_p, armType)
+        result_traj = []
+        result_traj.append(config_edge_traj)
+        execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
+        print("lifting up finished")
+        ### move a little bit to the left
+        ### synchronize with the real scene so as to get the object and robot initial pose
+        self.updateInPlanSceneFromRealScene()
+        if armType == "Left":
+            initialPose = self.robot_p.left_ee_pose
+            theme = "LeftReset"
+        else:
+            initialPose = self.robot_p.right_ee_pose
+            theme = "RightReset"
+
+        targetPose = [[initialPose[0][0], initialPose[0][1]+0.4, initialPose[0][2]], initialPose[1]]
+        config_edge_traj = self.planner_p.translate_between_poses(
+            initialPose, targetPose, self.robot_p, self.workspace_p, armType)
+        result_traj = []
+        result_traj.append(config_edge_traj)
+        execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
+        print("moving left finished")
+
+        return True
+
+
     def motion_plan_callback(self, req):
 
         if req.motionType == "transit":
@@ -318,6 +358,15 @@ class PybulletPlanScene(object):
             isSuccess = self.transfer_motion_planning(req)
             print("isSuccess: ", isSuccess)
             return MotionPlanningResponse(isSuccess)
+
+        elif req.motionType == "reset":
+            isSuccess = self.reset_motion_planning(req)
+            print("isSuccess: ", isSuccess)
+            return MotionPlanningResponse(isSuccess)
+
+        else:
+            print("could not handle this type of motion")
+            return MotionPlanningResponse(False)
 
 
 
