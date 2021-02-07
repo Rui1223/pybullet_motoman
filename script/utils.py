@@ -30,13 +30,28 @@ def calculateInnerProduct(v1, v2):
     return ip
 
 
-def computePoseDist(actual_pose, desired_pose):
+def computePoseDist_pos(actual_pose_pos, desired_pose_pos):
+    ### Input: format for pose_pos [x,y,z]
     temp_dist = 0.0
-    for i in range(len(actual_pose)):
-        temp_dist += (actual_pose[i] - desired_pose[i])**2
+    for i in range(len(actual_pose_pos)):
+        temp_dist += (actual_pose_pos[i] - desired_pose_pos[i])**2
     temp_dist = math.sqrt(temp_dist)
 
     return temp_dist
+
+
+def computePoseDist_quat(actual_pose_quat, desired_pose_quat):
+    lamb = calculateInnerProduct(actual_pose_quat, desired_pose_quat)
+    return (1 - abs(lamb))
+
+
+def interpolatePosition(P1, P2, f):
+    ### Here pos P: [x,y,z]
+    x = P1[0] + (P2[0]-P1[0]) * f
+    y = P1[1] + (P2[1]-P1[1]) * f
+    z = P1[2] + (P2[2]-P1[2]) * f
+    P = [x, y, z]
+    return P
 
 
 def interpolateQuaternion(Q1, Q2, f):
@@ -81,8 +96,6 @@ def interpolateQuaternion(Q1, Q2, f):
     Q = [x / Q_norm, y / Q_norm, z / Q_norm, w / Q_norm]
 
     return Q
-
-
 
 
 def convertRobotConfig_dualArm(config, robot, server):

@@ -1,8 +1,13 @@
 # This srv file defines the service
 # for a single motion planning query
 # given the updated gripper pose and armType specified
+# motionType includes 3 categories
+# (1) "transit": on the way to grasp an object
+# (2) "transfer": transfer an object
+# (3) "reset": such as move back to home position, etc.
 
-geometry_msgs/Pose[] gripper_pose_candidates
+geometry_msgs/Pose gripper_pose
 string armType
+string motionType
 ---
 bool success

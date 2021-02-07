@@ -2,7 +2,7 @@
 # for a need to execute a given trajectory
 # on a specified arm
 
-geometry_msgs/Pose[] poses
+pybullet_motoman/EdgeConfigs[] trajectory
 string armType
 ---
 bool success

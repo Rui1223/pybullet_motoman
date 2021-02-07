@@ -63,12 +63,12 @@ class MotomanRobot(object):
         # ### restposes for null space
         # self.rp = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
-        ################## new joint limits ##################
+        # ################## new joint limits ##################
         self.ll = [-3.13, -1.90, -2.95, -1.80, -3.13, -1.90, -3.13, -3.13, -1.90, -2.95, -1.80, -3.13, -1.90, -3.13]
         ### upper limits for null space
-        self.ul = [3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13, 3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13]
+        self.ul = [3.13, 1.60, 2.95, 2.36, 3.13, 1.90, 3.13, 3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13]
         ### joint ranges for null space
-        self.jr = [6.26, 3.80, 5.90, 4.16, 6.26, 3.80, 6.26, 6.26, 3.80, 5.90, 4.16, 6.26, 3.80, 6.26]
+        self.jr = [6.26, 3.50, 5.90, 4.16, 6.26, 3.80, 6.26, 6.26, 3.80, 5.90, 4.16, 6.26, 3.80, 6.26]
         ### restposes for null space
         self.rp = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
@@ -97,9 +97,9 @@ class MotomanRobot(object):
 
         p.stepSimulation(physicsClientId=self.server)
         left_ee_pos_quat = p.getLinkState(self.motomanGEO, self.left_ee_idx, physicsClientId=self.server)
-        self.left_ee_pose = list(left_ee_pos_quat[0]) + list(left_ee_pos_quat[1])
+        self.left_ee_pose = [list(left_ee_pos_quat[0]), list(left_ee_pos_quat[1])]
         right_ee_pos_quat = p.getLinkState(self.motomanGEO, self.right_ee_idx, physicsClientId=self.server)
-        self.right_ee_pose = list(right_ee_pos_quat[0]) + list(right_ee_pos_quat[1])
+        self.right_ee_pose = [list(right_ee_pos_quat[0]), list(right_ee_pos_quat[1])]
 
 
     def setSingleArmToConfig(self, singleArmConfig, armType):
@@ -117,9 +117,9 @@ class MotomanRobot(object):
 
         p.stepSimulation(physicsClientId=self.server)
         left_ee_pos_quat = p.getLinkState(self.motomanGEO, self.left_ee_idx, physicsClientId=self.server)
-        self.left_ee_pose = list(left_ee_pos_quat[0]) + list(left_ee_pos_quat[1])
+        self.left_ee_pose = [list(left_ee_pos_quat[0]), list(left_ee_pos_quat[1])]
         right_ee_pos_quat = p.getLinkState(self.motomanGEO, self.right_ee_idx, physicsClientId=self.server)
-        self.right_ee_pose = list(right_ee_pos_quat[0]) + list(right_ee_pos_quat[1])
+        self.right_ee_pose = [list(right_ee_pos_quat[0]), list(right_ee_pos_quat[1])]
 
 
     def moveSingleArm(self, singleArmConfiguration, armType):
@@ -135,11 +135,11 @@ class MotomanRobot(object):
             self.updateSingleArmConfig(singleArmConfiguration, armType)
 
         ###### This function is in maintenance ###### 
-        p.stepSimulation(physicsClientId=self.server)
+        # p.stepSimulation(physicsClientId=self.server)
         left_ee_pos_quat = p.getLinkState(self.motomanGEO, self.left_ee_idx, physicsClientId=self.server)
-        self.left_ee_pose = list(left_ee_pos_quat[0]) + list(left_ee_pos_quat[1])
+        self.left_ee_pose = [list(left_ee_pos_quat[0]), list(left_ee_pos_quat[1])]
         right_ee_pos_quat = p.getLinkState(self.motomanGEO, self.right_ee_idx, physicsClientId=self.server)
-        self.right_ee_pose = list(right_ee_pos_quat[0]) + list(right_ee_pos_quat[1])
+        self.right_ee_pose = [list(right_ee_pos_quat[0]), list(right_ee_pos_quat[1])]
 
 
     def getJointState(self):
@@ -156,8 +156,17 @@ class MotomanRobot(object):
 
         self.updateSingleArmConfig(temp_left_arm_config, "Left")
         self.updateSingleArmConfig(temp_right_arm_config, "Right")
+        # print("leftArmCurrConfiguration: ")
+        # print(self.leftArmCurrConfiguration)
+        # print("rightArmCurrConfiguration: ")
+        # print(self.rightArmCurrConfiguration)
+        # print(type(self.leftArmCurrConfiguration))
+        # print(type(self.rightArmCurrConfiguration))
+        dualArmCurrConfiguration = list(self.leftArmCurrConfiguration) + list(self.rightArmCurrConfiguration)
+        # print("dualArmCurrConfiguration: ")
+        # print(dualArmCurrConfiguration)
 
-        return self.motomanRJointNames, self.leftArmCurrConfiguration + self.rightArmCurrConfiguration
+        return self.motomanRJointNames, dualArmCurrConfiguration
 
 
     def getRobotJointInfo(self):
