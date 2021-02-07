@@ -7,3 +7,8 @@ geometry_msgs/Pose left_ee_pose
 geometry_msgs/Pose right_ee_pose
 bool isObjectInLeftHand
 bool isObjectInRightHand
+<<<<<<< HEAD
+=======
+geometry_msgs/Pose left_local_pose
+geometry_msgs/Pose right_local_pose
+>>>>>>> 1aef294f5c55063b370f347de8eaccf4ef3d7834

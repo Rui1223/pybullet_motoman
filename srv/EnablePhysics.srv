@@ -1,0 +1,6 @@
+# This srv file defines the service
+# to enable physics simulation in the real scene
+
+bool isPhysicsEnabled
+---
+bool success

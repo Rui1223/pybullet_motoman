@@ -27,8 +27,9 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Pose
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryResponse
-from pybullet_motoman.msg import EEPoses
+from pybullet_motoman.msg import EEPoses, ObjectPose
 from pybullet_motoman.srv import AttachObject, AttachObjectResponse
+from pybullet_motoman.srv import EnablePhysics, EnablePhysicsResponse
 
 ### This class defines a PybulletExecutionScene class which
 ### (1) sets up the robot, table and camera
@@ -141,11 +142,26 @@ class PybulletExecutionScene(object):
         self.depth_im_pub = rospy.Publisher('depth_images', Image, queue_size=10)
         self.jointState_pub = rospy.Publisher("joint_states", JointState, queue_size=10)
         self.ee_poses_pub = rospy.Publisher('ee_poses', EEPoses, queue_size=10)
+        self.object_pose_pub = rospy.Publisher('object_pose', ObjectPose, queue_size=10)
         execute_trajectory_server = rospy.Service(
                 "execute_trajectory", ExecuteTrajectory, self.execute_traj_callback)
         attach_object_server = rospy.Service(
                 "attach_object", AttachObject, self.attach_object_callback)
+        enable_physics_server = rospy.Service(
+                "enable_physics", EnablePhysics, self.enable_physics_callback)
         rospy.init_node("pybullet_execution_scene", anonymous=True)
+
+
+    def enable_physics_callback(self, req):
+        ### given the request data: isPhysicsEnabled (bool)
+        if req.isPhysicsEnabled == True:
+            self.workspace_e.enablePhysicsEnv()
+            print("physics enabled, gravity comes in")
+            return EnablePhysicsResponse(True)
+        else:
+            self.workspace_e.disablePhysicsEnv()
+            print("physics turned off")
+            return EnablePhysicsResponse(True)
 
 
     def attach_object_callback(self, req):
@@ -156,23 +172,22 @@ class PybulletExecutionScene(object):
             return AttachObjectResponse(True)
         else:
             self.executor_e.detachObject(self.workspace_e, self.robot_e, req.armType)
-            p.setGravity(0.0, 0.0, -9.8, physicsClientId=self.executingClientID)
-            p.setRealTimeSimulation(enableRealTimeSimulation=1, physicsClientId=self.executingClientID)
-            time.sleep(10)
             print("successfully detached the object")
             return AttachObjectResponse(True)
 
 
     def execute_traj_callback(self, req):
-        ### given the request data: poses + armType
+        ### given the request data: traj + armType
         ### execute the trajectory on a specified arm
 
-        poses_path = []
-        for pose in req.poses:
-            poses_path.append([pose.position.x, pose.position.y, pose.position.z, \
-                pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w])
+        trajectory = []
+        for edgeConfigs in req.trajectory:
+            temp_configs = []
+            for joint_state in edgeConfigs.edge_configs:
+                temp_configs.append(joint_state.position)
+            trajectory.append(temp_configs)
 
-        self.executor_e.executePath_cartesian(poses_path, self.robot_e, req.armType)
+        self.executor_e.justExecute(trajectory, self.robot_e, req.armType)
 
         return ExecuteTrajectoryResponse(True)
 
@@ -221,38 +236,45 @@ def main(args):
         time_stamp = rospy.get_time()
         # rospy.loginfo("time stamp for image and joint state publisher %s" % time_stamp)
 
-        ### get the image
-        # rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
         ### get current joint state
         motomanRJointNames, armCurrConfiguration = pybullet_execution_scene.robot_e.getJointState()
-
         ### prepare the message
         joint_state_msg = JointState()
         # joint_state_msg.header.stamp = rospy.Time.now()
         joint_state_msg.header.frame_id = str(time_stamp)
         joint_state_msg.name = motomanRJointNames
         joint_state_msg.position = armCurrConfiguration
-        ### convert the image format to ros message
-        # rgb_msg = CvBridge().cv2_to_imgmsg(rgbImg)
-        # depth_msg = CvBridge().cv2_to_imgmsg(depthImg)
+
+        ### get the object information
+        object_name, object_pose = pybullet_execution_scene.workspace_e.getObjectInfo()
+        ### prepare the message
+        object_pose_msg = ObjectPose()
+        object_pose_msg.object_name = object_name
+        object_pose_msg.object_pose = Pose()
+        object_pose_msg.object_pose.position.x = object_pose[0][0]
+        object_pose_msg.object_pose.position.y = object_pose[0][1]
+        object_pose_msg.object_pose.position.z = object_pose[0][2]
+        object_pose_msg.object_pose.orientation.x = object_pose[1][0]
+        object_pose_msg.object_pose.orientation.y = object_pose[1][1]
+        object_pose_msg.object_pose.orientation.z = object_pose[1][2]
+        object_pose_msg.object_pose.orientation.w = object_pose[1][3]
 
         ### publish the message
-        # pybullet_execution_scene.rgbImg_pub.publish(rgb_msg)
-        # pybullet_execution_scene.depthImg_pub.publish(rgb_msg)
         pybullet_execution_scene.jointState_pub.publish(joint_state_msg)
         ee_poses_msgs = pybullet_execution_scene.executor_e.prepare_ee_poses_msgs(pybullet_execution_scene.robot_e)
         pybullet_execution_scene.ee_poses_pub.publish(ee_poses_msgs)
+        pybullet_execution_scene.object_pose_pub.publish(object_pose_msg)
 
-        rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
-        rgb_msg = bridge.cv2_to_imgmsg(rgbImg, 'rgb8')
-        depth_msg = bridge.cv2_to_imgmsg((1000 * depthImg).astype(np.uint16), 'mono16')
-        pybullet_execution_scene.color_im_pub.publish(rgb_msg)
-        pybullet_execution_scene.depth_im_pub.publish(depth_msg)
-        if count == 0:
-            cv2.imwrite(os.path.expanduser('~/color.png'), cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR))
-            cv2.imwrite(os.path.expanduser('~/depth.png'), (1000 * depthImg).astype(np.uint16))
+        # rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
+        # rgb_msg = bridge.cv2_to_imgmsg(rgbImg, 'rgb8')
+        # depth_msg = bridge.cv2_to_imgmsg((1000 * depthImg).astype(np.uint16), 'mono16')
+        # pybullet_execution_scene.color_im_pub.publish(rgb_msg)
+        # pybullet_execution_scene.depth_im_pub.publish(depth_msg)
+        # if count == 0:
+        #     cv2.imwrite(os.path.expanduser('~/color.png'), cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR))
+        #     cv2.imwrite(os.path.expanduser('~/depth.png'), (1000 * depthImg).astype(np.uint16))
 
-        count += 1
+        # count += 1
 
         rate.sleep()
 
