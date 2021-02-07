@@ -7,8 +7,8 @@ import os
 
 import rospy
 import rospkg
-from std_msgs.msg import String 
-from geometry_msgs.msg import Pose 
+from std_msgs.msg import String
+from geometry_msgs.msg import Pose
 
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningRequest
 from pybullet_motoman.srv import AttachObject, AttachObjectRequest
@@ -58,8 +58,8 @@ def shiyang_obtain_gripper_poses_at_transit_center(armType, motionType):
     ### here is just for a test
 
     ### here I set the transit center height to be (position.z = 0.9)
-    ###      I also set the distance from the robot body to the front table 
-    ###      (position.x = 0.8) make sure the robot arm will not collide its torso body 
+    ###      I also set the distance from the robot body to the front table
+    ###      (position.x = 0.8) make sure the robot arm will not collide its torso body
     ### feel free to change their values according to your interest
 
 
@@ -106,8 +106,8 @@ def shiyang_obtain_gripper_poses_at_drop_center(armType, motionType):
     ### here is just for a test
 
     ### here I set the drop center height to be (position.z = 0.7)
-    ###      I also set the distance from the robot body to the front table 
-    ###      (position.x = 0.8) make sure the robot arm will not collide its torso body 
+    ###      I also set the distance from the robot body to the front table
+    ###      (position.x = 0.8) make sure the robot arm will not collide its torso body
     ### feel free to change their values according to your interest
 
 
@@ -132,7 +132,7 @@ def serviceCall_motion_planning(planning_request):
     rospy.wait_for_service("motion_planning")
     try:
         plan = rospy.ServiceProxy('motion_planning', MotionPlanning)
-        success = plan(planning_request.gripper_pose, 
+        success = plan(planning_request.gripper_pose,
                         planning_request.armType, planning_request.motionType)
         return success.success
     except rospy.ServiceException as e:
@@ -227,9 +227,6 @@ def main(args):
     enable_physics_success = serviceCall_enablePhysics(isPhysicsEnabled=True)
     time.sleep(1)
     distable_physics_success = serviceCall_enablePhysics(isPhysicsEnabled=False)
-
-
-
 
     rospy.spin()
 
