@@ -146,7 +146,7 @@ def serviceCall_attachObject(attach, armType):
     request.armType = armType
     try:
         attachObject = rospy.ServiceProxy('attach_object', AttachObject)
-        success  = attachObject(request.isAttachEnabled, request.armType)
+        success  = attachObject(request.attach, request.armType)
         return success.success
     except rospy.ServiceException as e:
         print("attach_object service call failed: %s" % e)
@@ -163,17 +163,17 @@ def serviceCall_enablePhysics(isPhysicsEnabled):
     except rospy.ServiceException as e:
         print("enable_physics service call failed: %s" % e)
 
-def main(args):
+
+if __name__ == '__main__':
     ### declaim its role
     ### It is a master which requests plan node to plan
     ### the plan node will request a service from execute node to execute
     ### it also request attach/detach behavior from execute node
     rospy.init_node("test_pipeline", anonymous=True)
 
-    time.sleep(20)
-
-    print("ready to kazam")
-    time.sleep(7)
+    # time.sleep(20)
+    # print("ready to kazam")
+    # time.sleep(7)
 
     ### request the service to plan
     planning_requests = shiyang_obtain_gripper_poses_for_left_hand(
@@ -202,10 +202,10 @@ def main(args):
         if plan_success: break
 
     ## before next plan, we want the object to be attached to the gripper
-    attach_success = serviceCall_attachObject(isAttachEnabled=True, armType="Right")
+    attach_success = serviceCall_attachObject(attach=True, armType="Right")
 
     ### detach the object from left hand
-    detach_success = serviceCall_attachObject(isAttachEnabled=False, armType="Left")
+    detach_success = serviceCall_attachObject(attach=False, armType="Left")
 
     ### reset left arm (left arm has finished its work)
     planning_request = MotionPlanningRequest()
@@ -222,14 +222,8 @@ def main(args):
 
     ### drop the object ###
     ### first detach the object from left hand
-    detach_success = serviceCall_attachObject(isAttachEnabled=False, armType="Right")
+    detach_success = serviceCall_attachObject(attach=False, armType="Right")
     time.sleep(1)
     enable_physics_success = serviceCall_enablePhysics(isPhysicsEnabled=True)
     time.sleep(1)
     distable_physics_success = serviceCall_enablePhysics(isPhysicsEnabled=False)
-
-    rospy.spin()
-
-
-if __name__ == '__main__':
-    main(sys.argv)
