@@ -1,4 +1,5 @@
 float32[] dims
 float32[] position
+float32[] orientation  # quaternion: x, y, z, w
 ---
 bool success

@@ -150,15 +150,16 @@ class PybulletExecutionScene(object):
                 "attach_object", AttachObject, self.attach_object_callback)
         enable_physics_server = rospy.Service(
                 "enable_physics", EnablePhysics, self.enable_physics_callback)
-        add_vitual_box_server = rospy.Service(
-                "add_vitual_box", AddVirtualBox, self.add_vitual_box_callback)
+        add_virtual_box_server = rospy.Service(
+                "add_virtual_box", AddVirtualBox, self.add_virtual_box_callback)
         rospy.init_node("pybullet_execution_scene", anonymous=True)
 
-    def add_vitual_box_callback(self, req):
+    def add_virtual_box_callback(self, req):
         half_extents = np.array(req.dims) / 2
         test_visual = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=half_extents,
                                           rgbaColor=[0, 0, 0, 1])
-        _ = p.createMultiBody(baseVisualShapeIndex=test_visual, basePosition=req.position)
+        _ = p.createMultiBody(baseVisualShapeIndex=test_visual, basePosition=req.position,
+                              baseOrientation=req.orientation)
         res = AddVirtualBoxResponse()
         res.success = True
         return res
