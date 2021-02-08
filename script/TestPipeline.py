@@ -171,10 +171,6 @@ if __name__ == '__main__':
     ### it also request attach/detach behavior from execute node
     rospy.init_node("test_pipeline", anonymous=True)
 
-    time.sleep(15)
-    print("kazam can start to click")
-    time.sleep(7)
-
     ### request the service to plan
     planning_requests = shiyang_obtain_gripper_poses_for_left_hand(
                     armType="Left", motionType="transit") ### MotionPlanningRequest[]
