@@ -9,7 +9,6 @@
     <visual>
       <geometry>
         <mesh filename="package://pybullet_motoman/urdf/sda10f_description/meshes/sda10f/visual/motoman_base.stl"/>
-        <!-- <mesh filename="file://home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src/sda10f_description/meshes/sda10f/visual/motoman_base.stl"/> -->
       </geometry>
       <material name="blue">
         <color rgba="0 0 1 1"/>
@@ -18,8 +17,6 @@
     <collision>
       <geometry>
         <mesh filename="package://pybullet_motoman/urdf/sda10f_description/meshes/sda10f/collision/motoman_base.stl"/>
-        <!-- <mesh filename="/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src/sda10f_description/meshes/sda10f/collision/motoman_base.stl"/> -->
-        <!-- <mesh filename="sda10f_description/meshes/sda10f/collision/motoman_base.stl"/> -->
       </geometry>
       <material name="yellow">
         <color rgba="0 1 1 1"/>
@@ -251,8 +248,9 @@
   </joint>
   <joint name="arm_left_joint_tool0" type="fixed">
     <!-- the following line is modified by Rui-->
-    <origin rpy="0 0 -3.13" xyz="0 0 -0.0325"/>
-    <!-- <origin rpy="0 0 -3.13" xyz="0 0 0.0"/> origin -->
+    <origin rpy="0 0 -3.13" xyz="0 0 -0.025"/>
+    <!-- <origin rpy="0 0 -3.13" xyz="0 0 -0.0325"/> -->
+    <!-- <origin rpy="0 0 -3.13" xyz="0 0 0.0"/> -->
     <parent link="arm_left_link_7_t"/>
     <child link="arm_left_link_tool0"/>
     <!-- <dynamics damping="3.5"/> -->
@@ -437,7 +435,8 @@
   </joint>
   <joint name="arm_right_joint_tool0" type="fixed">
     <!-- the following line is modified by Rui-->
-    <origin rpy="0 0 -3.13" xyz="0 0 -0.0325"/>
+    <origin rpy="0 0 -3.13" xyz="0 0 -0.025"/>
+    <!-- <origin rpy="0 0 -3.13" xyz="0 0 -0.0325"/> -->
     <!-- <origin rpy="0 0 -3.13" xyz="0 0 0.0"/> origin -->
     <parent link="arm_right_link_7_t"/>
     <child link="arm_right_link_tool0"/>

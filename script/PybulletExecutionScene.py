@@ -187,7 +187,7 @@ class PybulletExecutionScene(object):
                 temp_configs.append(joint_state.position)
             trajectory.append(temp_configs)
 
-        self.executor_e.justExecute(trajectory, self.robot_e, req.armType)
+        self.executor_e.executeTrajctory(trajectory, self.robot_e, req.armType)
 
         return ExecuteTrajectoryResponse(True)
 

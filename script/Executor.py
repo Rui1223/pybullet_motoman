@@ -175,7 +175,7 @@ class Executor(object):
             time.sleep(0.005)
 
 
-    def justExecute(self, trajectory, robot, armType):
+    def executeTrajctory(self, trajectory, robot, armType):
         for edge_configs in trajectory:
             for config in edge_configs:
                 robot.moveSingleArm(config, armType)
