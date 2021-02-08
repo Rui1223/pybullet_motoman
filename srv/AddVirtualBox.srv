@@ -1,0 +1,4 @@
+float32[] dims
+float32[] position
+---
+bool success

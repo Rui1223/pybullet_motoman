@@ -30,6 +30,7 @@ from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryResponse
 from pybullet_motoman.msg import EEPoses, ObjectPose
 from pybullet_motoman.srv import AttachObject, AttachObjectResponse
 from pybullet_motoman.srv import EnablePhysics, EnablePhysicsResponse
+from pybullet_motoman.srv import AddVirtualBox, AddVirtualBoxResponse
 
 ### This class defines a PybulletExecutionScene class which
 ### (1) sets up the robot, table and camera
@@ -149,8 +150,18 @@ class PybulletExecutionScene(object):
                 "attach_object", AttachObject, self.attach_object_callback)
         enable_physics_server = rospy.Service(
                 "enable_physics", EnablePhysics, self.enable_physics_callback)
+        add_vitual_box_server = rospy.Service(
+                "add_vitual_box", AddVirtualBox, self.add_vitual_box_callback)
         rospy.init_node("pybullet_execution_scene", anonymous=True)
 
+    def add_vitual_box_callback(self, req):
+        half_extents = np.array(req.dims) / 2
+        test_visual = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=half_extents,
+                                          rgbaColor=[0, 0, 0, 1])
+        _ = p.createMultiBody(baseVisualShapeIndex=test_visual, basePosition=req.position)
+        res = AddVirtualBoxResponse()
+        res.success = True
+        return res
 
     def enable_physics_callback(self, req):
         ### given the request data: isPhysicsEnabled (bool)
@@ -192,13 +203,13 @@ class PybulletExecutionScene(object):
         return ExecuteTrajectoryResponse(True)
 
 
-    def configureMotomanRobot(self, 
+    def configureMotomanRobot(self,
                 urdfFile, basePosition, baseOrientation,
                 leftArmHomeConfiguration, rightArmHomeConfiguration, isPhysicsTurnOn):
         ### This function configures the robot in the real scene ###
         self.robot_e = MotomanRobot(
-            os.path.join(self.rosPackagePath, urdfFile), 
-            basePosition, baseOrientation, leftArmHomeConfiguration, rightArmHomeConfiguration, 
+            os.path.join(self.rosPackagePath, urdfFile),
+            basePosition, baseOrientation, leftArmHomeConfiguration, rightArmHomeConfiguration,
             isPhysicsTurnOn, self.executingClientID)
 
     def setupWorkspace(self,
@@ -260,22 +271,21 @@ def main(args):
         object_pose_msg.object_pose.orientation.w = object_pose[1][3]
 
         ### publish the message
+        rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
+        rgb_msg = bridge.cv2_to_imgmsg(rgbImg, 'rgb8')
+        depth_msg = bridge.cv2_to_imgmsg((1000 * depthImg).astype(np.uint16), 'mono16')
+        pybullet_execution_scene.color_im_pub.publish(rgb_msg)
+        pybullet_execution_scene.depth_im_pub.publish(depth_msg)
+        if count == 0:
+            cv2.imwrite(os.path.expanduser('~/color.png'), cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(os.path.expanduser('~/depth.png'), (1000 * depthImg).astype(np.uint16))
+
         pybullet_execution_scene.jointState_pub.publish(joint_state_msg)
         ee_poses_msgs = pybullet_execution_scene.executor_e.prepare_ee_poses_msgs(pybullet_execution_scene.robot_e)
         pybullet_execution_scene.ee_poses_pub.publish(ee_poses_msgs)
         pybullet_execution_scene.object_pose_pub.publish(object_pose_msg)
 
-        # rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
-        # rgb_msg = bridge.cv2_to_imgmsg(rgbImg, 'rgb8')
-        # depth_msg = bridge.cv2_to_imgmsg((1000 * depthImg).astype(np.uint16), 'mono16')
-        # pybullet_execution_scene.color_im_pub.publish(rgb_msg)
-        # pybullet_execution_scene.depth_im_pub.publish(depth_msg)
-        # if count == 0:
-        #     cv2.imwrite(os.path.expanduser('~/color.png'), cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR))
-        #     cv2.imwrite(os.path.expanduser('~/depth.png'), (1000 * depthImg).astype(np.uint16))
-
-        # count += 1
-
+        count += 1
         rate.sleep()
 
 if __name__ == '__main__':
