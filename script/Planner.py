@@ -46,6 +46,7 @@ class Planner(object):
         self.rightLocalPose = [[-1, -1, -1], [-1, -1, -1, -1]]
 
 
+
     def loadSamples(self):
         arms = ["Left", "Right"]
         for armType in arms:
