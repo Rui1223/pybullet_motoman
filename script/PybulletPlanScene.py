@@ -20,6 +20,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Pose
 from pybullet_motoman.msg import EEPoses
+from pybullet_motoman.msg import ObjectPoseBox
 
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningResponse
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryRequest
@@ -46,8 +47,8 @@ class PybulletPlanScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet planning scene
-        self.planningClientID = p.connect(p.DIRECT)
-        # self.planningClientID = p.connect(p.GUI)
+        # self.planningClientID = p.connect(p.DIRECT)
+        self.planningClientID = p.connect(p.GUI)
 
         ### create a planner assistant
         self.planner_p = Planner(
@@ -142,15 +143,15 @@ class PybulletPlanScene(object):
                 leftLocalPose, rightLocalPose, self.workspace_p.object_geometries.keys()[0])
 
 
-    def updateObjectPoseInPlanScene(self):
+    def updateObjectPoseInPlanScene(self, object_pose):
         ### get the current object pose from real scene by looking at the topic "object_pose"
-        object_pose_msg = rospy.wait_for_message("object_pose", ObjectPose)
-        object_name = object_pose_msg.object_name
-        object_pose = [[object_pose_msg.object_pose.position.x, 
-                object_pose_msg.object_pose.position.y, object_pose_msg.object_pose.position.z], 
-                [object_pose_msg.object_pose.orientation.x, object_pose_msg.object_pose.orientation.y, 
-                object_pose_msg.object_pose.orientation.z, object_pose_msg.object_pose.orientation.w]]
-        self.workspace_p.updateObjectMesh(object_name, object_pose)
+        # object_pose_msg = rospy.wait_for_message("object_pose", ObjectPose)
+        # object_name = object_pose_msg.object_name
+        # object_pose = [[object_pose_msg.object_pose.position.x, 
+        #         object_pose_msg.object_pose.position.y, object_pose_msg.object_pose.position.z], 
+        #         [object_pose_msg.object_pose.orientation.x, object_pose_msg.object_pose.orientation.y, 
+        #         object_pose_msg.object_pose.orientation.z, object_pose_msg.object_pose.orientation.w]]
+        self.workspace_p.updateObjectMesh(object_pose)
 
 
     def updateRobotConfigurationInPlanScene(self):
@@ -164,9 +165,9 @@ class PybulletPlanScene(object):
             self.robot_p.leftArmCurrConfiguration, self.robot_p.rightArmCurrConfiguration)
 
 
-    def updateInPlanSceneFromRealScene(self):
+    def updateInPlanSceneFromRealScene(self, object_pose):
         ### update the object in the plan scene based on real scene
-        self.updateObjectPoseInPlanScene()
+        self.updateObjectPoseInPlanScene(object_pose)
         ### update the robot in the plan scene based on real scene
         self.updateRobotConfigurationInPlanScene()
         ### update the information to see (there is an object in any of the hand)
@@ -178,7 +179,7 @@ class PybulletPlanScene(object):
         armType = req.armType
         motionType = req.motionType
         ### synchronize with the real scene so as to get the object and robot initial pose
-        self.updateInPlanSceneFromRealScene()
+        self.updateInPlanSceneFromRealScene(req.object_pose)
 
         if armType == "Left":
             initialPose = copy.deepcopy(self.robot_p.left_ee_pose)
@@ -237,7 +238,8 @@ class PybulletPlanScene(object):
         if result_traj != []:
             print("the path is successfully found")
             ### now we need to call a service call to execute the path in the execution scene
-            execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
+            execute_success = self.serviceCall_execute_trajectory(
+                                result_traj, armType, self.robot_p.motomanRJointNames)
         else:
             print("the path is not successfully found")
             return False
@@ -248,7 +250,8 @@ class PybulletPlanScene(object):
                                                 configToPreGraspPose, configToGraspPose)
         result_traj = []
         result_traj.append(config_edge_traj)
-        execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
+        execute_success = self.serviceCall_execute_trajectory(
+                            result_traj, armType, self.robot_p.motomanRJointNames)
         print("the execution has been finished")
         return True
 
@@ -258,7 +261,7 @@ class PybulletPlanScene(object):
         armType = req.armType
         motionType = req.motionType
         ### synchronize with the real scene so as to get the object and robot initial pose
-        self.updateInPlanSceneFromRealScene()
+        self.updateInPlanSceneFromRealScene(req.object_pose)
 
         if armType == "Left":
             initialPose = copy.deepcopy(self.robot_p.left_ee_pose)
@@ -310,7 +313,8 @@ class PybulletPlanScene(object):
         if result_traj != []:
             print("the path is successfully found")
             ### now we need to call a service call to execute the path in the execution scene
-            execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
+            execute_success = self.serviceCall_execute_trajectory(
+                                    result_traj, armType, self.robot_p.motomanRJointNames)
             print("the execution has been finished")
             return True
         else:
@@ -323,7 +327,7 @@ class PybulletPlanScene(object):
         armType = req.armType
         motionType = req.motionType
         ### synchronize with the real scene so as to get the object and robot initial pose
-        self.updateInPlanSceneFromRealScene()
+        self.updateInPlanSceneFromRealScene(req.object_pose)
         if armType == "Left":
             initialPose = copy.deepcopy(self.robot_p.left_ee_pose)
             initialConfig = copy.deepcopy(self.robot_p.leftArmCurrConfiguration)
@@ -349,62 +353,10 @@ class PybulletPlanScene(object):
                                                         initialConfig, configToTargetPose)
         result_traj = []
         result_traj.append(config_edge_traj)
-        execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
+        execute_success = self.serviceCall_execute_trajectory(
+                                    result_traj, armType, self.robot_p.motomanRJointNames)
         print("lifting up finished")
         return True
-
-        # ### synchronize with the real scene so as to get the object and robot initial pose
-        # self.updateInPlanSceneFromRealScene()
-        # if armType == "Left":
-        #     initialPose = copy.deepcopy(self.robot_p.left_ee_pose)
-        #     initialConfig = copy.deepcopy(self.robot_p.leftArmCurrConfiguration)
-        #     theme = "LeftReset"
-        # else:
-        #     initialPose = copy.deepcopy(self.robot_p.right_ee_pose)
-        #     initialConfig = copy.deepcopy(self.robot_p.rightArmCurrConfiguration)
-        #     theme = "RightReset"
-
-        # ### move a little bit to the left
-        # targetPose = [[initialPose[0][0], initialPose[0][1]+0.4, initialPose[0][2]], initialPose[1]]
-        # isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
-        #                     targetPose, self.robot_p, self.workspace_p, armType, motionType)
-        # if not isPoseValid:
-        #     print("this pose is not even valid, let alone motion planning")
-        #     return False
-        # else:
-        #     print("the grasp pose is valid, proceed to planning")
-
-        # config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
-        #                                                 initialConfig, configToTargetPose)
-        # result_traj = []
-        # result_traj.append(config_edge_traj)
-        # execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
-        # print("moving left finished")
-        # config_edge_traj = self.planner_p.translate_between_poses(
-        #     initialPose, targetPose, self.robot_p, self.workspace_p, armType)
-        # result_traj = []
-        # result_traj.append(config_edge_traj)
-        # execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
-        # print("lifting up finished")
-        # ### move a little bit to the left
-        # ### synchronize with the real scene so as to get the object and robot initial pose
-        # self.updateInPlanSceneFromRealScene()
-        # if armType == "Left":
-        #     initialPose = self.robot_p.left_ee_pose
-        #     theme = "LeftReset"
-        # else:
-        #     initialPose = self.robot_p.right_ee_pose
-        #     theme = "RightReset"
-
-        # targetPose = [[initialPose[0][0], initialPose[0][1]+0.4, initialPose[0][2]], initialPose[1]]
-        # config_edge_traj = self.planner_p.translate_between_poses(
-        #     initialPose, targetPose, self.robot_p, self.workspace_p, armType)
-        # result_traj = []
-        # result_traj.append(config_edge_traj)
-        # execute_success = self.serviceCall_execute_trajectory(result_traj, armType)
-        # print("moving left finished")
-
-        # return True
 
 
     def motion_plan_callback(self, req):
@@ -430,17 +382,23 @@ class PybulletPlanScene(object):
 
         
 
-    def serviceCall_execute_trajectory(self, result_traj, armType):
+    def serviceCall_execute_trajectory(self, result_traj, armType, motomanRJointNames):
         ### here the result_traj has the format:
         ### [[edge1_configs], [edge2_configs], ...]
         rospy.wait_for_service("execute_trajectory")
         request = ExecuteTrajectoryRequest()
         request.armType = armType
 
+        if armType == "Left":
+            first_joint_index = 0
+        else:
+            first_joint_index = 7
+
         for edge_configs in result_traj:
             temp_edge_configs = EdgeConfigs()
             for config in edge_configs:
                 joint_state = JointState()
+                joint_state.name = motomanRJointNames[first_joint_index:first_joint_index+7]
                 joint_state.position = config
                 temp_edge_configs.edge_configs.append(joint_state)
             request.trajectory.append(temp_edge_configs)

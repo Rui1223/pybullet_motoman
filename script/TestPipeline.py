@@ -9,6 +9,7 @@ import rospy
 import rospkg
 from std_msgs.msg import String
 from geometry_msgs.msg import Pose
+from pybullet_motoman.msg import ObjectPoseBox
 
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningRequest
 from pybullet_motoman.srv import AttachObject, AttachObjectRequest
@@ -34,6 +35,9 @@ def shiyang_obtain_gripper_poses_for_left_hand(armType, motionType):
     request1.gripper_pose.orientation.y = 0.8
     request1.gripper_pose.orientation.z = 0.0
     request1.gripper_pose.orientation.w = 0.0
+    request1.object_pose.dims = [0.06, 0.16, 0.23]
+    request1.object_pose.position = [0.8, 0.45, 0.62]
+    request1.object_pose.orientation = [0.0, 0.707, 0.0, 0.707]
     request1.armType = armType
     request1.motionType = motionType
     planning_requests.append(request1)
@@ -73,6 +77,9 @@ def shiyang_obtain_gripper_poses_at_transit_center(armType, motionType):
     request1.gripper_pose.orientation.y = 0.8
     request1.gripper_pose.orientation.z = 0.0
     request1.gripper_pose.orientation.w = 0.0
+    request1.object_pose.dims = [0.06, 0.16, 0.23]
+    request1.object_pose.position = [0.8, 0.45, 0.62]
+    request1.object_pose.orientation = [0.0, 0.707, 0.0, 0.707]
     request1.armType = armType
     request1.motionType = motionType
     planning_requests.append(request1)
@@ -94,6 +101,9 @@ def shiyang_obtain_gripper_poses_for_right_hand(armType, motionType):
     request1.gripper_pose.orientation.y = 0.707
     request1.gripper_pose.orientation.z = 0.707
     request1.gripper_pose.orientation.w = 0.0
+    request1.object_pose.dims = [0.06, 0.16, 0.23]
+    request1.object_pose.position = [0.79999, 1.549e-09, 0.85999]
+    request1.object_pose.orientation = [-4.12e-09, 0.707, 3.4397e-09, 0.707]
     request1.armType = armType
     request1.motionType = motionType
     planning_requests.append(request1)
@@ -121,6 +131,9 @@ def shiyang_obtain_gripper_poses_at_drop_center(armType, motionType):
     request1.gripper_pose.orientation.y = 0.8
     request1.gripper_pose.orientation.z = 0.0
     request1.gripper_pose.orientation.w = 0.0
+    request1.object_pose.dims = [0.06, 0.16, 0.23]
+    request1.object_pose.position = [0.79999, 1.549e-09, 0.85999]
+    request1.object_pose.orientation = [-4.12e-09, 0.707, 3.4397e-09, 0.707]
     request1.armType = armType
     request1.motionType = motionType
     planning_requests.append(request1)
@@ -132,7 +145,7 @@ def serviceCall_motion_planning(planning_request):
     rospy.wait_for_service("motion_planning")
     try:
         plan = rospy.ServiceProxy('motion_planning', MotionPlanning)
-        success = plan(planning_request.gripper_pose,
+        success = plan(planning_request.gripper_pose, planning_request.object_pose,
                         planning_request.armType, planning_request.motionType)
         return success.success
     except rospy.ServiceException as e:
@@ -207,6 +220,9 @@ if __name__ == '__main__':
     planning_request = MotionPlanningRequest()
     planning_request.armType = "Left"
     planning_request.motionType = "reset"
+    planning_request.object_pose.dims = [0.06, 0.16, 0.23]
+    planning_request.object_pose.position = [0.79999, 1.549e-09, 0.85999]
+    planning_request.object_pose.orientation = [-4.12e-09, 0.707, 3.4397e-09, 0.707]
     plan_success = serviceCall_motion_planning(planning_request)
 
     ### Now move the object at the drop center
@@ -224,4 +240,4 @@ if __name__ == '__main__':
     time.sleep(1)
     distable_physics_success = serviceCall_enablePhysics(isPhysicsEnabled=False)
 
-    time.sleep(1000)
+    time.sleep(10000)
