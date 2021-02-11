@@ -55,22 +55,14 @@ class MotomanRobot(object):
         ### For each arm, there are 10 joints and 7 of them are revolute joints
         ### There are total 14 revolute joints for each arm
         ### lower limits for null space
-        # self.ll = [-3.13, -1.90, -2.95, -2.36, -3.13, -1.90, -3.13, -3.13, -1.90, -2.95, -2.36, -3.13, -1.90, -3.13]
-        # ### upper limits for null space
-        # self.ul = [3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13, 3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13]
-        # ### joint ranges for null space
-        # self.jr = [6.26, 3.80, 5.90, 4.72, 6.26, 3.80, 6.26, 6.26, 3.80, 5.90, 4.72, 6.26, 3.80, 6.26]
-        # ### restposes for null space
-        # self.rp = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-
-        # ################## new joint limits ##################
-        self.ll = [-3.13, -1.90, -2.95, -1.80, -3.13, -1.90, -3.13, -3.13, -1.90, -2.95, -1.80, -3.13, -1.90, -3.13]
+        self.ll = [-3.13, -1.90, -2.95, -2.36, -3.13, -1.90, -3.13, -3.13, -1.90, -2.95, -2.36, -3.13, -1.90, -3.13]
         ### upper limits for null space
-        self.ul = [3.13, 1.60, 2.95, 2.36, 3.13, 1.90, 3.13, 3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13]
+        self.ul = [3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13, 3.13, 1.90, 2.95, 2.36, 3.13, 1.90, 3.13]
         ### joint ranges for null space
-        self.jr = [6.26, 3.50, 5.90, 4.16, 6.26, 3.80, 6.26, 6.26, 3.80, 5.90, 4.16, 6.26, 3.80, 6.26]
+        self.jr = [6.26, 3.80, 5.90, 4.72, 6.26, 3.80, 6.26, 6.26, 3.80, 5.90, 4.72, 6.26, 3.80, 6.26]
         ### restposes for null space
-        self.rp = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        # self.rp = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        self.setRestPoses(self.leftArmHomeConfiguration, self.rightArmHomeConfiguration)
 
         ### get all controllable joints (for motoman, they are all revolute joints)
         self.getRobotJointInfo()
@@ -80,6 +72,10 @@ class MotomanRobot(object):
         self.updateSingleArmConfig(self.leftArmHomeConfiguration, "Left")
         self.updateSingleArmConfig(self.rightArmHomeConfiguration, "Right")
         self.resetArmConfig(self.leftArmCurrConfiguration + self.rightArmCurrConfiguration)
+
+
+    def setRestPoses(self, leftArmConfiguration, rightArmConfiguration):
+        self.rp = list(leftArmConfiguration) + list(rightArmConfiguration)
 
 
     def updateSingleArmConfig(self, currSingleArmConfig, armType):

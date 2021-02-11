@@ -7,6 +7,7 @@
 # (3) "reset": such as move back to home position, etc.
 
 geometry_msgs/Pose gripper_pose
+pybullet_motoman/ObjectPoseBox object_pose
 string armType
 string motionType
 ---

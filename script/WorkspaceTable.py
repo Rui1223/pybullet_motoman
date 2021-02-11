@@ -189,7 +189,7 @@ class WorkspaceTable(object):
         self.obj_name = obj_name
         self.object_geometries[_m] = self.obj_name
 
-
+    ### This function is disabled
     def getObjectInfo(self):
         ### this function is called to get the object information
         ### which includes (1) the object name
@@ -200,27 +200,53 @@ class WorkspaceTable(object):
         return self.obj_name, obj_pose
 
 
-    def updateObjectMesh(self, object_name, object_pose):
+    def updateObjectMesh(self, object_pose):
         ### this function is called to update the object pose
-        ### NOTE: it is expected to be called by planning scene
+        ### NOTE: it should be only called by planning scene
+        ### here the object_pose is a msg of ObjectPoseBox (dims, position, orientation)
 
         ### first check if the object is already in the scene
         if not self.object_geometries:
             ### no object is registered, so we need to add the object
-            self.obj_name = object_name
-            obj_path = os.path.join(self.mesh_path, self.obj_name, "google_16k/textured.obj")
-            _c = p.createCollisionShape(shapeType=p.GEOM_MESH, fileName=obj_path, meshScale=[1, 1, 1], physicsClientId=self.server)
-            _v = p.createVisualShape(shapeType=p.GEOM_MESH, fileName=obj_path, meshScale=[1, 1, 1], physicsClientId=self.server)
-            _m = p.createMultiBody(baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
-                                    basePosition=object_pose[0], baseOrientation=object_pose[1], physicsClientId=self.server)
-            self.object_geometries[_m] = self.obj_name
-            # print("_m::::::::::: ", _m)
+            _c = p.createCollisionShape(
+                shapeType=p.GEOM_BOX, halfExtents=np.array(object_pose.dims)/2, 
+                            meshScale=[1, 1, 1], physicsClientId=self.server)
+            _v = p.createVisualShape(
+                shapeType=p.GEOM_BOX, halfExtents=np.array(object_pose.dims)/2, 
+                        meshScale=[1, 1, 1], rgbaColor=[0.35, 0.35, 0.35, 1], physicsClientId=self.server)
+            _m = p.createMultiBody(
+                baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
+                basePosition=object_pose.position, baseOrientation=object_pose.orientation, 
+                physicsClientId=self.server)
+            self.object_geometries[_m] = "object_to_manipulate"
 
         else:
             ### the object is already registered, so we just need to update the object
             p.resetBasePositionAndOrientation(
-                self.object_geometries.keys()[0], object_pose[0], object_pose[1], physicsClientId=self.server)
-            # print("existing mesh::::::::::", self.object_geometries.keys()[0])
+                self.object_geometries.keys()[0], 
+                object_pose.position, object_pose.orientation, physicsClientId=self.server)
+
+
+    # def updateObjectMesh_old(self, object_pose):
+    #     ### this function is called to update the object pose
+    #     ### NOTE: it should be only called by planning scene
+    #     ### here the object_pose is a msg of ObjectPoseBox (dims, position, orientation)
+
+    #     ### first check if the object is already in the scene
+    #     if not self.object_geometries:
+    #         ### no object is registered, so we need to add the object
+    #         self.obj_name = object_name
+    #         obj_path = os.path.join(self.mesh_path, self.obj_name, "google_16k/textured.obj")
+    #         _c = p.createCollisionShape(shapeType=p.GEOM_MESH, fileName=obj_path, meshScale=[1, 1, 1], physicsClientId=self.server)
+    #         _v = p.createVisualShape(shapeType=p.GEOM_MESH, fileName=obj_path, meshScale=[1, 1, 1], physicsClientId=self.server)
+    #         _m = p.createMultiBody(baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
+    #                                 basePosition=object_pose[0], baseOrientation=object_pose[1], physicsClientId=self.server)
+    #         self.object_geometries[_m] = self.obj_name
+
+    #     else:
+    #         ### the object is already registered, so we just need to update the object
+    #         p.resetBasePositionAndOrientation(
+    #             self.object_geometries.keys()[0], object_pose[0], object_pose[1], physicsClientId=self.server)
 
 
     def updateObjectGeomeotry_BoundingBox(self, object_pose, object_dim):
