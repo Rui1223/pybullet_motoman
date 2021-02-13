@@ -30,18 +30,22 @@ def calculateInnerProduct(v1, v2):
     return ip
 
 
-def computePoseDist_pos(actual_pose_pos, desired_pose_pos):
-    ### Input: format for pose_pos [x,y,z]
+def calculateNorm2(v1, v2):
     temp_dist = 0.0
-    for i in range(len(actual_pose_pos)):
-        temp_dist += (actual_pose_pos[i] - desired_pose_pos[i])**2
+    for i in range(len(v1)):
+        temp_dist += (v1[i] - v2[i])**2
     temp_dist = math.sqrt(temp_dist)
-
     return temp_dist
 
 
-def computePoseDist_quat(actual_pose_quat, desired_pose_quat):
-    lamb = calculateInnerProduct(actual_pose_quat, desired_pose_quat)
+def computePoseDist_pos(pose1, pose2):
+    ### Input: format for pose [x,y,z]
+    pose_dist = calculateNorm2(pose1, pose2)
+    return pose_dist
+
+
+def computePoseDist_quat(quat1, quat2):
+    lamb = calculateInnerProduct(quat1, quat2)
     return (1 - abs(lamb))
 
 
@@ -201,7 +205,7 @@ def generatePreGraspConfig(robot_ee_pose, robot, workspace, planner, handType, s
     trials = 0
     while (not isValid) and (trials<5):
         ### reset arm configurations
-        resetConfiguration = [0.0]*len(robot.homeConfiguration)
+        resetConfiguration = [0.0]*len(robot.armHomeConfiguration)
         robot.resetConfig(resetConfiguration, server)
         q_preGraspIK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO_p,
                                 endEffectorLinkIndex=ee_idx,
@@ -275,7 +279,7 @@ def generateGraspConfig_objectPose(objectTargetPose, robot, workspace, planner, 
     trials = 0
     while (not isValid) and (trials<5):
         ### reset arm configurations
-        resetConfiguration = [0.0]*len(robot.homeConfiguration)
+        resetConfiguration = [0.0]*len(robot.armHomeConfiguration)
         robot.resetConfig(resetConfiguration, server)
         q_graspIK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO_p,
                                 endEffectorLinkIndex=ee_idx,
@@ -368,7 +372,7 @@ def convertPoseToConfig(armPose, robot, workspace, handType, planner, server):
     trials = 0
     while (not isValid) and (trials<5):
         ### reset arm configurations
-        resetConfiguration = [0.0]*len(robot.homeConfiguration)
+        resetConfiguration = [0.0]*len(robot.armHomeConfiguration)
         robot.resetConfig(resetConfiguration, robot.motomanGEO_p, server)
         q_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO_p,
                                 endEffectorLinkIndex=ee_idx,

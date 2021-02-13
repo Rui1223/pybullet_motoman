@@ -18,20 +18,22 @@ class WorkspaceTable(object):
     def __init__(self,
         robotBasePosition,
         standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
-        mesh_path, server):
+        mesh_path, isPhysicsTurnOn, server):
         ### get the server
         self.server = server
         self.mesh_path = mesh_path
         self.known_geometries = []
         self.object_geometries = OrderedDict()
-        self.createTableScene(robotBasePosition, standingBase_dim, table_dim, table_offset_x)
+        self.createTableScene(
+            robotBasePosition, standingBase_dim, table_dim, table_offset_x, isPhysicsTurnOn)
         ### specify the transit center
         self.objectTransitCenter = [
             self.tablePosition[0], self.tablePosition[1], self.tablePosition[2]+transitCenterHeight]
 
 
 
-    def createTableScene(self, robotBasePosition, standingBase_dim, table_dim, table_offset_x):
+    def createTableScene(self, 
+        robotBasePosition, standingBase_dim, table_dim, table_offset_x, isPhysicsTurnOn):
         print("---------Enter to table scene!----------")
 
         ################ create the known geometries - standingBase  ####################
@@ -42,8 +44,14 @@ class WorkspaceTable(object):
                                     halfExtents=self.standingBase_dim/2, physicsClientId=self.server)
         self.standingBase_v = p.createVisualShape(shapeType=p.GEOM_BOX,
                                     halfExtents=self.standingBase_dim/2, physicsClientId=self.server)
-        self.standingBaseM = p.createMultiBody(baseCollisionShapeIndex=self.standingBase_c, baseVisualShapeIndex=self.standingBase_v,
-                                    basePosition=self.standingBasePosition, physicsClientId=self.server)
+        if isPhysicsTurnOn == True:
+            self.standingBaseM = p.createMultiBody(
+                baseCollisionShapeIndex=self.standingBase_c, baseVisualShapeIndex=self.standingBase_v,
+                basePosition=self.standingBasePosition, physicsClientId=self.server)
+        else:
+            self.standingBaseM = p.createMultiBody(
+                baseCollisionShapeIndex=self.standingBase_c, baseVisualShapeIndex=self.standingBase_v,
+                basePosition=self.standingBasePosition, physicsClientId=self.server)            
         print("standing base: " + str(self.standingBaseM))
         self.known_geometries.append(self.standingBaseM)
         #################################################################################
@@ -88,7 +96,7 @@ class WorkspaceTable(object):
         }
 
         massList = {
-            "003_cracker_box": 40,
+            "003_cracker_box": 2.32,
             "004_sugar_box": 1.7,
             "005_tomato_soup_can": 3.5,
             "006_mustard_bottle": 1.9,
@@ -107,6 +115,8 @@ class WorkspaceTable(object):
         temp_pos = [random.uniform(self.tablePosition[0]-self.table_dim[0]/2+0.1, self.tablePosition[0]+self.table_dim[0]/2-0.1), \
                     random.uniform(self.tablePosition[1]+0.1, self.tablePosition[1]+self.table_dim[1]/2-0.1), \
                     self.tablePosition[2]+self.table_dim[2]/2+dropHeight]
+        print("temp_pos")
+        print(temp_pos)
 
         ### select one configuration
         temp_angles = random.choice(object_configs_angles[obj_name])
@@ -145,7 +155,7 @@ class WorkspaceTable(object):
         }
 
         massList = {
-            "003_cracker_box": 40,
+            "003_cracker_box": 2.32,
             "004_sugar_box": 1.7,
             "005_tomato_soup_can": 3.5,
             "006_mustard_bottle": 1.9,

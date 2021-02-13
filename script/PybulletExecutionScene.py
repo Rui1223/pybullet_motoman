@@ -64,7 +64,7 @@ class PybulletExecutionScene(object):
                 leftArmHomeConfiguration, rightArmHomeConfiguration, True)
         ### set up the workspace
         self.setupWorkspace(standingBase_dim, table_dim, table_offset_x, \
-                transitCenterHeight, object_mesh_path)
+                transitCenterHeight, object_mesh_path, True)
         ### set up the camera
         self.setupCamera(camera_extrinsic, camera_intrinsic, args)
 
@@ -203,12 +203,12 @@ class PybulletExecutionScene(object):
 
     def setupWorkspace(self,
             standingBase_dim, table_dim, table_offset_x,
-            transitCenterHeight, object_mesh_path):
+            transitCenterHeight, object_mesh_path, isPhysicsTurnOn):
         ### This function sets up the workspace ###
         self.workspace_e = WorkspaceTable(self.robot_e.basePosition,
             standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
             os.path.join(self.rosPackagePath, object_mesh_path),
-            self.executingClientID)
+            isPhysicsTurnOn, self.executingClientID)
 
     def setupCamera(self, camera_extrinsic, camera_intrinsic, args):
         ### This function sets up the camera ###
@@ -245,25 +245,10 @@ def main(args):
         joint_state_msg.name = motomanRJointNames
         joint_state_msg.position = armCurrConfiguration
 
-        # ### get the object information
-        # object_name, object_pose = pybullet_execution_scene.workspace_e.getObjectInfo()
-        # ### prepare the message
-        # object_pose_msg = ObjectPose()
-        # object_pose_msg.object_name = object_name
-        # object_pose_msg.object_pose = Pose()
-        # object_pose_msg.object_pose.position.x = object_pose[0][0]
-        # object_pose_msg.object_pose.position.y = object_pose[0][1]
-        # object_pose_msg.object_pose.position.z = object_pose[0][2]
-        # object_pose_msg.object_pose.orientation.x = object_pose[1][0]
-        # object_pose_msg.object_pose.orientation.y = object_pose[1][1]
-        # object_pose_msg.object_pose.orientation.z = object_pose[1][2]
-        # object_pose_msg.object_pose.orientation.w = object_pose[1][3]
-
         ### publish the message
         pybullet_execution_scene.jointState_pub.publish(joint_state_msg)
         ee_poses_msgs = pybullet_execution_scene.executor_e.prepare_ee_poses_msgs(pybullet_execution_scene.robot_e)
         pybullet_execution_scene.ee_poses_pub.publish(ee_poses_msgs)
-        # pybullet_execution_scene.object_pose_pub.publish(object_pose_msg)
 
         # rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
         # rgb_msg = bridge.cv2_to_imgmsg(rgbImg, 'rgb8')
