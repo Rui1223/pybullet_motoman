@@ -18,20 +18,22 @@ class WorkspaceTable(object):
     def __init__(self,
         robotBasePosition,
         standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
-        mesh_path, server):
+        mesh_path, isPhysicsTurnOn, server):
         ### get the server
         self.server = server
         self.mesh_path = mesh_path
         self.known_geometries = []
         self.object_geometries = OrderedDict()
-        self.createTableScene(robotBasePosition, standingBase_dim, table_dim, table_offset_x)
+        self.createTableScene(
+            robotBasePosition, standingBase_dim, table_dim, table_offset_x, isPhysicsTurnOn)
         ### specify the transit center
         self.objectTransitCenter = [
             self.tablePosition[0], self.tablePosition[1], self.tablePosition[2]+transitCenterHeight]
 
 
 
-    def createTableScene(self, robotBasePosition, standingBase_dim, table_dim, table_offset_x):
+    def createTableScene(self, 
+        robotBasePosition, standingBase_dim, table_dim, table_offset_x, isPhysicsTurnOn):
         print("---------Enter to table scene!----------")
 
         ################ create the known geometries - standingBase  ####################
@@ -42,8 +44,14 @@ class WorkspaceTable(object):
                                     halfExtents=self.standingBase_dim/2, physicsClientId=self.server)
         self.standingBase_v = p.createVisualShape(shapeType=p.GEOM_BOX,
                                     halfExtents=self.standingBase_dim/2, physicsClientId=self.server)
-        self.standingBaseM = p.createMultiBody(baseCollisionShapeIndex=self.standingBase_c, baseVisualShapeIndex=self.standingBase_v,
-                                    basePosition=self.standingBasePosition, physicsClientId=self.server)
+        if isPhysicsTurnOn == True:
+            self.standingBaseM = p.createMultiBody(
+                baseCollisionShapeIndex=self.standingBase_c, baseVisualShapeIndex=self.standingBase_v,
+                basePosition=self.standingBasePosition, physicsClientId=self.server)
+        else:
+            self.standingBaseM = p.createMultiBody(
+                baseCollisionShapeIndex=self.standingBase_c, baseVisualShapeIndex=self.standingBase_v,
+                basePosition=self.standingBasePosition, physicsClientId=self.server)            
         print("standing base: " + str(self.standingBaseM))
         self.known_geometries.append(self.standingBaseM)
         #################################################################################
@@ -88,7 +96,7 @@ class WorkspaceTable(object):
         }
 
         massList = {
-            "003_cracker_box": 40,
+            "003_cracker_box": 2.32,
             "004_sugar_box": 1.7,
             "005_tomato_soup_can": 3.5,
             "006_mustard_bottle": 1.9,
@@ -107,6 +115,8 @@ class WorkspaceTable(object):
         temp_pos = [random.uniform(self.tablePosition[0]-self.table_dim[0]/2+0.1, self.tablePosition[0]+self.table_dim[0]/2-0.1), \
                     random.uniform(self.tablePosition[1]+0.1, self.tablePosition[1]+self.table_dim[1]/2-0.1), \
                     self.tablePosition[2]+self.table_dim[2]/2+dropHeight]
+        print("temp_pos")
+        print(temp_pos)
 
         ### select one configuration
         temp_angles = random.choice(object_configs_angles[obj_name])
@@ -145,7 +155,7 @@ class WorkspaceTable(object):
         }
 
         massList = {
-            "003_cracker_box": 40,
+            "003_cracker_box": 2.32,
             "004_sugar_box": 1.7,
             "005_tomato_soup_can": 3.5,
             "006_mustard_bottle": 1.9,
@@ -218,35 +228,27 @@ class WorkspaceTable(object):
                 baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
                 basePosition=object_pose.position, baseOrientation=object_pose.orientation, 
                 physicsClientId=self.server)
-            self.object_geometries[_m] = "object_to_manipulate"
+            self.object_geometries[_m] = [list(object_pose.position), list(object_pose.orientation)]
+            # print(self.object_geometries)
 
         else:
-            ### the object is already registered, so we just need to update the object
-            p.resetBasePositionAndOrientation(
-                self.object_geometries.keys()[0], 
-                object_pose.position, object_pose.orientation, physicsClientId=self.server)
-
-
-    # def updateObjectMesh_old(self, object_pose):
-    #     ### this function is called to update the object pose
-    #     ### NOTE: it should be only called by planning scene
-    #     ### here the object_pose is a msg of ObjectPoseBox (dims, position, orientation)
-
-    #     ### first check if the object is already in the scene
-    #     if not self.object_geometries:
-    #         ### no object is registered, so we need to add the object
-    #         self.obj_name = object_name
-    #         obj_path = os.path.join(self.mesh_path, self.obj_name, "google_16k/textured.obj")
-    #         _c = p.createCollisionShape(shapeType=p.GEOM_MESH, fileName=obj_path, meshScale=[1, 1, 1], physicsClientId=self.server)
-    #         _v = p.createVisualShape(shapeType=p.GEOM_MESH, fileName=obj_path, meshScale=[1, 1, 1], physicsClientId=self.server)
-    #         _m = p.createMultiBody(baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
-    #                                 basePosition=object_pose[0], baseOrientation=object_pose[1], physicsClientId=self.server)
-    #         self.object_geometries[_m] = self.obj_name
-
-    #     else:
-    #         ### the object is already registered, so we just need to update the object
-    #         p.resetBasePositionAndOrientation(
-    #             self.object_geometries.keys()[0], object_pose[0], object_pose[1], physicsClientId=self.server)
+            ### we first need to remove the current object mesh
+            # print(self.object_geometries.keys()[0])
+            p.removeBody(self.object_geometries.keys()[0], physicsClientId=self.server)
+            self.object_geometries = OrderedDict()
+            ### generate the new object mesh
+            _c = p.createCollisionShape(
+                shapeType=p.GEOM_BOX, halfExtents=np.array(object_pose.dims)/2, 
+                            meshScale=[1, 1, 1], physicsClientId=self.server)
+            _v = p.createVisualShape(
+                shapeType=p.GEOM_BOX, halfExtents=np.array(object_pose.dims)/2, 
+                        meshScale=[1, 1, 1], rgbaColor=[0.35, 0.35, 0.35, 1], physicsClientId=self.server)
+            _m = p.createMultiBody(
+                baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
+                basePosition=object_pose.position, baseOrientation=object_pose.orientation, 
+                physicsClientId=self.server)
+            self.object_geometries[_m] = [list(object_pose.position), list(object_pose.orientation)]
+            # print(self.object_geometries)
 
 
     def updateObjectGeomeotry_BoundingBox(self, object_pose, object_dim):

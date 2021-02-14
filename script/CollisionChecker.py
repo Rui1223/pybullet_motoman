@@ -20,7 +20,8 @@ class CollisionChecker(object):
                 # print(str(contact[3]) + ": " + str(contact[4]))
                 if (contact[3] == 23 and contact[4] == 25) or (contact[3] == 28 and contact[4] == 30) \
                     or (contact[3] == 24 and contact[4] == 25) or (contact[3] == 29 and contact[4] == 30) \
-                    or (contact[3] == 6 and contact[4] == 9) or (contact[3] == 19 and contact[4] == 16):
+                    or (contact[3] == 6 and contact[4] == 9) or (contact[3] == 19 and contact[4] == 16) \
+                    or (contact[3] == 22 and contact[4] == 25):
                     ### we can allow collisions among the links of the robotiq hand 
                     ### (mounted on the right arm)
                     ### we also allow collision between the gripper and the wrist (both left and right hand)

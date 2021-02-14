@@ -173,26 +173,46 @@ class Planner(object):
         f_connection.close()
 
 
-    def updateManipulationStatus(self, isObjectInLeftHand, isObjectInRightHand, 
-            leftLocalPose, rightLocalPose, objectGEO):
+    def updateManipulationStatus(self, 
+        isObjectInLeftHand, isObjectInRightHand, object_geometries, robot):
         ### This update update the manipulation status by indicating
         ### whether the object is in any of the hand
         self.isObjectInLeftHand = isObjectInLeftHand
         self.isObjectInRightHand = isObjectInRightHand
 
         if self.isObjectInLeftHand:
-            self.objectInLeftHand = objectGEO
-            self.leftLocalPose = leftLocalPose
+            self.objectInLeftHand = object_geometries.keys()[0]
+            self.leftLocalPose = self.computeLocalPose(
+                        object_geometries.values()[0], robot, "Left")
         else:
             self.objectInLeftHand = None
-            self.leftLocalPose = leftLocalPose
+            self.leftLocalPose = [[-1, -1, -1], [-1, -1, -1, -1]]
 
         if self.isObjectInRightHand:
-            self.objectInRightHand = objectGEO
-            self.rightLocalPose = rightLocalPose
+            self.objectInRightHand = object_geometries.keys()[0]
+            self.rightLocalPose = self.computeLocalPose(
+                        object_geometries.values()[0], robot, "Right")
         else:
             self.objectInRightHand = None
-            self.rightLocalPose = rightLocalPose
+            self.rightLocalPose = [[-1, -1, -1], [-1, -1, -1, -1]]
+
+
+    def computeLocalPose(self, object_pose, robot, armType):
+        ### This function computes local pose given current object_pose + ee pose
+        ### when it is in-hand manipulation (the object is attached to the hand)
+        if armType == "Left":
+            curr_ee_pose = robot.left_ee_pose
+        else:
+            curr_ee_pose = robot.right_ee_pose
+
+        inverse_ee_global = p.invertTransform(curr_ee_pose[0], curr_ee_pose[1])
+        temp_localPose = p.multiplyTransforms(
+            list(inverse_ee_global[0]), list(inverse_ee_global[1]),
+            object_pose[0], object_pose[1])
+
+        temp_localPose = [list(temp_localPose[0]), list(temp_localPose[1])]
+
+        return temp_localPose
 
 
     def generatePreGrasp(self, grasp_pose, robot, workspace, armType, motionType):
@@ -221,7 +241,7 @@ class Planner(object):
                                 jointRanges=robot.jr, restPoses=robot.rp,
                                 maxNumIterations=20000, residualThreshold=0.0000001,
                                 physicsClientId=robot.server)
-        singleArmConfig_IK = q_preGraspIK[first_joint_index:first_joint_index+7]
+        singleArmConfig_IK = list(q_preGraspIK[first_joint_index:first_joint_index+7])
         isPoseValid = self.checkPoseIK(
                 singleArmConfig_IK, ee_idx, preGrasp_pose, robot, workspace, armType, motionType)
 
@@ -247,22 +267,32 @@ class Planner(object):
         return isPoseValid, preGrasp_pose, singleArmConfig_IK
 
 
-    def updateRealObjectBasedonLocalPose(self, robot, armType):
+    def updateRealObjectBasedonLocalPose(self, robot, workspace, armType):
         if armType == "Left":
-            ee_idx = robot.left_ee_idx
-            objectInHand = self.objectInLeftHand
-            curr_ee_pose = robot.left_ee_pose
-            object_global_pose = self.getObjectGlobalPose(self.leftLocalPose, curr_ee_pose)
+            # ee_idx = robot.left_ee_idx
+            # objectInHand = self.objectInLeftHand
+            # curr_ee_pose = robot.left_ee_pose
+            # object_global_pose = self.getObjectGlobalPose(self.leftLocalPose, curr_ee_pose)
+            object_global_pose = self.getObjectGlobalPose(self.leftLocalPose, robot.left_ee_pose)
+            p.resetBasePositionAndOrientation(
+                self.objectInLeftHand, object_global_pose[0], object_global_pose[1], 
+                physicsClientId=self.planningServer)
+            workspace.object_geometries[self.objectInLeftHand] = [object_global_pose[0], object_global_pose[1]]
 
         else:
-            ee_idx = robot.right_ee_idx
-            objectInHand = self.objectInRightHand
-            curr_ee_pose = robot.right_ee_pose
-            object_global_pose = self.getObjectGlobalPose(self.rightLocalPose, curr_ee_pose)
+            # ee_idx = robot.right_ee_idx
+            # objectInHand = self.objectInRightHand
+            # curr_ee_pose = robot.right_ee_pose
+            # object_global_pose = self.getObjectGlobalPose(self.rightLocalPose, curr_ee_pose)
+            object_global_pose = self.getObjectGlobalPose(self.rightLocalPose, robot.right_ee_pose)
+            p.resetBasePositionAndOrientation(
+                self.objectInRightHand, object_global_pose[0], object_global_pose[1], 
+                physicsClientId=self.planningServer)
+            workspace.object_geometries[self.objectInRightHand] = [object_global_pose[0], object_global_pose[1]]
 
-        p.resetBasePositionAndOrientation(
-            objectInHand, object_global_pose[0], object_global_pose[1], 
-            physicsClientId=self.planningServer)
+        # p.resetBasePositionAndOrientation(
+        #     objectInHand, object_global_pose[0], object_global_pose[1], 
+        #     physicsClientId=self.planningServer)
 
 
     def getObjectGlobalPose(self, local_pose, ee_global_pose):
@@ -278,7 +308,8 @@ class Planner(object):
         ### This function checks the validity of a pose by checking its corresponding config (IK)
         ### Input: pose: [[x,y,z],[x,y,z,w]]
         ###        armType: "Left" or "Right"
-        ###        motionType: "transfer" or "transit" or "others"
+        ###        motionType: "transfer" or "transit" or "reset" or 
+        ###                    "moveAway" or "approachToPlacement"
         ### Output: isPoseValid (bool), singleArmConfig_IK (list (7-by-1))
         if armType == "Left":
             ee_idx = robot.left_ee_idx
@@ -297,7 +328,7 @@ class Planner(object):
                                 maxNumIterations=20000, residualThreshold=0.0000001,
                                 physicsClientId=robot.server)
 
-        singleArmConfig_IK = config_IK[first_joint_index:first_joint_index+7]
+        singleArmConfig_IK = list(config_IK[first_joint_index:first_joint_index+7])
         isPoseValid = self.checkPoseIK(
                 singleArmConfig_IK, ee_idx, pose, robot, workspace, armType, motionType)
 
@@ -312,7 +343,7 @@ class Planner(object):
                                     jointRanges=robot.jr,
                                     maxNumIterations=20000, residualThreshold=0.0000001,
                                     physicsClientId=robot.server)
-            singleArmConfig_IK = config_IK[first_joint_index:first_joint_index+7]
+            singleArmConfig_IK = list(config_IK[first_joint_index:first_joint_index+7])
             isPoseValid = self.checkPoseIK(
                     singleArmConfig_IK, ee_idx, pose, robot, workspace, armType, motionType)
             if isPoseValid: break
@@ -356,8 +387,9 @@ class Planner(object):
         ### Common: no robot self collision and collsions between robot and knownGEO AT ALL TIME
         ### no other collisions based on motionType
         ###     (i) "transit": no collision between the robot and the static object
-        ###     (ii) "transfer": no collision between the robot and the moving object
-        ###                      no collision between the moving object and knownGEO
+        ###     (ii) "transfer" or "approachToPlacement": 
+        ###           no collision between the robot and the moving object
+        ###           no collision between the moving object and knownGEO
         isValid = self.checkIK_CollisionWithRobotAndKnownGEO(
                                             singleArmConfig_IK, robot, workspace, armType)
         if not isValid: return isValid
@@ -365,14 +397,14 @@ class Planner(object):
         ### If currently it is in hand manipulation, also move the object 
         if (self.isObjectInLeftHand and armType == "Left") or \
                             (self.isObjectInRightHand and armType == "Right"):
-            self.updateRealObjectBasedonLocalPose(robot, armType)
+            self.updateRealObjectBasedonLocalPose(robot, workspace, armType)
 
         ### depend on what type of motion it is, we have different collision check strategies
         ### IN TERMS OF THE OBJECT!
         if motionType == "transit":
             isValid = self.checkIK_CollisionWithStaticObject(
                                             singleArmConfig_IK, robot, workspace, armType)
-        elif motionType == "transfer":
+        elif (motionType == "transfer") or (motionType == "approachToPlacement"):
             isValid = self.checkIK_CollisionWithMovingObject(
                                             singleArmConfig_IK, robot, workspace, armType)
 
@@ -515,7 +547,7 @@ class Planner(object):
                                     lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr,
                                     maxNumIterations=2000, residualThreshold=0.0000001,
                                     physicsClientId=robot.server)
-                interm_IK = interm_IK[first_joint_index:first_joint_index+7]
+                interm_IK = list(interm_IK[first_joint_index:first_joint_index+7])
                 config_edge_traj.append(interm_IK)
             
             ### finish the current edge
@@ -541,17 +573,21 @@ class Planner(object):
         print("nseg: " + str(nseg))
 
         for i in range(1, nseg+1):
+            start_time = time.clock()
             interm_pos = utils.interpolatePosition(pose1[0], pose2[0], 1 / nseg * i)
+            print("time for interpolate position: ", str(time.clock() - start_time))
             # interm_quat = utils.interpolateQuaternion(pose1[1], pose2[1], 1 / nseg * i)
-            # start_time = time.clock()
+            start_time = time.clock()
             interm_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
                                     endEffectorLinkIndex=ee_idx,
                                     targetPosition=interm_pos,
-                                    lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr,
-                                    maxNumIterations=2000, residualThreshold=0.0000001,
+                                    lowerLimits=robot.ll, upperLimits=robot.ul, 
+                                    jointRanges=robot.jr, restPoses=robot.rp,
+                                    maxNumIterations=20000, residualThreshold=0.0000001,
                                     physicsClientId=robot.server)
+            print("time for IK: ", str(time.clock() - start_time))
             # print("time for IK calculation: ", str(time.clock() - start_time))
-            interm_IK = interm_IK[first_joint_index:first_joint_index+7]
+            interm_IK = list(interm_IK[first_joint_index:first_joint_index+7])
             config_edge_traj.append(interm_IK)
 
         return config_edge_traj
@@ -587,41 +623,6 @@ class Planner(object):
         ### Reach here because the edge is valid since all poses along the edge are valid
         isEdgeValid = True
         return isEdgeValid
-
-
-    def checkEdgeValidity_SGPoses(self, pose1, pose2, robot, workspace, armType, motionType):
-        ### pose1, pose2: [[x,y,z], [x,y,z,w]]
-        # if armType == "Left":
-        #     ee_idx = robot.left_ee_idx
-        #     first_joint_index = 0
-        # else:
-        #     ee_idx = robot.right_ee_idx
-        #     first_joint_index = 7
-        # nseg = 5
-        config_edge_traj = [] ### a list of joint values
-        min_dist = 0.01
-        nseg = int(max(abs(pose1[0][0]-pose2[0][0]), 
-                    abs(pose1[0][1]-pose2[0][1]), abs(pose1[0][2]-pose2[0][2])) / min_dist)
-        if nseg == 0: nseg += 1
-        # print("nseg: " + str(nseg))
-        isEdgeValid = False
-        ### no need to check two ends
-        for i in range(1, nseg):
-            interm_pos = utils.interpolatePosition(pose1[0], pose2[0], 1 / nseg * i)
-            interm_quat = utils.interpolateQuaternion(pose1[1], pose2[1], 1 / nseg * i)
-            interm_pose = [interm_pos, interm_quat]
-            ### check this pose
-            isPoseValid, pose_config = self.checkPoseBasedOnConfig(
-                        interm_pose, robot, workspace, armType, motionType, "continuous")
-            if not isPoseValid:
-                config_edge_traj = []
-                return isEdgeValid, config_edge_traj
-            else:
-                config_edge_traj.append(pose_config)
-
-        ### Reach here because the edge is valid since all poses along the edge are valid
-        isEdgeValid = True
-        return isEdgeValid, config_edge_traj
 
 
     def checkEdgeValidity_knownGEO(self, n1, n2, robot, workspace, armType):
@@ -688,12 +689,27 @@ class Planner(object):
         return config_edge_traj
 
 
-    def shortestPathPlanning(self, initialPose, targetPose, theme, robot, workspace, armType, motionType):
-        ### Input: initialPose, targetPose [[x,y,z], [x,y,z,w]]
+    # def checkAndGenerateSolution_DirectConfigPath(self, n1, n2):
+    #     ### This function checks an edge coming from the solution
+    #     ### and will generate an edge trajectory if the edge is valid
+    #     ### so this function has the features from both generateTrajectory_DirectConfigPath and checkEdgeValidity_DirectConfigPath
+    #     ### Input: n1, n2: node (a list of 7 joint values)
+    #     ### output: an edge trajectory (config_edge_traj) which includes the endtail but not the head
+    #     ###         format: a list of list(7 joint values)
+    #     ###         isEdgeValid
+
+
+    def shortestPathPlanning(self, initialConfig, targetConfig, theme, robot, workspace, armType, motionType):
+        ### Input: initialConfig, configToPreGraspPose [q1, q2, ..., q7]
+        ### Output: traj (format: [edge_config1, edge_config2, ...])
+        ###         and each edge_config is a list of [7*1 config]
         ### first prepare the start_goal file
-        f = self.writeStartGoal(initialPose[0], targetPose[0], theme)
+
+        result_traj = [] ### the output we want to construct
+
+        f = self.writeStartGoal(initialConfig, targetConfig, theme)
         self.connectStartGoalToArmRoadmap(f,
-                initialPose, targetPose, robot, workspace, armType, motionType)
+                initialConfig, targetConfig, robot, workspace, armType, motionType)
 
         ### call the planning algorithm
         executeCommand = "./main_planner" + " " + theme + " " + armType + " " + str(self.nsamples) + " shortestPath"
@@ -703,7 +719,46 @@ class Planner(object):
         subprocess.call(executeCommand, cwd=cwd, shell=True)
 
         path = self.readPath(theme, armType)
-        return path
+        if path == []:
+            ### the plan fails, could not find a solution
+            return result_traj ### an empty trajectory
+
+        ### Once we have the path, let's check the validity of the path
+        # if len(path) > 3:
+        #     ### we have more than one waypoint other than the start and the goal
+        #     for i in range(1, len(path)-2):
+        #         config1 = self.nodes[armType][path[i]]
+        #         config2 = self.nodes[armType][path[i+1]]
+        #         ### check the edge
+        #         isEdgeValid = checkEdgeValidity_DirectConfigPath(config1, config2, robot, workspace, armType, motionType)
+        for i in range(0, len(path)-1):
+            if i == 0:
+                config1 = initialConfig
+            else:
+                config1 = self.nodes[armType][path[i]]
+            if i == (len(path)-2):
+                config2 = targetConfig
+            else:
+                config2 = self.nodes[armType][path[i+1]]
+            ### check the edge
+            isEdgeValid = self.checkEdgeValidity_DirectConfigPath(config1, config2, robot, workspace, armType, motionType)
+
+        if isEdgeValid:
+            ### generate the trajectory for the solution
+            for i in range(0, len(path)-1):
+                if i == 0:
+                    config1 = initialConfig
+                else:
+                    config1 = self.nodes[armType][path[i]]
+                if i == (len(path)-2):
+                    config2 = targetConfig
+                else:
+                    config2 = self.nodes[armType][path[i+1]]
+                ### get edge trajectory
+                config_edge_traj = self.generateTrajectory_DirectConfigPath(config1, config2)
+                result_traj.append(config_edge_traj)
+
+        return result_traj
 
 
     def readPath(self, theme, armType):
@@ -725,29 +780,27 @@ class Planner(object):
                 path.reverse()
         f.close()
 
-        # for idx in path[1:-1]:
-        #     traj.append(self.nodes[armType][idx])
-
         return path
 
 
-    def writeStartGoal(self, initialPose, targetPose, theme):
+    def writeStartGoal(self, initialConfig, targetConfig, theme):
         start_goal_file = os.path.join(self.rosPackagePath, "src/") + theme + ".txt"
         f = open(start_goal_file, "w")
         f.write(str(self.nsamples) + " ")
-        for e in initialPose:
+        for e in initialConfig:
             f.write(str(e) + " ")
         f.write("\n")
         f.write(str(self.nsamples+1) + " ")
-        for e in targetPose:
+        for e in targetConfig:
             f.write(str(e) + " ")
         f.write("\n")
 
         return f
 
+
     def connectStartGoalToArmRoadmap(
-                        self, f, initialPose, targetPose, robot, workspace, armType, motionType):
-        ### initialPose, targetPose [[x,y,z],[x,y,z,w]]
+                        self, f, initialConfig, targetConfig, robot, workspace, armType, motionType):
+        ### initialConfig, targetConfig [q1, q2, ..., q7]
         ### if you trigger plan, it indicates the start and goal cannot be directly connected
         ### so in this case, we do not let start and goal be the neighbors
         start_id = self.nsamples
@@ -758,41 +811,37 @@ class Planner(object):
             ee_idx = robot.right_ee_idx
 
         # neighborIndex_to_start = sorted(range(len(dist_to_start)), key=dist_to_start.__getitem__)
-
         dist_to_start = [
-            utils.computePoseDist_pos(initialPose[0], curr_pose) for \
-                                                curr_pose in self.workspaceNodes[armType]]
+            utils.calculateNorm2(initialConfig, neighborConfig) for neighborConfig in self.nodes[armType]]
         neighborIndex_to_start, neighborDist_to_start = zip(
                                     *sorted(enumerate(dist_to_start), key=itemgetter(1)))
         neighborIndex_to_start = list(neighborIndex_to_start)
         neighborDist_to_start = list(neighborDist_to_start)
 
         dist_to_goal = [
-            utils.computePoseDist_pos(targetPose[0], curr_pose) for \
-                                                curr_pose in self.workspaceNodes[armType]]
+            utils.calculateNorm2(targetConfig, neighborConfig) for neighborConfig in self.nodes[armType]]
         neighborIndex_to_goal, neighborDist_to_goal = zip(
                                     *sorted(enumerate(dist_to_goal), key=itemgetter(1)))
         neighborIndex_to_goal = list(neighborIndex_to_goal) 
         neighborDist_to_goal = list(neighborDist_to_goal)
 
-        # num_neighbors = self.num_neighbors
-        num_neighbors = 25
+        # max_neighbors = self.num_neighbors
+        max_neighbors = 10
+        max_candiates_to_consider = self.num_neighbors
 
         ####### now connect potential neighbors for the start and the goal #######
         ### for start
         # print("for start")        
         neighbors_connected = 0
-        for j in range(len(neighborIndex_to_start)):
+        for j in range(max_candiates_to_consider):
             ### first check if the query node has already connected to enough neighbors
-            if neighbors_connected >= num_neighbors:
+            if neighbors_connected >= max_neighbors:
                 break
             ### otherwise, find the neighbor
             neighbor = self.nodes[armType][neighborIndex_to_start[j]]
-            neighbor = [neighbor[0:3], neighbor[3:7]]
             ### check the edge validity
-            isEdgeValid, config_edge_traj = self.checkEdgeValidity_SGPoses(
-                        initialPose, neighbor, robot, workspace, armType, motionType)
-            ### so far we do not record the config_edge_traj
+            isEdgeValid = self.checkEdgeValidity_DirectConfigPath(
+                        initialConfig, neighbor, robot, workspace, armType, motionType)
             if isEdgeValid:
                 f.write(str(start_id) + " " + str(neighborIndex_to_start[j]) + \
                                              " " + str(neighborDist_to_start[j]) + "\n")
@@ -802,17 +851,15 @@ class Planner(object):
         ### for goal
         # print("for goal")
         neighbors_connected = 0
-        for j in range(len(neighborIndex_to_goal)):        
+        for j in range(max_candiates_to_consider):        
             ### first check if the query node has already connected to enough neighbors
-            if neighbors_connected >= num_neighbors:
+            if neighbors_connected >= max_neighbors:
                 break
             ### otherwise, find the neighbor
             neighbor = self.nodes[armType][neighborIndex_to_goal[j]]
-            neighbor = [neighbor[0:3], neighbor[3:7]]
             ### check the edge validity
-            isEdgeValid, config_edge_traj = self.checkEdgeValidity_SGPoses(
-                        neighbor, targetPose, robot, workspace, armType, motionType)
-            ### so far we do not record the config_edge_traj
+            isEdgeValid = self.checkEdgeValidity_DirectConfigPath(
+                        neighbor, targetConfig, robot, workspace, armType, motionType)
             if isEdgeValid:
                 f.write(str(target_id) + " " + str(neighborIndex_to_goal[j]) + \
                                             " " + str(neighborDist_to_goal[j]) + "\n")            
@@ -890,9 +937,9 @@ class Planner(object):
 #                                 maxNumIterations=2000, residualThreshold=0.0000001,
 #                                 physicsClientId=robot.server)
 #         if armType == "Left":
-#             interm_IK = interm_IK[0:7]
+#             interm_IK = list(interm_IK[0:7])
 #         else:
-#             interm_IK = interm_IK[7:14]
+#             interm_IK = list(interm_IK[7:14])
 #         ### Then check if there is collision
 #         isValid = self.checkIK_CollisionWithRobotAndKnownGEO(interm_IK, robot, workspace, armType)
 #         if isValid == False:
@@ -942,7 +989,7 @@ class Planner(object):
 #                             lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr,
 #                             maxNumIterations=2000, residualThreshold=0.0000001,
 #                             physicsClientId=robot.server)
-#     singleArmConfig_IK = config_IK[first_joint_index:first_joint_index+7]
+#     singleArmConfig_IK = list(config_IK[first_joint_index:first_joint_index+7])
 #     isPoseValid = self.checkIK(
 #                     singleArmConfig_IK, ee_idx, pose, robot, workspace, armType, motionType)
 
@@ -960,7 +1007,7 @@ class Planner(object):
 #                                 lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr,
 #                                 maxNumIterations=2000, residualThreshold=0.0000001,
 #                                 physicsClientId=robot.server)
-#         singleArmConfig_IK = config_IK[first_joint_index:first_joint_index+7]
+#         singleArmConfig_IK = list(config_IK[first_joint_index:first_joint_index+7])
 #         isPoseValid = self.checkIK(
 #             singleArmConfig_IK, ee_idx, pose, robot, workspace, armType, motionType)
 #         if isPoseValid: break
@@ -969,6 +1016,41 @@ class Planner(object):
 #     ### you need to return both the statement whether the pose is valid
 #     ### and the valid configuration the pose corresponds to
 #     return isPoseValid, singleArmConfig_IK
+
+
+# def checkEdgeValidity_SGPoses(self, pose1, pose2, robot, workspace, armType, motionType):
+#     ### pose1, pose2: [[x,y,z], [x,y,z,w]]
+#     # if armType == "Left":
+#     #     ee_idx = robot.left_ee_idx
+#     #     first_joint_index = 0
+#     # else:
+#     #     ee_idx = robot.right_ee_idx
+#     #     first_joint_index = 7
+#     # nseg = 5
+#     config_edge_traj = [] ### a list of joint values
+#     min_dist = 0.01
+#     nseg = int(max(abs(pose1[0][0]-pose2[0][0]), 
+#                 abs(pose1[0][1]-pose2[0][1]), abs(pose1[0][2]-pose2[0][2])) / min_dist)
+#     if nseg == 0: nseg += 1
+#     # print("nseg: " + str(nseg))
+#     isEdgeValid = False
+#     ### no need to check two ends
+#     for i in range(1, nseg):
+#         interm_pos = utils.interpolatePosition(pose1[0], pose2[0], 1 / nseg * i)
+#         interm_quat = utils.interpolateQuaternion(pose1[1], pose2[1], 1 / nseg * i)
+#         interm_pose = [interm_pos, interm_quat]
+#         ### check this pose
+#         isPoseValid, pose_config = self.checkPoseBasedOnConfig(
+#                     interm_pose, robot, workspace, armType, motionType, "continuous")
+#         if not isPoseValid:
+#             config_edge_traj = []
+#             return isEdgeValid, config_edge_traj
+#         else:
+#             config_edge_traj.append(pose_config)
+
+#     ### Reach here because the edge is valid since all poses along the edge are valid
+#     isEdgeValid = True
+#     return isEdgeValid, config_edge_traj
 
 
 # def jointMetric(self, a, b):

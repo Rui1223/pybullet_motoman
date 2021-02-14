@@ -50,7 +50,6 @@ class Executor(object):
                     self.objectInRightHand[0], physicsClientId=self.server)
             curr_object_global_pose = [list(ls[0]), list(ls[1])]
 
-
         inverse_ee_global = p.invertTransform(curr_ee_pose[0], curr_ee_pose[1])
         temp_localPose = p.multiplyTransforms(
             list(inverse_ee_global[0]), list(inverse_ee_global[1]),
