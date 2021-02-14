@@ -228,9 +228,8 @@ class WorkspaceTable(object):
                 baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
                 basePosition=object_pose.position, baseOrientation=object_pose.orientation, 
                 physicsClientId=self.server)
-            self.object_geometries[_m] = "object_to_manipulate"
-            # print("mesh id: ")
-            # print(_m)
+            self.object_geometries[_m] = [list(object_pose.position), list(object_pose.orientation)]
+            # print(self.object_geometries)
 
         else:
             ### we first need to remove the current object mesh
@@ -248,12 +247,8 @@ class WorkspaceTable(object):
                 baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
                 basePosition=object_pose.position, baseOrientation=object_pose.orientation, 
                 physicsClientId=self.server)
-            self.object_geometries[_m] = "object_to_manipulate"
-            # p.resetBasePositionAndOrientation(
-            #     self.object_geometries.keys()[0], 
-            #     object_pose.position, object_pose.orientation, physicsClientId=self.server)
-            # print("mesh id: ")
-            # print(_m)
+            self.object_geometries[_m] = [list(object_pose.position), list(object_pose.orientation)]
+            # print(self.object_geometries)
 
 
     def updateObjectGeomeotry_BoundingBox(self, object_pose, object_dim):

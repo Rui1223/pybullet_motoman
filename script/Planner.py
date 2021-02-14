@@ -173,26 +173,46 @@ class Planner(object):
         f_connection.close()
 
 
-    def updateManipulationStatus(self, isObjectInLeftHand, isObjectInRightHand, 
-            leftLocalPose, rightLocalPose, objectGEO):
+    def updateManipulationStatus(self, 
+        isObjectInLeftHand, isObjectInRightHand, object_geometries, robot):
         ### This update update the manipulation status by indicating
         ### whether the object is in any of the hand
         self.isObjectInLeftHand = isObjectInLeftHand
         self.isObjectInRightHand = isObjectInRightHand
 
         if self.isObjectInLeftHand:
-            self.objectInLeftHand = objectGEO
-            self.leftLocalPose = leftLocalPose
+            self.objectInLeftHand = object_geometries.keys()[0]
+            self.leftLocalPose = self.computeLocalPose(
+                        object_geometries.values()[0], robot, "Left")
         else:
             self.objectInLeftHand = None
-            self.leftLocalPose = leftLocalPose
+            self.leftLocalPose = [[-1, -1, -1], [-1, -1, -1, -1]]
 
         if self.isObjectInRightHand:
-            self.objectInRightHand = objectGEO
-            self.rightLocalPose = rightLocalPose
+            self.objectInRightHand = object_geometries.keys()[0]
+            self.rightLocalPose = self.computeLocalPose(
+                        object_geometries.values()[0], robot, "Right")
         else:
             self.objectInRightHand = None
-            self.rightLocalPose = rightLocalPose
+            self.rightLocalPose = [[-1, -1, -1], [-1, -1, -1, -1]]
+
+
+    def computeLocalPose(self, object_pose, robot, armType):
+        ### This function computes local pose given current object_pose + ee pose
+        ### when it is in-hand manipulation (the object is attached to the hand)
+        if armType == "Left":
+            curr_ee_pose = robot.left_ee_pose
+        else:
+            curr_ee_pose = robot.right_ee_pose
+
+        inverse_ee_global = p.invertTransform(curr_ee_pose[0], curr_ee_pose[1])
+        temp_localPose = p.multiplyTransforms(
+            list(inverse_ee_global[0]), list(inverse_ee_global[1]),
+            object_pose[0], object_pose[1])
+
+        temp_localPose = [list(temp_localPose[0]), list(temp_localPose[1])]
+
+        return temp_localPose
 
 
     def generatePreGrasp(self, grasp_pose, robot, workspace, armType, motionType):
@@ -247,22 +267,32 @@ class Planner(object):
         return isPoseValid, preGrasp_pose, singleArmConfig_IK
 
 
-    def updateRealObjectBasedonLocalPose(self, robot, armType):
+    def updateRealObjectBasedonLocalPose(self, robot, workspace, armType):
         if armType == "Left":
-            ee_idx = robot.left_ee_idx
-            objectInHand = self.objectInLeftHand
-            curr_ee_pose = robot.left_ee_pose
-            object_global_pose = self.getObjectGlobalPose(self.leftLocalPose, curr_ee_pose)
+            # ee_idx = robot.left_ee_idx
+            # objectInHand = self.objectInLeftHand
+            # curr_ee_pose = robot.left_ee_pose
+            # object_global_pose = self.getObjectGlobalPose(self.leftLocalPose, curr_ee_pose)
+            object_global_pose = self.getObjectGlobalPose(self.leftLocalPose, robot.left_ee_pose)
+            p.resetBasePositionAndOrientation(
+                self.objectInLeftHand, object_global_pose[0], object_global_pose[1], 
+                physicsClientId=self.planningServer)
+            workspace.object_geometries[self.objectInLeftHand] = [object_global_pose[0], object_global_pose[1]]
 
         else:
-            ee_idx = robot.right_ee_idx
-            objectInHand = self.objectInRightHand
-            curr_ee_pose = robot.right_ee_pose
-            object_global_pose = self.getObjectGlobalPose(self.rightLocalPose, curr_ee_pose)
+            # ee_idx = robot.right_ee_idx
+            # objectInHand = self.objectInRightHand
+            # curr_ee_pose = robot.right_ee_pose
+            # object_global_pose = self.getObjectGlobalPose(self.rightLocalPose, curr_ee_pose)
+            object_global_pose = self.getObjectGlobalPose(self.rightLocalPose, robot.right_ee_pose)
+            p.resetBasePositionAndOrientation(
+                self.objectInRightHand, object_global_pose[0], object_global_pose[1], 
+                physicsClientId=self.planningServer)
+            workspace.object_geometries[self.objectInRightHand] = [object_global_pose[0], object_global_pose[1]]
 
-        p.resetBasePositionAndOrientation(
-            objectInHand, object_global_pose[0], object_global_pose[1], 
-            physicsClientId=self.planningServer)
+        # p.resetBasePositionAndOrientation(
+        #     objectInHand, object_global_pose[0], object_global_pose[1], 
+        #     physicsClientId=self.planningServer)
 
 
     def getObjectGlobalPose(self, local_pose, ee_global_pose):
@@ -367,7 +397,7 @@ class Planner(object):
         ### If currently it is in hand manipulation, also move the object 
         if (self.isObjectInLeftHand and armType == "Left") or \
                             (self.isObjectInRightHand and armType == "Right"):
-            self.updateRealObjectBasedonLocalPose(robot, armType)
+            self.updateRealObjectBasedonLocalPose(robot, workspace, armType)
 
         ### depend on what type of motion it is, we have different collision check strategies
         ### IN TERMS OF THE OBJECT!

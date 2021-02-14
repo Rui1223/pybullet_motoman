@@ -47,8 +47,8 @@ class PybulletPlanScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet planning scene
-        # self.planningClientID = p.connect(p.DIRECT)
-        self.planningClientID = p.connect(p.GUI)
+        self.planningClientID = p.connect(p.DIRECT)
+        # self.planningClientID = p.connect(p.GUI)
 
         ### create a planner assistant
         self.planner_p = Planner(
@@ -121,36 +121,17 @@ class PybulletPlanScene(object):
         rospy.init_node("pybullet_plan_scene", anonymous=True)
 
 
-    def getLocalPose_gripperObject(self, left_local_pose, right_local_pose):
-        leftLocalPose = [[left_local_pose.position.x, 
-            left_local_pose.position.y, left_local_pose.position.z], [left_local_pose.orientation.x, 
-            left_local_pose.orientation.y, left_local_pose.orientation.z, left_local_pose.orientation.w]]
-        rightLocalPose = [[right_local_pose.position.x, 
-            right_local_pose.position.y, right_local_pose.position.z], [right_local_pose.orientation.x, 
-            right_local_pose.orientation.y, right_local_pose.orientation.z, right_local_pose.orientation.w]]
-        return leftLocalPose, rightLocalPose
-
-
     def updateEEPoseInPlanScene(self):
         ### get the information on whether the object is in hand (which object? which hand?)
         ### by looking at the topic "ee_poses"
         ee_poses_msg = rospy.wait_for_message("ee_poses", EEPoses)
         isObjectInLeftHand = ee_poses_msg.isObjectInLeftHand
         isObjectInRightHand = ee_poses_msg.isObjectInRightHand
-        leftLocalPose, rightLocalPose = self.getLocalPose_gripperObject(
-                            ee_poses_msg.left_local_pose, ee_poses_msg.right_local_pose)
-        self.planner_p.updateManipulationStatus(isObjectInLeftHand, isObjectInRightHand, 
-                leftLocalPose, rightLocalPose, self.workspace_p.object_geometries.keys()[0])
+        self.planner_p.updateManipulationStatus(
+                isObjectInLeftHand, isObjectInRightHand, self.workspace_p.object_geometries, self.robot_p)
 
 
     def updateObjectPoseInPlanScene(self, object_pose):
-        ### get the current object pose from real scene by looking at the topic "object_pose"
-        # object_pose_msg = rospy.wait_for_message("object_pose", ObjectPose)
-        # object_name = object_pose_msg.object_name
-        # object_pose = [[object_pose_msg.object_pose.position.x, 
-        #         object_pose_msg.object_pose.position.y, object_pose_msg.object_pose.position.z], 
-        #         [object_pose_msg.object_pose.orientation.x, object_pose_msg.object_pose.orientation.y, 
-        #         object_pose_msg.object_pose.orientation.z, object_pose_msg.object_pose.orientation.w]]
         self.workspace_p.updateObjectMesh(object_pose)
 
 
@@ -416,6 +397,7 @@ class PybulletPlanScene(object):
 
 
     def approachToPlacement_motion_planning(self, req):
+
         armType = req.armType
         motionType = req.motionType
         ### synchronize with the real scene so as to get the object and robot initial pose
