@@ -137,7 +137,7 @@ class PybulletPlanScene(object):
 
     def updateRobotConfigurationInPlanScene(self):
         ### get the current robot config from real scene by looking at the topic "joint_states"
-        joint_states_msg = rospy.wait_for_message('joint_states', JointState)
+        joint_states_msg = rospy.wait_for_message('left_right_joint_states', JointState)
         joint_values = list(joint_states_msg.position)
         self.robot_p.resetArmConfig(joint_values)
         self.robot_p.updateSingleArmConfig(joint_values[0:7], "Left")
