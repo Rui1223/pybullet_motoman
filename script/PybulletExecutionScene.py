@@ -72,8 +72,8 @@ class PybulletExecutionScene(object):
         ### after initialize the scene,
         ### randomize an object in the scene (drop an object on the table)
         self.object_name = args[3]
-        # self.workspace_e.dropObjectOnTable(self.object_name, dropHeight)
-        self.workspace_e.fixAnObjectOnTable(self.object_name)
+        self.workspace_e.dropObjectOnTable(self.object_name, dropHeight)
+        # self.workspace_e.fixAnObjectOnTable(self.object_name)
 
     def readROSParam(self):
         ### This functions read in needed ROS parameters
