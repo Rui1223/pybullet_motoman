@@ -249,7 +249,9 @@
   </joint>
   <joint name="arm_left_joint_tool0" type="fixed">
     <!-- the following line is modified by Rui-->
-    <origin rpy="0 0 -3.13" xyz="0 0 -0.025"/>
+    <origin rpy="0 0 -3.13" xyz="0 0 -0.09"/>
+    <!-- <origin rpy="0 0 -3.13" xyz="0 0 -0.07"/> -->
+    <!-- <origin rpy="0 0 -3.13" xyz="0 0 -0.025"/> -->
     <!-- <origin rpy="0 0 -3.13" xyz="0 0 -0.0325"/> -->
     <!-- <origin rpy="0 0 -3.13" xyz="0 0 0.0"/> -->
     <parent link="arm_left_link_7_t"/>
@@ -503,7 +505,8 @@
     <parent link="arm_right_link_tool0"/>
     <!-- <child link="motoman_right_hand"/> -->
     <child link="robotiq_arg2f_base_link"/>
-    <origin rpy="3.1416 0 0" xyz="0 0 0.0"/>
+    <origin rpy="3.1416 0 1.57" xyz="0 0 0.0"/>
+    <!-- <origin rpy="3.1416 0 0" xyz="0 0 0.0"/> -->
     <!-- <origin rpy="3.141 0 0" xyz="0 0 -0.035"/> -->
   </joint>
 

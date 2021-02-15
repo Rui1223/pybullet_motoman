@@ -30,13 +30,13 @@ def shiyang_obtain_gripper_poses_for_left_hand(armType, motionType):
     request1 = MotionPlanningRequest()
     request1.gripper_pose.position.x = 0.8
     request1.gripper_pose.position.y = 0.45
-    request1.gripper_pose.position.z = 0.66
+    request1.gripper_pose.position.z = 0.64 - 0.04 ### hard-coded
     request1.gripper_pose.orientation.x = 0.0
     request1.gripper_pose.orientation.y = 0.8
     request1.gripper_pose.orientation.z = 0.0
     request1.gripper_pose.orientation.w = 0.0
     request1.object_pose.dims = [0.06, 0.16, 0.23]
-    request1.object_pose.position = [0.8, 0.45, 0.62]
+    request1.object_pose.position = [0.8, 0.45, 0.61 - 0.04]
     request1.object_pose.orientation = [0.0, 0.707, 0.0, 0.707]
     request1.armType = armType
     request1.motionType = motionType
@@ -72,7 +72,7 @@ def shiyang_obtain_gripper_poses_at_transit_center(armType, motionType):
     request1 = MotionPlanningRequest()
     request1.gripper_pose.position.x = 0.8
     request1.gripper_pose.position.y = 0.0
-    request1.gripper_pose.position.z = 0.9
+    request1.gripper_pose.position.z = 0.9 - 0.015
     request1.gripper_pose.orientation.x = 0.0
     request1.gripper_pose.orientation.y = 0.8
     request1.gripper_pose.orientation.z = 0.0
@@ -96,13 +96,13 @@ def shiyang_obtain_gripper_poses_for_right_hand(armType, motionType):
     request1 = MotionPlanningRequest()
     request1.gripper_pose.position.x = 0.8
     request1.gripper_pose.position.y = -0.07
-    request1.gripper_pose.position.z = 0.86
+    request1.gripper_pose.position.z = 0.86 - 0.015
     request1.gripper_pose.orientation.x = 0.0
     request1.gripper_pose.orientation.y = 0.707
     request1.gripper_pose.orientation.z = 0.707
     request1.gripper_pose.orientation.w = 0.0
     request1.object_pose.dims = [0.06, 0.16, 0.23]
-    request1.object_pose.position = [0.79999, 1.549e-09, 0.85999]
+    request1.object_pose.position = [0.79999, 1.549e-09, 0.85999 - 0.015]
     request1.object_pose.orientation = [-4.12e-09, 0.707, 3.4397e-09, 0.707]
     request1.armType = armType
     request1.motionType = motionType
@@ -126,7 +126,7 @@ def shiyang_obtain_gripper_poses_at_drop_center(armType, motionType):
     request1 = MotionPlanningRequest()
     request1.gripper_pose.position.x = 0.8
     request1.gripper_pose.position.y = 0.0
-    request1.gripper_pose.position.z = 0.8
+    request1.gripper_pose.position.z = 0.8 - 0.015
     request1.gripper_pose.orientation.x = 0.0
     request1.gripper_pose.orientation.y = 0.8
     request1.gripper_pose.orientation.z = 0.0
@@ -185,6 +185,7 @@ if __name__ == '__main__':
     ### it also request attach/detach behavior from execute node
     rospy.init_node("test_pipeline", anonymous=True)
 
+
     ## request the service to plan
     planning_requests = shiyang_obtain_gripper_poses_for_left_hand(
                     armType="Left", motionType="transit") ### MotionPlanningRequest[]
@@ -193,6 +194,7 @@ if __name__ == '__main__':
         print("plan_success: ", plan_success)
         print("\n")
         if plan_success: break
+
 
     ## before next plan, we want the object to be attached to the gripper
     attach_success = serviceCall_attachObject(attach=True, armType="Left")
@@ -205,7 +207,7 @@ if __name__ == '__main__':
         print("plan_success: ", plan_success)
         print("\n")
         if plan_success: break
-
+    
     ## request the service to plan
     planning_requests = shiyang_obtain_gripper_poses_for_right_hand(
                     armType="Right", motionType="transit") ### MotionPlanningRequest[]
@@ -214,7 +216,7 @@ if __name__ == '__main__':
         print("plan_success: ", plan_success)
         print("\n")
         if plan_success: break
-
+    
     ## before next plan, we want the object to be attached to the gripper
     attach_success = serviceCall_attachObject(attach=True, armType="Right")
 
@@ -265,6 +267,6 @@ if __name__ == '__main__':
     # planning_request.object_pose.position = [0.79999, 1.549e-09, 0.85999]
     # planning_request.object_pose.orientation = [-4.12e-09, 0.707, 3.4397e-09, 0.707]
     plan_success = serviceCall_motion_planning(planning_request)    
-
+    
 
     time.sleep(10000)

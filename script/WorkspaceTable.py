@@ -58,7 +58,8 @@ class WorkspaceTable(object):
 
 
         ################ create the known geometries - table  ###########################
-        self.table_dim = np.array([table_dim[0], table_dim[1], table_dim[2]+self.standingBase_dim[2]+0.005])
+        # self.table_dim = np.array([table_dim[0], table_dim[1], table_dim[2]+self.standingBase_dim[2]+0.005])
+        self.table_dim = np.array([table_dim[0], table_dim[1], table_dim[2]])
         self.tablePosition = [
             table_offset_x+self.table_dim[0]/2, robotBasePosition[1], robotBasePosition[2]+(self.table_dim[2]/2-self.standingBase_dim[2]-0.005)]
 
