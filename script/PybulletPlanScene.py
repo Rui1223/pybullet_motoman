@@ -8,6 +8,7 @@ import time
 import sys
 import os
 import copy
+import math
 
 import utils
 from MotomanRobot import MotomanRobot
@@ -23,6 +24,7 @@ from pybullet_motoman.msg import EEPoses
 from pybullet_motoman.msg import ObjectPoseBox
 
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningResponse
+from pybullet_motoman.srv import RotateWrist, RotateWristResponse
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryRequest
 from pybullet_motoman.msg import ObjectPose
 from pybullet_motoman.msg import EdgeConfigs
@@ -117,6 +119,7 @@ class PybulletPlanScene(object):
         ### specify the role of a node instance for this class
         ### claim the service
         motion_planning_server = rospy.Service("motion_planning", MotionPlanning, self.motion_plan_callback)
+        rotate_wrist_server = rospy.Service("rotate_wrist", RotateWrist, self.rotate_wrist_callback)
         # object_pose_sub = rospy.Subscriber("object_pose", ObjectPose, self.objectPose_callback)
         rospy.init_node("pybullet_plan_scene", anonymous=True)
 
@@ -308,18 +311,9 @@ class PybulletPlanScene(object):
             initialConfig = copy.deepcopy(self.robot_p.rightArmCurrConfiguration)
             theme = "RightMoveAway"
 
-        if armType == "Left":
-            ### move to left-up corner
-            # targetPose = [[initialPose[0][0], initialPose[0][1]+0.4, 
-            #                 initialPose[0][2]+0.15], initialPose[1]]
-            targetPose = [[initialPose[0][0], initialPose[0][1], 
+        ### lift it up
+        targetPose = [[initialPose[0][0], initialPose[0][1], 
                         initialPose[0][2]+0.05], initialPose[1]]
-        else:
-            ### for the right hand, we have to lift it up
-            # targetPose = [[initialPose[0][0], initialPose[0][1]-0.4, 
-            #                 initialPose[0][2]+0.15], initialPose[1]]
-            targetPose = [[initialPose[0][0], initialPose[0][1], 
-                            initialPose[0][2]+0.05], initialPose[1]] 
 
         isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
                             targetPose, self.robot_p, self.workspace_p, armType, motionType)
@@ -492,6 +486,28 @@ class PybulletPlanScene(object):
             print("could not handle this type of motion")
             return MotionPlanningResponse(False)
 
+
+    def rotate_wrist_callback(self, req):
+        ### update the robot config
+        self.updateRobotConfigurationInPlanScene()
+        armType = req.armType
+        if armType == "Left":
+            currArmConfig = copy.deepcopy(self.robot_p.leftArmCurrConfiguration)
+        else:
+            currArmConfig = copy.deepcopy(self.robot_p.leftArmCurrConfiguration)
+
+        targetArmConfig = copy.deepcopy(currArmConfig)
+        targetArmConfig[6] = req.rotate_angle * math.pi / 180
+
+        config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                        currArmConfig, targetArmConfig)
+        result_traj = []
+        result_traj.append(config_edge_traj)
+
+        execute_success = self.serviceCall_execute_trajectory(
+                                    result_traj, armType, self.robot_p.motomanRJointNames)
+        print("rotate the wrist of %s arm finished" % armType)
+        return RotateWristResponse(True)
         
 
     def serviceCall_execute_trajectory(self, result_traj, armType, motomanRJointNames):

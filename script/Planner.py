@@ -556,41 +556,41 @@ class Planner(object):
         return config_traj
 
 
-    def translate_between_poses(self, pose1, pose2, robot, workspace, armType):
-        ### pose1, pose2: [[x,y,z], [x,y,z,w]]
-        ### Output: config_traj = [[config_edge_traj]]
-        config_edge_traj = [] ### a list of joint values
-        if armType == "Left":
-            ee_idx = robot.left_ee_idx
-            first_joint_index = 0
-        else:
-            ee_idx = robot.right_ee_idx
-            first_joint_index = 7
-        min_dist = 0.01
-        nseg = int(max(abs(pose1[0][0]-pose2[0][0]), 
-                    abs(pose1[0][1]-pose2[0][1]), abs(pose1[0][2]-pose2[0][2])) / min_dist)
-        if nseg == 0: nseg += 1
-        print("nseg: " + str(nseg))
+    # def translate_move_configs(self, config1, config2, robot, workspace, armType):
+    #     ### config1, config2: [q1, q2, ...]
+    #     ### Output: config_edge_traj
+    #     config_edge_traj = [] ### a list of joint values
+    #     if armType == "Left":
+    #         ee_idx = robot.left_ee_idx
+    #         first_joint_index = 0
+    #     else:
+    #         ee_idx = robot.right_ee_idx
+    #         first_joint_index = 7
+    #     min_dist = 0.01
+    #     nseg = int(max(abs(pose1[0][0]-pose2[0][0]), 
+    #                 abs(pose1[0][1]-pose2[0][1]), abs(pose1[0][2]-pose2[0][2])) / min_dist)
+    #     if nseg == 0: nseg += 1
+    #     print("nseg: " + str(nseg))
 
-        for i in range(1, nseg+1):
-            start_time = time.clock()
-            interm_pos = utils.interpolatePosition(pose1[0], pose2[0], 1 / nseg * i)
-            print("time for interpolate position: ", str(time.clock() - start_time))
-            # interm_quat = utils.interpolateQuaternion(pose1[1], pose2[1], 1 / nseg * i)
-            start_time = time.clock()
-            interm_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
-                                    endEffectorLinkIndex=ee_idx,
-                                    targetPosition=interm_pos,
-                                    lowerLimits=robot.ll, upperLimits=robot.ul, 
-                                    jointRanges=robot.jr, restPoses=robot.rp,
-                                    maxNumIterations=20000, residualThreshold=0.0000001,
-                                    physicsClientId=robot.server)
-            print("time for IK: ", str(time.clock() - start_time))
-            # print("time for IK calculation: ", str(time.clock() - start_time))
-            interm_IK = list(interm_IK[first_joint_index:first_joint_index+7])
-            config_edge_traj.append(interm_IK)
+    #     for i in range(1, nseg+1):
+    #         start_time = time.clock()
+    #         interm_pos = utils.interpolatePosition(pose1[0], pose2[0], 1 / nseg * i)
+    #         print("time for interpolate position: ", str(time.clock() - start_time))
+    #         # interm_quat = utils.interpolateQuaternion(pose1[1], pose2[1], 1 / nseg * i)
+    #         start_time = time.clock()
+    #         interm_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
+    #                                 endEffectorLinkIndex=ee_idx,
+    #                                 targetPosition=interm_pos,
+    #                                 lowerLimits=robot.ll, upperLimits=robot.ul, 
+    #                                 jointRanges=robot.jr, restPoses=robot.rp,
+    #                                 maxNumIterations=20000, residualThreshold=0.0000001,
+    #                                 physicsClientId=robot.server)
+    #         print("time for IK: ", str(time.clock() - start_time))
+    #         # print("time for IK calculation: ", str(time.clock() - start_time))
+    #         interm_IK = list(interm_IK[first_joint_index:first_joint_index+7])
+    #         config_edge_traj.append(interm_IK)
 
-        return config_edge_traj
+    #     return config_edge_traj
 
 
     def checkEdgeValidity_DirectConfigPath(self, n1, n2, robot, workspace, armType, motionType):

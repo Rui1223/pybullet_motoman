@@ -1,0 +1,10 @@
+# This srv file defines the service
+# to rotate the wrist of either left or right arm
+# request includes
+# (1) rotate_angle (unit: degree)
+# (2) armType (either "Left" or "Right")
+
+float32 rotate_angle
+string armType
+---
+bool success

@@ -272,20 +272,20 @@ class Executor(object):
         ee_poses_msgs.isObjectInLeftHand = self.isObjectInLeftHand
         ee_poses_msgs.isObjectInRightHand = self.isObjectInRightHand
 
-        ee_poses_msgs.left_local_pose.position.x = self.leftLocalPose[0][0]
-        ee_poses_msgs.left_local_pose.position.y = self.leftLocalPose[0][1]
-        ee_poses_msgs.left_local_pose.position.z = self.leftLocalPose[0][2]
-        ee_poses_msgs.left_local_pose.orientation.x = self.leftLocalPose[1][0]
-        ee_poses_msgs.left_local_pose.orientation.y = self.leftLocalPose[1][1]
-        ee_poses_msgs.left_local_pose.orientation.z = self.leftLocalPose[1][2]
-        ee_poses_msgs.left_local_pose.orientation.w = self.leftLocalPose[1][3]
-        ee_poses_msgs.right_local_pose.position.x = self.rightLocalPose[0][0]
-        ee_poses_msgs.right_local_pose.position.y = self.rightLocalPose[0][1]
-        ee_poses_msgs.right_local_pose.position.z = self.rightLocalPose[0][2]
-        ee_poses_msgs.right_local_pose.orientation.x = self.rightLocalPose[1][0]
-        ee_poses_msgs.right_local_pose.orientation.y = self.rightLocalPose[1][1]
-        ee_poses_msgs.right_local_pose.orientation.z = self.rightLocalPose[1][2]
-        ee_poses_msgs.right_local_pose.orientation.w = self.rightLocalPose[1][3]
+        # ee_poses_msgs.left_local_pose.position.x = self.leftLocalPose[0][0]
+        # ee_poses_msgs.left_local_pose.position.y = self.leftLocalPose[0][1]
+        # ee_poses_msgs.left_local_pose.position.z = self.leftLocalPose[0][2]
+        # ee_poses_msgs.left_local_pose.orientation.x = self.leftLocalPose[1][0]
+        # ee_poses_msgs.left_local_pose.orientation.y = self.leftLocalPose[1][1]
+        # ee_poses_msgs.left_local_pose.orientation.z = self.leftLocalPose[1][2]
+        # ee_poses_msgs.left_local_pose.orientation.w = self.leftLocalPose[1][3]
+        # ee_poses_msgs.right_local_pose.position.x = self.rightLocalPose[0][0]
+        # ee_poses_msgs.right_local_pose.position.y = self.rightLocalPose[0][1]
+        # ee_poses_msgs.right_local_pose.position.z = self.rightLocalPose[0][2]
+        # ee_poses_msgs.right_local_pose.orientation.x = self.rightLocalPose[1][0]
+        # ee_poses_msgs.right_local_pose.orientation.y = self.rightLocalPose[1][1]
+        # ee_poses_msgs.right_local_pose.orientation.z = self.rightLocalPose[1][2]
+        # ee_poses_msgs.right_local_pose.orientation.w = self.rightLocalPose[1][3]
 
         return ee_poses_msgs
 

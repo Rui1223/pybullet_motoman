@@ -65,6 +65,7 @@ add_service_files(
   ExecuteTrajectory.srv
   AttachObject.srv
   EnablePhysics.srv
+  RotateWrist.srv
 )
 
 ## Generate actions in the 'action' folder
