@@ -267,6 +267,5 @@ if __name__ == '__main__':
     # planning_request.object_pose.position = [0.79999, 1.549e-09, 0.85999]
     # planning_request.object_pose.orientation = [-4.12e-09, 0.707, 3.4397e-09, 0.707]
     plan_success = serviceCall_motion_planning(planning_request)    
-    
 
     time.sleep(10000)

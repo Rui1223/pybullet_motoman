@@ -175,8 +175,8 @@ class WorkspaceTable(object):
         # temp_pos = [random.uniform(self.tablePosition[0]-self.table_dim[0]/2+0.1, self.tablePosition[0]+self.table_dim[0]/2-0.1), \
         #             random.uniform(self.tablePosition[1]+0.1, self.tablePosition[1]+self.table_dim[1]/2-0.1), \
         #             self.tablePosition[2]+self.table_dim[2]/2]
-        temp_pos = [0.80, 0.45, 0.62]
-        temp_quat = [0.0, 1.0, 0.0, 1.0]
+        temp_pos = [0.80, 0.45, 0.61-0.04]
+        temp_quat = [0.0, 0.707, 0.0, 0.707]
 
         ### select one configuration
         # temp_angles = object_configs_angles[obj_name][0]
