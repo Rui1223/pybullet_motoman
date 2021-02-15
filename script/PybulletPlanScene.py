@@ -47,8 +47,8 @@ class PybulletPlanScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet planning scene
-        self.planningClientID = p.connect(p.DIRECT)
-        # self.planningClientID = p.connect(p.GUI)
+        # self.planningClientID = p.connect(p.DIRECT)
+        self.planningClientID = p.connect(p.GUI)
 
         ### create a planner assistant
         self.planner_p = Planner(
@@ -137,7 +137,7 @@ class PybulletPlanScene(object):
 
     def updateRobotConfigurationInPlanScene(self):
         ### get the current robot config from real scene by looking at the topic "joint_states"
-        joint_states_msg = rospy.wait_for_message('joint_states', JointState)
+        joint_states_msg = rospy.wait_for_message('left_right_joint_states', JointState)
         joint_values = list(joint_states_msg.position)
         self.robot_p.resetArmConfig(joint_values)
         self.robot_p.updateSingleArmConfig(joint_values[0:7], "Left")
@@ -310,12 +310,16 @@ class PybulletPlanScene(object):
 
         if armType == "Left":
             ### move to left-up corner
-            targetPose = [[initialPose[0][0], initialPose[0][1]+0.4, 
-                            initialPose[0][2]+0.15], initialPose[1]]
+            # targetPose = [[initialPose[0][0], initialPose[0][1]+0.4, 
+            #                 initialPose[0][2]+0.15], initialPose[1]]
+            targetPose = [[initialPose[0][0], initialPose[0][1], 
+                        initialPose[0][2]+0.05], initialPose[1]]
         else:
             ### for the right hand, we have to lift it up
-            targetPose = [[initialPose[0][0], initialPose[0][1]-0.4, 
-                            initialPose[0][2]+0.15], initialPose[1]]            
+            # targetPose = [[initialPose[0][0], initialPose[0][1]-0.4, 
+            #                 initialPose[0][2]+0.15], initialPose[1]]
+            targetPose = [[initialPose[0][0], initialPose[0][1], 
+                            initialPose[0][2]+0.05], initialPose[1]] 
 
         isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
                             targetPose, self.robot_p, self.workspace_p, armType, motionType)
@@ -330,7 +334,33 @@ class PybulletPlanScene(object):
         result_traj.append(config_edge_traj)
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
-        print("Move Away %s arm finished" % armType)
+        print("lift up %s arm finished" % armType)
+
+        ### now depends on left or right arm
+        ### we want to move the arm along side (either left or right)
+        currConfig = configToTargetPose
+        if armType == "Left":
+            ### for the left arm, move the left
+            targetPose = [[targetPose[0][0], targetPose[0][1]+0.4, 
+                            targetPose[0][2]], targetPose[1]]
+        else:
+            ### for the right arm, move to right
+            targetPose = [[targetPose[0][0], targetPose[0][1]-0.4, 
+                            targetPose[0][2]], targetPose[1]]            
+        isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
+                            targetPose, self.robot_p, self.workspace_p, armType, motionType)     
+        if not isPoseValid:
+            print("this pose is not even valid, let alone motion planning")
+            return False
+        else:
+            print("the grasp pose is valid, proceed to planning")
+        config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                        currConfig, configToTargetPose)
+        result_traj = []
+        result_traj.append(config_edge_traj)
+        execute_success = self.serviceCall_execute_trajectory(
+                                    result_traj, armType, self.robot_p.motomanRJointNames)
+        print("move alongside %s arm finished" % armType)
         return True
 
 
@@ -413,7 +443,7 @@ class PybulletPlanScene(object):
 
         ### no matter left or right arm, the target pose is always the same
         ### the drop height is now fixed at 75cm (we can tune it to be our preference)
-        targetPose = [[initialPose[0][0], initialPose[0][1], 0.75], initialPose[1]]
+        targetPose = [[initialPose[0][0], initialPose[0][1], 0.75-0.04], initialPose[1]]
         isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
                             targetPose, self.robot_p, self.workspace_p, armType, motionType)
         if not isPoseValid:

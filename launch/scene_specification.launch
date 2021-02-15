@@ -15,7 +15,8 @@
 	<group ns="workspace_table">
 		<!-- specification of the workspace (table scene) -->
 		<rosparam param="standingBase_dim">[0.915, 0.62, 0.19]</rosparam>
-		<rosparam param="table_dim">[0.58, 1.32, 0.58]</rosparam>
+		<rosparam param="table_dim">[0.61, 1.52, 0.735]</rosparam>
+		<!-- <rosparam param="table_dim">[0.58, 1.32, 0.58]</rosparam> -->
 		<!-- the following parameter specifies how the far the table is from the robot rigid body in x direction -->
 		<rosparam param="table_offset_x">0.4</rosparam>
 		<!-- the following parameter specifies the height up to which the left arm transfer the object (either drop or trigger handoff) -->

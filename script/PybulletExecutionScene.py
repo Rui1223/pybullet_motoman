@@ -141,7 +141,7 @@ class PybulletExecutionScene(object):
         ### specify the role of a node instance for this class
         self.color_im_pub = rospy.Publisher('rgb_images', Image, queue_size=10)
         self.depth_im_pub = rospy.Publisher('depth_images', Image, queue_size=10)
-        self.jointState_pub = rospy.Publisher("joint_states", JointState, queue_size=10)
+        self.jointState_pub = rospy.Publisher("left_right_joint_states", JointState, queue_size=10)
         self.ee_poses_pub = rospy.Publisher('ee_poses', EEPoses, queue_size=10)
         # self.object_pose_pub = rospy.Publisher('object_pose', ObjectPose, queue_size=10)
         execute_trajectory_server = rospy.Service(
