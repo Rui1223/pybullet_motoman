@@ -404,7 +404,7 @@ class Planner(object):
         if motionType == "transit":
             isValid = self.checkIK_CollisionWithStaticObject(
                                             singleArmConfig_IK, robot, workspace, armType)
-        elif (motionType == "transfer") or (motionType == "approachToPlacement"):
+        elif motionType == "transfer":
             isValid = self.checkIK_CollisionWithMovingObject(
                                             singleArmConfig_IK, robot, workspace, armType)
 

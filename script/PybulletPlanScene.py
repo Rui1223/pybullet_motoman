@@ -24,7 +24,7 @@ from pybullet_motoman.msg import EEPoses
 from pybullet_motoman.msg import ObjectPoseBox
 
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningResponse
-from pybullet_motoman.srv import RotateWrist, RotateWristResponse
+from pybullet_motoman.srv import SingleJointChange, SingleJointChangeResponse
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryRequest
 from pybullet_motoman.msg import ObjectPose
 from pybullet_motoman.msg import EdgeConfigs
@@ -49,8 +49,8 @@ class PybulletPlanScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet planning scene
-        # self.planningClientID = p.connect(p.DIRECT)
-        self.planningClientID = p.connect(p.GUI)
+        self.planningClientID = p.connect(p.DIRECT)
+        # self.planningClientID = p.connect(p.GUI)
 
         ### create a planner assistant
         self.planner_p = Planner(
@@ -119,8 +119,8 @@ class PybulletPlanScene(object):
         ### specify the role of a node instance for this class
         ### claim the service
         motion_planning_server = rospy.Service("motion_planning", MotionPlanning, self.motion_plan_callback)
-        rotate_wrist_server = rospy.Service("rotate_wrist", RotateWrist, self.rotate_wrist_callback)
-        # object_pose_sub = rospy.Subscriber("object_pose", ObjectPose, self.objectPose_callback)
+        single_joint_change_server = rospy.Service(
+                                "single_joint_change", SingleJointChange, self.single_joint_change_callback)
         rospy.init_node("pybullet_plan_scene", anonymous=True)
 
 
@@ -487,7 +487,7 @@ class PybulletPlanScene(object):
             return MotionPlanningResponse(False)
 
 
-    def rotate_wrist_callback(self, req):
+    def single_joint_change_callback(self, req):
         ### update the robot config
         self.updateRobotConfigurationInPlanScene()
         armType = req.armType
@@ -497,7 +497,32 @@ class PybulletPlanScene(object):
             currArmConfig = copy.deepcopy(self.robot_p.leftArmCurrConfiguration)
 
         targetArmConfig = copy.deepcopy(currArmConfig)
-        targetArmConfig[6] = req.rotate_angle * math.pi / 180
+        ### given the joint_name, figure out the index of the joint
+        joint_index = self.robot_p.motomanRJointNames.index(req.joint_name)
+        rotate_radian = req.rotate_angle * math.pi / 180
+        if armType == "Left":
+            ### check if the given joint value exceeds the limit
+            if (rotate_radian < self.robot_p.ll[joint_index]) or \
+                        (rotate_radian > self.robot_p.ul[joint_index]):
+                rospy.logerr("The joint value input for %s exceeds its limits" % req.joint_name)
+                rospy.logerr(
+                    "%f does not in the range [%f, %f]" % \
+                    (rotate_radian, self.robot_p.ll[joint_index], self.robot_p.ul[joint_index]))
+                return SingleJointChangeResponse(False)
+            ### otherwise continue
+            targetArmConfig[joint_index] = rotate_radian
+        else:
+            ### check if the given joint value exceeds the limit
+            if (rotate_radian < self.robot_p.ll[joint_index]) or \
+                        (rotate_radian > self.robot_p.ul[joint_index]):
+                rospy.logerr("The joint value input for %s exceeds its limits" % req.joint_name)
+                rospy.logerr(
+                    "%f does not in the range [%f, %f]" % \
+                    (rotate_radian, self.robot_p.ll[joint_index], self.robot_p.ul[joint_index]))
+                return SingleJointChangeResponse(False)
+            ### otherwise continue
+            joint_index = joint_index - 7 ### for the right arm
+            targetArmConfig[joint_index] = rotate_radian
 
         config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
                         currArmConfig, targetArmConfig)
@@ -506,8 +531,8 @@ class PybulletPlanScene(object):
 
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
-        print("rotate the wrist of %s arm finished" % armType)
-        return RotateWristResponse(True)
+        print("change the %s of %s arm finished" % (req.joint_name, armType))
+        return SingleJointChangeResponse(True)
         
 
     def serviceCall_execute_trajectory(self, result_traj, armType, motomanRJointNames):
