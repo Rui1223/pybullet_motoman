@@ -26,7 +26,6 @@ from pybullet_motoman.msg import ObjectPoseBox
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningResponse
 from pybullet_motoman.srv import SingleJointChange, SingleJointChangeResponse
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryRequest
-from pybullet_motoman.msg import ObjectPose
 from pybullet_motoman.msg import EdgeConfigs
 
 ### This class defines a PybulletPlanScene class which
@@ -153,7 +152,7 @@ class PybulletPlanScene(object):
     def updateInPlanSceneFromRealScene(self, object_pose):
         ### update the object in the plan scene based on real scene
         if object_pose.dims:
-            ### only update the object pose 
+            ### only update the object pose
             ### if the object pose is updated from the last planning
             self.updateObjectPoseInPlanScene(object_pose)
         ### update the robot in the plan scene based on real scene
@@ -178,9 +177,9 @@ class PybulletPlanScene(object):
             initialConfig = copy.deepcopy(self.robot_p.rightArmCurrConfiguration)
             theme = "RightTransit"
 
-        targetPose = [[req.gripper_pose.position.x, req.gripper_pose.position.y, 
-            req.gripper_pose.position.z], [req.gripper_pose.orientation.x, 
-            req.gripper_pose.orientation.y, req.gripper_pose.orientation.z, 
+        targetPose = [[req.gripper_pose.position.x, req.gripper_pose.position.y,
+            req.gripper_pose.position.z], [req.gripper_pose.orientation.x,
+            req.gripper_pose.orientation.y, req.gripper_pose.orientation.z,
             req.gripper_pose.orientation.w]]
         ### check if the target pose is valid
         isPoseValid, configToGraspPose = self.planner_p.generateConfigBasedOnPose(
@@ -212,7 +211,7 @@ class PybulletPlanScene(object):
         else:
             ### if it's not possible, then we have to trigger motion planning
             result_traj = self.planner_p.shortestPathPlanning(
-                    initialConfig, configToPreGraspPose, theme, 
+                    initialConfig, configToPreGraspPose, theme,
                     self.robot_p, self.workspace_p, armType, motionType)
 
         ## the planning has been finished, either success or failure
@@ -253,9 +252,9 @@ class PybulletPlanScene(object):
             initialConfig = copy.deepcopy(self.robot_p.rightArmCurrConfiguration)
             theme = "RightTransfer"
 
-        targetPose = [[req.gripper_pose.position.x, req.gripper_pose.position.y, 
-            req.gripper_pose.position.z], [req.gripper_pose.orientation.x, 
-            req.gripper_pose.orientation.y, req.gripper_pose.orientation.z, 
+        targetPose = [[req.gripper_pose.position.x, req.gripper_pose.position.y,
+            req.gripper_pose.position.z], [req.gripper_pose.orientation.x,
+            req.gripper_pose.orientation.y, req.gripper_pose.orientation.z,
             req.gripper_pose.orientation.w]]
         ### check if the target pose is valid
         isPoseValid, configToGraspPose = self.planner_p.generateConfigBasedOnPose(
@@ -264,7 +263,7 @@ class PybulletPlanScene(object):
             print("this pose is not even valid, let alone motion planning")
             return False
         else:
-            print("the grasp pose is valid, proceed to planning")    
+            print("the grasp pose is valid, proceed to planning")
 
         ### first check if we can direct connect current pose to pre-grasp_pose
         isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
@@ -280,7 +279,7 @@ class PybulletPlanScene(object):
         else:
             # ### if it's not possible, then we have to trigger motion planning
             result_traj = self.planner_p.shortestPathPlanning(
-                    initialConfig, configToGraspPose, theme, 
+                    initialConfig, configToGraspPose, theme,
                     self.robot_p, self.workspace_p, armType, motionType)
 
         ## the planning has been finished, either success or failure
@@ -312,7 +311,7 @@ class PybulletPlanScene(object):
             theme = "RightMoveAway"
 
         ### lift it up
-        targetPose = [[initialPose[0][0], initialPose[0][1], 
+        targetPose = [[initialPose[0][0], initialPose[0][1],
                         initialPose[0][2]+0.05], initialPose[1]]
 
         isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
@@ -335,14 +334,14 @@ class PybulletPlanScene(object):
         currConfig = configToTargetPose
         if armType == "Left":
             ### for the left arm, move the left
-            targetPose = [[targetPose[0][0], targetPose[0][1]+0.4, 
+            targetPose = [[targetPose[0][0], targetPose[0][1]+0.4,
                             targetPose[0][2]], targetPose[1]]
         else:
             ### for the right arm, move to right
-            targetPose = [[targetPose[0][0], targetPose[0][1]-0.4, 
-                            targetPose[0][2]], targetPose[1]]            
+            targetPose = [[targetPose[0][0], targetPose[0][1]-0.4,
+                            targetPose[0][2]], targetPose[1]]
         isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
-                            targetPose, self.robot_p, self.workspace_p, armType, motionType)     
+                            targetPose, self.robot_p, self.workspace_p, armType, motionType)
         if not isPoseValid:
             print("this pose is not even valid, let alone motion planning")
             return False
@@ -391,16 +390,16 @@ class PybulletPlanScene(object):
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
 
-        ### now depends on left or arm, 
+        ### now depends on left or arm,
         ### we want to move the arm along side (either left or right)
         currConfig = configToTargetPose ### update the current configuration
         if armType == "Left":
             ### for the left hand, move to left
-            targetPose = [[targetPose[0][0], targetPose[0][1]+0.4, 
+            targetPose = [[targetPose[0][0], targetPose[0][1]+0.4,
                             targetPose[0][2]], targetPose[1]]
         else:
             ### for the right hand, move to right
-            targetPose = [[targetPose[0][0], targetPose[0][1]-0.4, 
+            targetPose = [[targetPose[0][0], targetPose[0][1]-0.4,
                             targetPose[0][2]], targetPose[1]]
         isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
                             targetPose, self.robot_p, self.workspace_p, armType, motionType)
@@ -433,7 +432,7 @@ class PybulletPlanScene(object):
         else:
             initialPose = copy.deepcopy(self.robot_p.right_ee_pose)
             initialConfig = copy.deepcopy(self.robot_p.rightArmCurrConfiguration)
-            theme = "RightToPlace"    
+            theme = "RightToPlace"
 
         ### no matter left or right arm, the target pose is always the same
         ### the drop height is now fixed at 75cm (we can tune it to be our preference)
@@ -533,7 +532,7 @@ class PybulletPlanScene(object):
                                     result_traj, armType, self.robot_p.motomanRJointNames)
         print("change the %s of %s arm finished" % (req.joint_name, armType))
         return SingleJointChangeResponse(True)
-        
+
 
     def serviceCall_execute_trajectory(self, result_traj, armType, motomanRJointNames):
         ### here the result_traj has the format:
