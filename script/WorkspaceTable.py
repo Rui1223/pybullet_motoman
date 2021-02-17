@@ -17,7 +17,7 @@ import IPython
 class WorkspaceTable(object):
     def __init__(self,
         robotBasePosition,
-        standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
+        standingBase_dim, table_dim, table_offset_x, 
         mesh_path, isPhysicsTurnOn, server):
         ### get the server
         self.server = server
@@ -28,7 +28,7 @@ class WorkspaceTable(object):
             robotBasePosition, standingBase_dim, table_dim, table_offset_x, isPhysicsTurnOn)
         ### specify the transit center
         self.objectTransitCenter = [
-            self.tablePosition[0], self.tablePosition[1], self.tablePosition[2]+transitCenterHeight]
+            self.tablePosition[0], self.tablePosition[1], self.tablePosition[2]+self.table_dim[2]/2]
 
 
 

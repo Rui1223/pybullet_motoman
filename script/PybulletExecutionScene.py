@@ -42,14 +42,14 @@ class PybulletExecutionScene(object):
         ### read in relevant ros parameters for scene generation
         basePosition, baseOrientation, urdfFile, \
         leftArmHomeConfiguration, rightArmHomeConfiguration, \
-        standingBase_dim, table_dim, table_offset_x, transitCenterHeight, \
+        standingBase_dim, table_dim, table_offset_x, \
         camera_extrinsic, camera_intrinsic, object_mesh_path, dropHeight = self.readROSParam()
         rospack = rospkg.RosPack() ### https://wiki.ros.org/Packages
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet real scene
-        # self.executingClientID = p.connect(p.DIRECT)
-        self.executingClientID = p.connect(p.GUI)
+        self.executingClientID = p.connect(p.DIRECT)
+        # self.executingClientID = p.connect(p.GUI)
         # p.setAdditionalSearchPath(pybullet_data.getDataPath())
         # self.egl_plugin = p.loadPlugin(egl.get_filename(), "_eglRendererPlugin")
         # print("plugin=", self.egl_plugin)
@@ -63,8 +63,7 @@ class PybulletExecutionScene(object):
         self.configureMotomanRobot(urdfFile, basePosition, baseOrientation, \
                 leftArmHomeConfiguration, rightArmHomeConfiguration, True)
         ### set up the workspace
-        self.setupWorkspace(standingBase_dim, table_dim, table_offset_x, \
-                transitCenterHeight, object_mesh_path, True)
+        self.setupWorkspace(standingBase_dim, table_dim, table_offset_x, object_mesh_path, True)
         ### set up the camera
         self.setupCamera(camera_extrinsic, camera_intrinsic, args)
 
@@ -108,9 +107,9 @@ class PybulletExecutionScene(object):
             rospy.sleep(0.2)
         table_offset_x = rospy.get_param('/workspace_table/table_offset_x')
 
-        while not rospy.has_param('/workspace_table/transitCenterHeight'):
-            rospy.sleep(0.2)
-        transitCenterHeight = rospy.get_param('/workspace_table/transitCenterHeight')
+        # while not rospy.has_param('/workspace_table/transitCenterHeight'):
+        #     rospy.sleep(0.2)
+        # transitCenterHeight = rospy.get_param('/workspace_table/transitCenterHeight')
 
         while not rospy.has_param('/simulated_camera/camera_extrinsic'):
             rospy.sleep(0.2)
@@ -130,7 +129,7 @@ class PybulletExecutionScene(object):
 
         return basePosition, baseOrientation, urdfFile, \
             leftArmHomeConfiguration, rightArmHomeConfiguration, \
-            standingBase_dim, table_dim, table_offset_x, transitCenterHeight, \
+            standingBase_dim, table_dim, table_offset_x, \
             camera_extrinsic, camera_intrinsic, object_mesh_path, dropHeight
 
 
@@ -203,10 +202,10 @@ class PybulletExecutionScene(object):
 
     def setupWorkspace(self,
             standingBase_dim, table_dim, table_offset_x,
-            transitCenterHeight, object_mesh_path, isPhysicsTurnOn):
+            object_mesh_path, isPhysicsTurnOn):
         ### This function sets up the workspace ###
         self.workspace_e = WorkspaceTable(self.robot_e.basePosition,
-            standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
+            standingBase_dim, table_dim, table_offset_x, 
             os.path.join(self.rosPackagePath, object_mesh_path),
             isPhysicsTurnOn, self.executingClientID)
 

@@ -164,6 +164,8 @@ class PybulletPlanScene(object):
 
     def transit_motion_planning(self, req):
 
+        start_time = time.clock()
+
         armType = req.armType
         motionType = req.motionType
         ### synchronize with the real scene so as to get the object and robot initial pose
@@ -215,6 +217,9 @@ class PybulletPlanScene(object):
                     initialConfig, configToPreGraspPose, theme, 
                     self.robot_p, self.workspace_p, armType, motionType)
 
+        print("time for transit planning to pregrasp: ")
+        print(str(time.clock()-start_time))
+
         ## the planning has been finished, either success or failure
         if result_traj != []:
             print("the path is successfully found")
@@ -225,12 +230,17 @@ class PybulletPlanScene(object):
             print("the path is not successfully found")
             return False
 
+        start_time = time.clock()
         ### you are reaching here since pre-grasp pose has been reached
         ### just do a translation to reach the final grasp pose
         config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
                                                 configToPreGraspPose, configToGraspPose)
         result_traj = []
         result_traj.append(config_edge_traj)
+
+        print("time for transit planning to grasp: ")
+        print(str(time.clock()-start_time))
+
         execute_success = self.serviceCall_execute_trajectory(
                             result_traj, armType, self.robot_p.motomanRJointNames)
         print("the execution has been finished")
@@ -238,6 +248,8 @@ class PybulletPlanScene(object):
 
 
     def transfer_motion_planning(self, req):
+
+        start_time = time.clock()
 
         armType = req.armType
         motionType = req.motionType
@@ -283,6 +295,9 @@ class PybulletPlanScene(object):
                     initialConfig, configToGraspPose, theme, 
                     self.robot_p, self.workspace_p, armType, motionType)
 
+        print("time for tranfer planning to specified position: ")
+        print(str(time.clock()-start_time))
+
         ## the planning has been finished, either success or failure
         if result_traj != []:
             print("the path is successfully found")
@@ -297,6 +312,8 @@ class PybulletPlanScene(object):
 
 
     def moveAway_motion_planning(self, req):
+
+        start_time = time.clock()
 
         armType = req.armType
         motionType = req.motionType
@@ -326,9 +343,15 @@ class PybulletPlanScene(object):
                                                         initialConfig, configToTargetPose)
         result_traj = []
         result_traj.append(config_edge_traj)
+
+        print("time for moveaway planning 1: ")
+        print(str(time.clock()-start_time))        
+
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
         print("lift up %s arm finished" % armType)
+
+        start_time = time.clock()
 
         ### now depends on left or right arm
         ### we want to move the arm along side (either left or right)
@@ -352,6 +375,10 @@ class PybulletPlanScene(object):
                                                         currConfig, configToTargetPose)
         result_traj = []
         result_traj.append(config_edge_traj)
+
+        print("time for moveaway planning 2: ")
+        print(str(time.clock()-start_time))
+
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
         print("move alongside %s arm finished" % armType)
@@ -359,6 +386,8 @@ class PybulletPlanScene(object):
 
 
     def reset_motion_planning(self, req):
+
+        start_time = time.clock()
 
         armType = req.armType
         motionType = req.motionType
@@ -388,9 +417,14 @@ class PybulletPlanScene(object):
                                                         initialConfig, configToTargetPose)
         result_traj = []
         result_traj.append(config_edge_traj)
+
+        print("time for reset planning 1: ")
+        print(str(time.clock()-start_time))
+
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
 
+        start_time = time.clock()
         ### now depends on left or arm, 
         ### we want to move the arm along side (either left or right)
         currConfig = configToTargetPose ### update the current configuration
@@ -413,6 +447,10 @@ class PybulletPlanScene(object):
                                                         currConfig, configToTargetPose)
         result_traj = []
         result_traj.append(config_edge_traj)
+
+        print("time for reset planning 2: ")
+        print(str(time.clock()-start_time))
+
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
 
@@ -421,6 +459,8 @@ class PybulletPlanScene(object):
 
 
     def approachToPlacement_motion_planning(self, req):
+
+        start_time = time.clock()
 
         armType = req.armType
         motionType = req.motionType
@@ -449,6 +489,10 @@ class PybulletPlanScene(object):
                                                         initialConfig, configToTargetPose)
         result_traj = []
         result_traj.append(config_edge_traj)
+
+        print("time for approachToPlacement planning: ")
+        print(str(time.clock()-start_time))
+
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
         print("%s arm place object finished" % armType)

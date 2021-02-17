@@ -672,7 +672,7 @@ class Planner(object):
             abs(n1[0]-n2[0]), abs(n1[1]-n2[1]), abs(n1[2]-n2[2]), abs(n1[3]-n2[3]),
             abs(n1[4]-n2[4]), abs(n1[5]-n2[5]), abs(n1[6]-n2[6])) / min_degree)
         if nseg == 0: nseg += 1
-        # print("nseg: " + str(nseg))
+        print("nseg: " + str(nseg))
 
         ### we don't include the head (i=0)
         for i in range(1, nseg+1):
@@ -687,16 +687,6 @@ class Planner(object):
             config_edge_traj.append(intermNode)
 
         return config_edge_traj
-
-
-    # def checkAndGenerateSolution_DirectConfigPath(self, n1, n2):
-    #     ### This function checks an edge coming from the solution
-    #     ### and will generate an edge trajectory if the edge is valid
-    #     ### so this function has the features from both generateTrajectory_DirectConfigPath and checkEdgeValidity_DirectConfigPath
-    #     ### Input: n1, n2: node (a list of 7 joint values)
-    #     ### output: an edge trajectory (config_edge_traj) which includes the endtail but not the head
-    #     ###         format: a list of list(7 joint values)
-    #     ###         isEdgeValid
 
 
     def shortestPathPlanning(self, initialConfig, targetConfig, theme, robot, workspace, armType, motionType):

@@ -198,6 +198,7 @@ if __name__ == '__main__':
     ### It is a master which requests plan node to plan
     ### the plan node will request a service from execute node to execute
     ### it also request attach/detach behavior from execute node
+    table_dim, table_offset_x, transitCenterHeight = 
     rospy.init_node("test_pipeline", anonymous=True)
 
     ### rotation test
