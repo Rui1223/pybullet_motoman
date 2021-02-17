@@ -436,7 +436,8 @@ class PybulletPlanScene(object):
 
         ### no matter left or right arm, the target pose is always the same
         ### the drop height is now fixed at 75cm (we can tune it to be our preference)
-        targetPose = [[initialPose[0][0], initialPose[0][1], 0.75-0.04], initialPose[1]]
+        targetPose = [[initialPose[0][0], initialPose[0][1], \
+                    self.workspace_p.tablePosition[2] + self.workspace_p.table_dim[2]/2 + 0.16], initialPose[1]]
         isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
                             targetPose, self.robot_p, self.workspace_p, armType, motionType)
         if not isPoseValid:
