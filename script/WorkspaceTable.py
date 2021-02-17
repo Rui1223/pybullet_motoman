@@ -175,7 +175,7 @@ class WorkspaceTable(object):
         # temp_pos = [random.uniform(self.tablePosition[0]-self.table_dim[0]/2+0.1, self.tablePosition[0]+self.table_dim[0]/2-0.1), \
         #             random.uniform(self.tablePosition[1]+0.1, self.tablePosition[1]+self.table_dim[1]/2-0.1), \
         #             self.tablePosition[2]+self.table_dim[2]/2]
-        temp_pos = [0.80, 0.45, 0.62]
+        temp_pos = [0.80, 0.45, 0.61 + 0.025]
         temp_quat = [0.0, 1.0, 0.0, 1.0]
 
         ### select one configuration
@@ -229,7 +229,7 @@ class WorkspaceTable(object):
                 baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
                 basePosition=object_pose.position, baseOrientation=object_pose.orientation, 
                 physicsClientId=self.server)
-            self.object_geometries[_m] = [list(object_pose.position), list(object_pose.orientation)]
+            self.object_geometries[_m] = [[list(object_pose.position), list(object_pose.orientation)], object_pose.dims]
             # print(self.object_geometries)
 
         else:
@@ -248,7 +248,7 @@ class WorkspaceTable(object):
                 baseCollisionShapeIndex=_c, baseVisualShapeIndex=_v,
                 basePosition=object_pose.position, baseOrientation=object_pose.orientation, 
                 physicsClientId=self.server)
-            self.object_geometries[_m] = [list(object_pose.position), list(object_pose.orientation)]
+            self.object_geometries[_m] = [[list(object_pose.position), list(object_pose.orientation)], object_pose.dims]
             # print(self.object_geometries)
 
 
