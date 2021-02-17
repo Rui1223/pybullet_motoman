@@ -3,6 +3,7 @@
 # This msg file also indicates whether currently
 # the hand of an arm is holding an object
 
+std_msgs/Header header
 geometry_msgs/Pose left_ee_pose
 geometry_msgs/Pose right_ee_pose
 bool isObjectInLeftHand
