@@ -183,7 +183,7 @@ class Planner(object):
         if self.isObjectInLeftHand:
             self.objectInLeftHand = object_geometries.keys()[0]
             self.leftLocalPose = self.computeLocalPose(
-                        object_geometries.values()[0], robot, "Left")
+                        object_geometries.values()[0][0], robot, "Left")
         else:
             self.objectInLeftHand = None
             self.leftLocalPose = [[-1, -1, -1], [-1, -1, -1, -1]]
@@ -191,7 +191,7 @@ class Planner(object):
         if self.isObjectInRightHand:
             self.objectInRightHand = object_geometries.keys()[0]
             self.rightLocalPose = self.computeLocalPose(
-                        object_geometries.values()[0], robot, "Right")
+                        object_geometries.values()[0][0], robot, "Right")
         else:
             self.objectInRightHand = None
             self.rightLocalPose = [[-1, -1, -1], [-1, -1, -1, -1]]
@@ -277,7 +277,7 @@ class Planner(object):
             p.resetBasePositionAndOrientation(
                 self.objectInLeftHand, object_global_pose[0], object_global_pose[1], 
                 physicsClientId=self.planningServer)
-            workspace.object_geometries[self.objectInLeftHand] = [object_global_pose[0], object_global_pose[1]]
+            workspace.object_geometries[self.objectInLeftHand][0] = [object_global_pose[0], object_global_pose[1]]
 
         else:
             # ee_idx = robot.right_ee_idx
@@ -288,7 +288,7 @@ class Planner(object):
             p.resetBasePositionAndOrientation(
                 self.objectInRightHand, object_global_pose[0], object_global_pose[1], 
                 physicsClientId=self.planningServer)
-            workspace.object_geometries[self.objectInRightHand] = [object_global_pose[0], object_global_pose[1]]
+            workspace.object_geometries[self.objectInRightHand][0] = [object_global_pose[0], object_global_pose[1]]
 
         # p.resetBasePositionAndOrientation(
         #     objectInHand, object_global_pose[0], object_global_pose[1], 
