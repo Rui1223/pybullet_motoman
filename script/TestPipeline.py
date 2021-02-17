@@ -14,6 +14,7 @@ from pybullet_motoman.msg import ObjectPoseBox
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningRequest
 from pybullet_motoman.srv import AttachObject, AttachObjectRequest
 from pybullet_motoman.srv import EnablePhysics, EnablePhysicsRequest
+from pybullet_motoman.srv import SingleJointChange, SingleJointChangeRequest
 
 ### This program serves as the pipeline which
 ### coordinates with three main nodes
@@ -166,6 +167,20 @@ def serviceCall_attachObject(attach, armType):
         print("attach_object service call failed: %s" % e)
 
 
+def serviceCall_singleJointChange(rotate_angle, joint_name, armType):
+    rospy.wait_for_service("single_joint_change")
+    request = SingleJointChangeRequest()
+    request.rotate_angle = rotate_angle
+    request.joint_name = joint_name
+    request.armType = armType
+    try:
+        singleJointChange = rospy.ServiceProxy('single_joint_change', SingleJointChange)
+        success = singleJointChange(request.rotate_angle, request.joint_name, request.armType)
+        return success.success
+    except rospy.ServiceException as e:
+        print("single_joint_change service call failed: %s" % e)
+
+
 def serviceCall_enablePhysics(isPhysicsEnabled):
     rospy.wait_for_service("enable_physics")
     request = EnablePhysicsRequest()
@@ -185,6 +200,10 @@ if __name__ == '__main__':
     ### it also request attach/detach behavior from execute node
     rospy.init_node("test_pipeline", anonymous=True)
 
+    ### rotation test
+    # rotate_angle = 160
+    # single_joint_change_success = serviceCall_singleJointChange(
+    #                     rotate_angle, joint_name="arm_right_joint_7_t", armType="Right")
 
     ## request the service to plan
     planning_requests = shiyang_obtain_gripper_poses_for_left_hand(
@@ -268,5 +287,4 @@ if __name__ == '__main__':
     # planning_request.object_pose.orientation = [-4.12e-09, 0.707, 3.4397e-09, 0.707]
     plan_success = serviceCall_motion_planning(planning_request)
     
-
     time.sleep(10000)

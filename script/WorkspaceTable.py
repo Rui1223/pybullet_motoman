@@ -178,6 +178,7 @@ class WorkspaceTable(object):
         temp_pos = [0.80, 0.45, 0.61 + 0.025]
         temp_quat = [0.0, 1.0, 0.0, 1.0]
 
+
         ### select one configuration
         # temp_angles = object_configs_angles[obj_name][0]
         ### add some randomness on the orientation around z-axis
