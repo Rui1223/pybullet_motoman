@@ -44,7 +44,7 @@ class PybulletPlanScene(object):
         ### read in relevant ros parameters for scene generation
         basePosition, baseOrientation, urdfFile, object_mesh_path, \
         leftArmHomeConfiguration, rightArmHomeConfiguration, \
-        standingBase_dim, table_dim, table_offset_x, transitCenterHeight = self.readROSParam()
+        standingBase_dim, table_dim, table_offset_x = self.readROSParam()
         rospack = rospkg.RosPack() ### https://wiki.ros.org/Packages
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
@@ -62,8 +62,7 @@ class PybulletPlanScene(object):
         self.configureMotomanRobot(urdfFile, basePosition, baseOrientation, \
                 leftArmHomeConfiguration, rightArmHomeConfiguration, False)
         ### set up the workspace
-        self.setupWorkspace(standingBase_dim, table_dim, table_offset_x, \
-                transitCenterHeight, object_mesh_path, False)
+        self.setupWorkspace(standingBase_dim, table_dim, table_offset_x, object_mesh_path, False)
 
 
     def readROSParam(self):
@@ -104,13 +103,13 @@ class PybulletPlanScene(object):
             rospy.sleep(0.2)
         object_mesh_path = rospy.get_param('/object_in_real_scene/object_mesh_path')
 
-        while not rospy.has_param('/workspace_table/transitCenterHeight'):
-            rospy.sleep(0.2)
-        transitCenterHeight = rospy.get_param('/workspace_table/transitCenterHeight')
+        # while not rospy.has_param('/workspace_table/transitCenterHeight'):
+        #     rospy.sleep(0.2)
+        # transitCenterHeight = rospy.get_param('/workspace_table/transitCenterHeight')
 
         return basePosition, baseOrientation, urdfFile, object_mesh_path, \
             leftArmHomeConfiguration, rightArmHomeConfiguration, \
-            standingBase_dim, table_dim, table_offset_x, transitCenterHeight
+            standingBase_dim, table_dim, table_offset_x
 
 
     def rosInit(self):
@@ -164,8 +163,6 @@ class PybulletPlanScene(object):
 
     def transit_motion_planning(self, req):
 
-        start_time = time.clock()
-
         armType = req.armType
         motionType = req.motionType
         ### synchronize with the real scene so as to get the object and robot initial pose
@@ -217,20 +214,16 @@ class PybulletPlanScene(object):
                     initialConfig, configToPreGraspPose, theme, 
                     self.robot_p, self.workspace_p, armType, motionType)
 
-        print("time for transit planning to pregrasp: ")
-        print(str(time.clock()-start_time))
-
         ## the planning has been finished, either success or failure
         if result_traj != []:
-            print("the path is successfully found")
+            print("the transit path for %s arm is successfully found" % armType)
             ### now we need to call a service call to execute the path in the execution scene
             execute_success = self.serviceCall_execute_trajectory(
                                 result_traj, armType, self.robot_p.motomanRJointNames)
         else:
-            print("the path is not successfully found")
+            print("the transit path for %s arm is not successfully found" % armType)
             return False
 
-        start_time = time.clock()
         ### you are reaching here since pre-grasp pose has been reached
         ### just do a translation to reach the final grasp pose
         config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
@@ -238,18 +231,13 @@ class PybulletPlanScene(object):
         result_traj = []
         result_traj.append(config_edge_traj)
 
-        print("time for transit planning to grasp: ")
-        print(str(time.clock()-start_time))
-
         execute_success = self.serviceCall_execute_trajectory(
                             result_traj, armType, self.robot_p.motomanRJointNames)
-        print("the execution has been finished")
+        print("the execution has been finished\n")
         return True
 
 
     def transfer_motion_planning(self, req):
-
-        start_time = time.clock()
 
         armType = req.armType
         motionType = req.motionType
@@ -295,25 +283,20 @@ class PybulletPlanScene(object):
                     initialConfig, configToGraspPose, theme, 
                     self.robot_p, self.workspace_p, armType, motionType)
 
-        print("time for tranfer planning to specified position: ")
-        print(str(time.clock()-start_time))
-
         ## the planning has been finished, either success or failure
         if result_traj != []:
-            print("the path is successfully found")
+            print("the transfer path for %s arm is successfully found" % armType)
             ### now we need to call a service call to execute the path in the execution scene
             execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
-            print("the execution has been finished")
+            print("the execution has been finished\n")
             return True
         else:
-            print("the path is not successfully found")
+            print("the transfer path for %s arm is not successfully found" % armType)
             return False
 
 
     def moveAway_motion_planning(self, req):
-
-        start_time = time.clock()
 
         armType = req.armType
         motionType = req.motionType
@@ -342,16 +325,11 @@ class PybulletPlanScene(object):
         config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
                                                         initialConfig, configToTargetPose)
         result_traj = []
-        result_traj.append(config_edge_traj)
-
-        print("time for moveaway planning 1: ")
-        print(str(time.clock()-start_time))        
+        result_traj.append(config_edge_traj)       
 
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
         print("lift up %s arm finished" % armType)
-
-        start_time = time.clock()
 
         ### now depends on left or right arm
         ### we want to move the arm along side (either left or right)
@@ -376,18 +354,13 @@ class PybulletPlanScene(object):
         result_traj = []
         result_traj.append(config_edge_traj)
 
-        print("time for moveaway planning 2: ")
-        print(str(time.clock()-start_time))
-
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
-        print("move alongside %s arm finished" % armType)
+        print("move alongside %s arm finished\n" % armType)
         return True
 
 
     def reset_motion_planning(self, req):
-
-        start_time = time.clock()
 
         armType = req.armType
         motionType = req.motionType
@@ -417,14 +390,8 @@ class PybulletPlanScene(object):
                                                         initialConfig, configToTargetPose)
         result_traj = []
         result_traj.append(config_edge_traj)
-
-        print("time for reset planning 1: ")
-        print(str(time.clock()-start_time))
-
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
-
-        start_time = time.clock()
         ### now depends on left or arm, 
         ### we want to move the arm along side (either left or right)
         currConfig = configToTargetPose ### update the current configuration
@@ -447,20 +414,14 @@ class PybulletPlanScene(object):
                                                         currConfig, configToTargetPose)
         result_traj = []
         result_traj.append(config_edge_traj)
-
-        print("time for reset planning 2: ")
-        print(str(time.clock()-start_time))
-
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
 
-        print("reset %s arm finished" % armType)
+        print("reset %s arm finished\n" % armType)
         return True
 
 
     def approachToPlacement_motion_planning(self, req):
-
-        start_time = time.clock()
 
         armType = req.armType
         motionType = req.motionType
@@ -476,27 +437,29 @@ class PybulletPlanScene(object):
             theme = "RightToPlace"    
 
         ### no matter left or right arm, the target pose is always the same
-        ### the drop height is now fixed at 75cm (we can tune it to be our preference)
-        targetPose = [[initialPose[0][0], initialPose[0][1], \
-                    self.workspace_p.tablePosition[2] + self.workspace_p.table_dim[2]/2 + 0.16], initialPose[1]]
-        isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
-                            targetPose, self.robot_p, self.workspace_p, armType, motionType)
-        if not isPoseValid:
-            print("this pose is not even valid, let alone motion planning")
-            return False
+        ### figure out the shortest distance between the table and the object
+        distance_from_tableSurface = self.workspace_p.detectHeight()
+        if distance_from_tableSurface > 0.15:
+            distance_to_moveDown = distance_from_tableSurface - 0.15
+            targetPose = [[initialPose[0][0], initialPose[0][1], \
+                        initialPose[0][2] - distance_to_moveDown], initialPose[1]]
+            isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
+                                targetPose, self.robot_p, self.workspace_p, armType, motionType)
+            if not isPoseValid:
+                print("this pose is not even valid, let alone motion planning")
+                return False
+            else:
+                print("the grasp pose is valid, proceed to planning")
+            config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                            initialConfig, configToTargetPose)
+            result_traj = []
+            result_traj.append(config_edge_traj)
+            execute_success = self.serviceCall_execute_trajectory(
+                                        result_traj, armType, self.robot_p.motomanRJointNames)
+            print("%s arm place object finished\n" % armType)
         else:
-            print("the grasp pose is valid, proceed to planning")
-        config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
-                                                        initialConfig, configToTargetPose)
-        result_traj = []
-        result_traj.append(config_edge_traj)
+            print("the height is close enough, no need to approach")
 
-        print("time for approachToPlacement planning: ")
-        print(str(time.clock()-start_time))
-
-        execute_success = self.serviceCall_execute_trajectory(
-                                    result_traj, armType, self.robot_p.motomanRJointNames)
-        print("%s arm place object finished" % armType)
         return True
 
 
@@ -622,10 +585,10 @@ class PybulletPlanScene(object):
 
     def setupWorkspace(self,
             standingBase_dim, table_dim, table_offset_x,
-            transitCenterHeight, object_mesh_path, isPhysicsTurnOn):
+            object_mesh_path, isPhysicsTurnOn):
         ### The function sets up the workspace
         self.workspace_p = WorkspaceTable(self.robot_p.basePosition,
-            standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
+            standingBase_dim, table_dim, table_offset_x,
             os.path.join(self.rosPackagePath, object_mesh_path),
             isPhysicsTurnOn, self.planningClientID)
 

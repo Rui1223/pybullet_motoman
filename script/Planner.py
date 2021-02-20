@@ -84,7 +84,7 @@ class Planner(object):
             self.saveSamplesToFile(samplesFile, armType)
 
         ### specify the needed parameters
-        self.neighbors_const = 2.5 * math.e * (1 + 1/len(self.nodes["Left"][0]))
+        self.neighbors_const = 3.5 * math.e * (1 + 1/len(self.nodes["Right"][0]))
         ### use k_n to decide the number of neighbors: #neighbors = k_n * log(#samples)
         self.num_neighbors = int(self.neighbors_const * math.log(self.nsamples))
         if self.num_neighbors > self.nsamples:
@@ -340,7 +340,7 @@ class Planner(object):
                                     targetPosition=pose[0],
                                     targetOrientation=pose[1],
                                     lowerLimits=robot.ll, upperLimits=robot.ul, 
-                                    jointRanges=robot.jr,
+                                    jointRanges=robot.jr, 
                                     maxNumIterations=20000, residualThreshold=0.0000001,
                                     physicsClientId=robot.server)
             singleArmConfig_IK = list(config_IK[first_joint_index:first_joint_index+7])
@@ -447,7 +447,7 @@ class Planner(object):
         if self.collisionAgent_p.collisionCheck_robot_objectGEO(
             robot.motomanGEO, object_geometry, armType, 
             self.isObjectInLeftHand, self.isObjectInRightHand) == True:
-            print("robot collide with moving object_geometry")
+            # print("robot collide with moving object_geometry")
             return isValid
         else:
             pass
@@ -455,7 +455,7 @@ class Planner(object):
         ### if the moving object collides with known GEO (e.g., table)
         if self.collisionAgent_p.collisionCheck_object_knownGEO(
                                     object_geometry, workspace.known_geometries) == True:
-            print("moving object collide with known geomtries")
+            # print("moving object collide with known geomtries")
             return isValid
         else:
             pass
@@ -474,7 +474,7 @@ class Planner(object):
         if self.collisionAgent_p.collisionCheck_robot_objectGEO(
             robot.motomanGEO, object_geometry, armType, 
             self.isObjectInLeftHand, self.isObjectInRightHand) == True:
-            print("robot collide with static object_geometry")
+            # print("robot collide with static object_geometry")
             return isValid
         else:
             pass
@@ -489,12 +489,12 @@ class Planner(object):
         isValid = False
         ### check if there is collision
         if self.collisionAgent_p.collisionCheck_selfCollision(robot.motomanGEO) == True:
-            print("robot self collision")
+            # print("robot self collision")
             return isValid
 
         if self.collisionAgent_p.collisionCheck_robot_knownGEO(
                     robot.motomanGEO, workspace.known_geometries, armType) == True:
-            print("robot collide with known geometries")
+            # print("robot collide with known geometries")
             return isValid
 
         ### If you reach here, the configuration passes collision check with known geometry
@@ -544,7 +544,8 @@ class Planner(object):
                                     endEffectorLinkIndex=ee_idx,
                                     targetPosition=interm_pos,
                                     targetOrientation=interm_quat,
-                                    lowerLimits=robot.ll, upperLimits=robot.ul, jointRanges=robot.jr,
+                                    lowerLimits=robot.ll, upperLimits=robot.ul, 
+                                    jointRanges=robot.jr, 
                                     maxNumIterations=2000, residualThreshold=0.0000001,
                                     physicsClientId=robot.server)
                 interm_IK = list(interm_IK[first_joint_index:first_joint_index+7])
@@ -672,7 +673,7 @@ class Planner(object):
             abs(n1[0]-n2[0]), abs(n1[1]-n2[1]), abs(n1[2]-n2[2]), abs(n1[3]-n2[3]),
             abs(n1[4]-n2[4]), abs(n1[5]-n2[5]), abs(n1[6]-n2[6])) / min_degree)
         if nseg == 0: nseg += 1
-        print("nseg: " + str(nseg))
+        # print("nseg: " + str(nseg))
 
         ### we don't include the head (i=0)
         for i in range(1, nseg+1):

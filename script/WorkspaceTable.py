@@ -28,7 +28,7 @@ class WorkspaceTable(object):
             robotBasePosition, standingBase_dim, table_dim, table_offset_x, isPhysicsTurnOn)
         ### specify the transit center
         self.objectTransitCenter = [
-            self.tablePosition[0], self.tablePosition[1], self.tablePosition[2]+self.table_dim[2]/2]
+            self.tablePosition[0], self.tablePosition[1], self.tablePosition[2]+self.table_dim[2]/2+0.305]
 
 
 
@@ -175,8 +175,8 @@ class WorkspaceTable(object):
         # temp_pos = [random.uniform(self.tablePosition[0]-self.table_dim[0]/2+0.1, self.tablePosition[0]+self.table_dim[0]/2-0.1), \
         #             random.uniform(self.tablePosition[1]+0.1, self.tablePosition[1]+self.table_dim[1]/2-0.1), \
         #             self.tablePosition[2]+self.table_dim[2]/2]
-        temp_pos = [0.80, 0.45, 0.61 + 0.025]
-        temp_quat = [0.0, 1.0, 0.0, 1.0]
+        temp_pos = [0.80, 0.45, self.tablePosition[2] + self.table_dim[2]/2 + 0.03]
+        temp_quat = [0.0, 0.707, 0.0, 0.707]
 
 
         ### select one configuration
@@ -251,6 +251,13 @@ class WorkspaceTable(object):
                 physicsClientId=self.server)
             self.object_geometries[_m] = [[list(object_pose.position), list(object_pose.orientation)], object_pose.dims]
             # print(self.object_geometries)
+
+
+    def detectHeight(self):
+        ### this function check the shortest distance between the object and the table
+        pts = p.getClosestPoints(
+            bodyA=self.known_geometries[-1], bodyB=self.object_geometries.keys()[0], distance=20)
+        return pts[0][8] ### shortest contactDistance between the table and the object
 
 
     def updateObjectGeomeotry_BoundingBox(self, object_pose, object_dim):
