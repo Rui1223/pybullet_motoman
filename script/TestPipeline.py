@@ -223,91 +223,91 @@ if __name__ == '__main__':
     table_dim, table_offset_x = readTableInfo()
     rospy.init_node("test_pipeline", anonymous=True)
 
-    ### rotation test
-    # rotate_angle = 160
-    # single_joint_change_success = serviceCall_singleJointChange(
-    #                     rotate_angle, joint_name="arm_right_joint_7_t", armType="Right")
+    # ### rotation test
+    # # rotate_angle = 160
+    # # single_joint_change_success = serviceCall_singleJointChange(
+    # #                     rotate_angle, joint_name="arm_right_joint_7_t", armType="Right")
 
-    ## request the service to plan
-    planning_requests = shiyang_obtain_gripper_poses_for_left_hand(
-        table_dim, table_offset_x, armType="Left", motionType="transit") ### MotionPlanningRequest[]
-    for planning_request in planning_requests:
-        plan_success = serviceCall_motion_planning(planning_request)
-        print("plan_success: ", plan_success)
-        print("\n")
-        if plan_success: break
+    # ## request the service to plan
+    # planning_requests = shiyang_obtain_gripper_poses_for_left_hand(
+    #     table_dim, table_offset_x, armType="Left", motionType="transit") ### MotionPlanningRequest[]
+    # for planning_request in planning_requests:
+    #     plan_success = serviceCall_motion_planning(planning_request)
+    #     print("plan_success: ", plan_success)
+    #     print("\n")
+    #     if plan_success: break
 
 
-    ## before next plan, we want the object to be attached to the gripper
-    attach_success = serviceCall_attachObject(attach=True, armType="Left")
+    # ## before next plan, we want the object to be attached to the gripper
+    # attach_success = serviceCall_attachObject(attach=True, armType="Left")
 
-    ### Now move the object at the transit center
-    planning_requests = shiyang_obtain_gripper_poses_at_transit_center(
-        table_dim, table_offset_x, armType="Left", motionType="transfer") ### MotionPlanningRequest[]
-    for planning_request in planning_requests:
-        plan_success = serviceCall_motion_planning(planning_request)
-        print("plan_success: ", plan_success)
-        print("\n")
-        if plan_success: break
+    # ### Now move the object at the transit center
+    # planning_requests = shiyang_obtain_gripper_poses_at_transit_center(
+    #     table_dim, table_offset_x, armType="Left", motionType="transfer") ### MotionPlanningRequest[]
+    # for planning_request in planning_requests:
+    #     plan_success = serviceCall_motion_planning(planning_request)
+    #     print("plan_success: ", plan_success)
+    #     print("\n")
+    #     if plan_success: break
     
-    ## request the service to plan
-    planning_requests = shiyang_obtain_gripper_poses_for_right_hand(
-        table_dim, table_offset_x, armType="Right", motionType="transit") ### MotionPlanningRequest[]
-    for planning_request in planning_requests:
-        plan_success = serviceCall_motion_planning(planning_request)
-        print("plan_success: ", plan_success)
-        print("\n")
-        if plan_success: break
+    # ## request the service to plan
+    # planning_requests = shiyang_obtain_gripper_poses_for_right_hand(
+    #     table_dim, table_offset_x, armType="Right", motionType="transit") ### MotionPlanningRequest[]
+    # for planning_request in planning_requests:
+    #     plan_success = serviceCall_motion_planning(planning_request)
+    #     print("plan_success: ", plan_success)
+    #     print("\n")
+    #     if plan_success: break
     
-    ## before next plan, we want the object to be attached to the gripper
-    attach_success = serviceCall_attachObject(attach=True, armType="Right")
+    # ## before next plan, we want the object to be attached to the gripper
+    # attach_success = serviceCall_attachObject(attach=True, armType="Right")
 
-    ### detach the object from left hand
-    detach_success = serviceCall_attachObject(attach=False, armType="Left")
+    # ### detach the object from left hand
+    # detach_success = serviceCall_attachObject(attach=False, armType="Left")
 
-    ### reset left arm (left arm has finished its work)
-    planning_request = MotionPlanningRequest()
-    planning_request.armType = "Left"
-    planning_request.motionType = "moveAway"
-    # planning_request.object_pose.dims = [0.06, 0.16, 0.23]
-    # planning_request.object_pose.position = [0.79999, 1.549e-09, 0.85999]
-    # planning_request.object_pose.orientation = [-4.12e-09, 0.707, 3.4397e-09, 0.707]
-    plan_success = serviceCall_motion_planning(planning_request)
-    print("plan_success: ", plan_success)
-    print("\n")
+    # ### reset left arm (left arm has finished its work)
+    # planning_request = MotionPlanningRequest()
+    # planning_request.armType = "Left"
+    # planning_request.motionType = "moveAway"
+    # # planning_request.object_pose.dims = [0.06, 0.16, 0.23]
+    # # planning_request.object_pose.position = [0.79999, 1.549e-09, 0.85999]
+    # # planning_request.object_pose.orientation = [-4.12e-09, 0.707, 3.4397e-09, 0.707]
+    # plan_success = serviceCall_motion_planning(planning_request)
+    # print("plan_success: ", plan_success)
+    # print("\n")
 
-    ### Now move the object at the drop center
-    planning_requests = shiyang_obtain_gripper_poses_at_drop_center(
-        table_dim, table_offset_x, armType="Right", motionType="transfer") ### MotionPlanningRequest[]
-    for planning_request in planning_requests:
-        plan_success = serviceCall_motion_planning(planning_request)
-        print("plan_success: ", plan_success)
-        print("\n")
-        if plan_success: break
+    # ### Now move the object at the drop center
+    # planning_requests = shiyang_obtain_gripper_poses_at_drop_center(
+    #     table_dim, table_offset_x, armType="Right", motionType="transfer") ### MotionPlanningRequest[]
+    # for planning_request in planning_requests:
+    #     plan_success = serviceCall_motion_planning(planning_request)
+    #     print("plan_success: ", plan_success)
+    #     print("\n")
+    #     if plan_success: break
 
-    ### approach to placement
-    planning_request = MotionPlanningRequest()
-    planning_request.armType = "Right"
-    planning_request.motionType = "approachToPlacement"
-    plan_success = serviceCall_motion_planning(planning_request)
-    print("plan_success: ", plan_success)
-    print("\n")
+    # ### approach to placement
+    # planning_request = MotionPlanningRequest()
+    # planning_request.armType = "Right"
+    # planning_request.motionType = "approachToPlacement"
+    # plan_success = serviceCall_motion_planning(planning_request)
+    # print("plan_success: ", plan_success)
+    # print("\n")
 
-    ### drop the object ###
-    ### first detach the object from left hand
-    detach_success = serviceCall_attachObject(attach=False, armType="Right")
-    time.sleep(1)
-    enable_physics_success = serviceCall_enablePhysics(isPhysicsEnabled=True)
-    time.sleep(1)
-    distable_physics_success = serviceCall_enablePhysics(isPhysicsEnabled=False)
+    # ### drop the object ###
+    # ### first detach the object from left hand
+    # detach_success = serviceCall_attachObject(attach=False, armType="Right")
+    # time.sleep(1)
+    # enable_physics_success = serviceCall_enablePhysics(isPhysicsEnabled=True)
+    # time.sleep(1)
+    # distable_physics_success = serviceCall_enablePhysics(isPhysicsEnabled=False)
 
-    ### reset the arm to leave the object
-    planning_request = MotionPlanningRequest()
-    planning_request.armType = "Right"
-    planning_request.motionType = "reset"
-    # planning_request.object_pose.dims = [0.06, 0.16, 0.23]
-    # planning_request.object_pose.position = [0.79999, 1.549e-09, 0.85999]
-    # planning_request.object_pose.orientation = [-4.12e-09, 0.707, 3.4397e-09, 0.707]
-    plan_success = serviceCall_motion_planning(planning_request)
+    # ### reset the arm to leave the object
+    # planning_request = MotionPlanningRequest()
+    # planning_request.armType = "Right"
+    # planning_request.motionType = "reset"
+    # # planning_request.object_pose.dims = [0.06, 0.16, 0.23]
+    # # planning_request.object_pose.position = [0.79999, 1.549e-09, 0.85999]
+    # # planning_request.object_pose.orientation = [-4.12e-09, 0.707, 3.4397e-09, 0.707]
+    # plan_success = serviceCall_motion_planning(planning_request)
     
     time.sleep(10000)

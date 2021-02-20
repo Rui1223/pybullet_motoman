@@ -71,6 +71,15 @@ class WorkspaceTable(object):
                                             basePosition=self.tablePosition, physicsClientId=self.server)
         print("table: " + str(self.tableM))
         self.known_geometries.append(self.tableM)
+
+        print("inner edge of the table: ")
+        print(self.tablePosition[0]-table_dim[0]/2)
+        print("table surface: ")
+        print(self.tablePosition[2]+table_dim[2]/2)
+        print("left side of the table: ")
+        print(self.tablePosition[1]+table_dim[1]/2)
+        print("right side of the table: ")
+        print(self.tablePosition[1]-table_dim[1]/2)
         #################################################################################
 
 

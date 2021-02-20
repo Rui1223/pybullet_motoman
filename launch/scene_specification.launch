@@ -15,10 +15,10 @@
 	<group ns="workspace_table">
 		<!-- specification of the workspace (table scene) -->
 		<rosparam param="standingBase_dim">[0.915, 0.62, 0.19]</rosparam>
-		<rosparam param="table_dim">[0.61, 1.52, 0.80]</rosparam>
+		<rosparam param="table_dim">[1.062, 1.96, 1.13]</rosparam>
 		<!-- <rosparam param="table_dim">[0.58, 1.32, 0.58]</rosparam> -->
-		<!-- the following parameter specifies how the far the table is from the robot rigid body in x direction -->
-		<rosparam param="table_offset_x">0.4</rosparam>
+		<!-- the following parameter specifies how the far the table (inner edge) is from the robot rigid body in x direction -->
+		<rosparam param="table_offset_x">0.469</rosparam>
 		<!-- the following parameter specifies the height up to which the left arm transfer the object (either drop or trigger handoff) -->
 <!-- 		<rosparam param="transitCenterHeight">0.8</rosparam> -->
 	</group>
@@ -40,8 +40,8 @@
 <!-- 	<node pkg="pybullet_motoman" type="PybulletExecutionScene.py" name="pybullet_execution_scene"
 		args="$(arg pybullet_execution_scene)" output="screen" required="True" /> -->
 
-<!-- 	<node pkg="pybullet_motoman" type="PybulletPlanScene.py" name="pybullet_plan_scene"
-		output="screen" required="True" /> -->
+	<node pkg="pybullet_motoman" type="PybulletPlanScene.py" name="pybullet_plan_scene"
+		output="screen" required="True" />
 
 <!-- 	<node pkg="pybullet_motoman" type="TestPipeline.py" name="test_pipeline"
 		output="screen" required="True" /> -->

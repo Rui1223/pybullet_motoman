@@ -62,7 +62,7 @@ class Planner(object):
         self.nsamples = len(self.nodes["Left"])
 
         ### specify the needed parameters
-        self.neighbors_const = 2.5 * math.e * (1 + 1/len(self.nodes["Left"][0]))
+        self.neighbors_const = 3 * math.e * (1 + 1.0/7)
         ### use k_n to decide the number of neighbors: #neighbors = k_n * log(#samples)
         self.num_neighbors = int(self.neighbors_const * math.log(self.nsamples))
         if self.num_neighbors > self.nsamples:
@@ -72,8 +72,19 @@ class Planner(object):
 
 
     def generateSamples(self, nsamples, robot, workspace):
+
         self.nsamples = nsamples
+        ### specify the needed parameters
+        self.neighbors_const = 3 * math.e * (1 + 1.0/7)
+        ### use k_n to decide the number of neighbors: #neighbors = k_n * log(#samples)
+        self.num_neighbors = int(self.neighbors_const * math.log(self.nsamples))
+        if self.num_neighbors > self.nsamples:
+            self.num_neighbors = self.nsamples
+        print("nsamples: ", self.nsamples)
+        print("num_neighbors: ", self.num_neighbors)
+
         arms = ["Left", "Right"]
+        # arms = ["Left", "Right"]
         for armType in arms:
             samplesFile = self.roadmapFolder + "/samples_" + str(armType) + ".txt"
             if armType == "Left":
@@ -82,15 +93,6 @@ class Planner(object):
                 ee_idx = robot.right_ee_idx
             self.samplingNodes(ee_idx, robot, workspace, armType)
             self.saveSamplesToFile(samplesFile, armType)
-
-        ### specify the needed parameters
-        self.neighbors_const = 3.5 * math.e * (1 + 1/len(self.nodes["Right"][0]))
-        ### use k_n to decide the number of neighbors: #neighbors = k_n * log(#samples)
-        self.num_neighbors = int(self.neighbors_const * math.log(self.nsamples))
-        if self.num_neighbors > self.nsamples:
-            self.num_neighbors = self.nsamples
-        print("nsamples: ", self.nsamples)
-        print("num_neighbors: ", self.num_neighbors)
 
 
     def samplingNodes(self, ee_idx, robot, workspace, armType):
@@ -102,12 +104,40 @@ class Planner(object):
             #     print("Now finish " + str(temp_counter) + " samples.")
             ### sample an IK configuration
             ikSolution = self.singleSampling_CSpace(robot, armType) ### this is for a single arm
+            ### check where the IK reaches
+            ### if it does not land where we want
+            ### we disgard it
+            isIKFallIntoRightRegion = self.sampleRegionCheck(ikSolution, robot, workspace, armType)
+            if not isIKFallIntoRightRegion:
+                continue
             ### check if the IK solution is valid in terms of
             ### no collision with the robot and other known geometries like table/shelf/etc..
             isValid = self.checkIK_CollisionWithRobotAndKnownGEO(ikSolution, robot, workspace, armType)
             if isValid:
                 self.nodes[armType].append(ikSolution)
                 temp_counter += 1
+                print("finish the %s node" % str(temp_counter))
+
+    def sampleRegionCheck(self, ikSolution, robot, workspace, armType):
+        if armType == "Left":
+            ee_idx = robot.left_ee_idx
+        else:
+            ee_idx = robot.right_ee_idx
+
+        isIKFallIntoRightRegion = False
+        robot.setSingleArmToConfig(ikSolution, armType)
+        pos_quat = p.getLinkState(robot.motomanGEO, ee_idx, physicsClientId=self.planningServer)
+        pos = list(pos_quat[0])
+        if (pos[0] <= workspace.standingBasePosition[0]+workspace.standingBase_dim[0]/2 or \
+            pos[2] <= workspace.tablePosition[2]+workspace.table_dim[2]/2 or \
+            pos[2] >= workspace.tablePosition[2]+workspace.table_dim[2]/2 + 0.3 or
+            pos[1] >= workspace.tablePosition[1]+0.5 or
+            pos[1] <= workspace.tablePosition[1]-0.5):
+            # print("bad sample region")
+            return isIKFallIntoRightRegion
+        ### congrats
+        # print("good sample region")
+        return True
 
 
     def singleSampling_CSpace(self, robot, armType):
@@ -722,34 +752,115 @@ class Planner(object):
         #         config2 = self.nodes[armType][path[i+1]]
         #         ### check the edge
         #         isEdgeValid = checkEdgeValidity_DirectConfigPath(config1, config2, robot, workspace, armType, motionType)
-        for i in range(0, len(path)-1):
-            if i == 0:
-                config1 = initialConfig
-            else:
-                config1 = self.nodes[armType][path[i]]
-            if i == (len(path)-2):
-                config2 = targetConfig
-            else:
-                config2 = self.nodes[armType][path[i+1]]
-            ### check the edge
-            isEdgeValid = self.checkEdgeValidity_DirectConfigPath(config1, config2, robot, workspace, armType, motionType)
 
-        if isEdgeValid:
-            ### generate the trajectory for the solution
+        ############ LET'S DO SMOOTHING #############
+        if len(path) == 3:
+            ### no need for collision check and smoothing
             for i in range(0, len(path)-1):
                 if i == 0:
                     config1 = initialConfig
+                    config2 = self.nodes[armType][path[i+1]]
                 else:
+                    ### i == 1
                     config1 = self.nodes[armType][path[i]]
-                if i == (len(path)-2):
+                    config2 = targetConfig
+                ### get edge trajectory
+                config_edge_traj = self.generateTrajectory_DirectConfigPath(config1, config2)
+                result_traj.append(config_edge_traj)
+        else:
+            ### len(path) > 3
+            ### we need collision check and smoothing
+            smoothed_path, isPathValid = self.smoothPath(path, robot, workspace, armType, motionType)
+            if isPathValid == False:
+                return result_traj
+            ### directly generate trajectory based on the new path
+            for i in range(0, len(smoothed_path)-1):
+                if i == 0:
+                    config1 = initialConfig
+                else:
+                    config1 = self.nodes[armType][smoothed_path[i]]
+                if i == (len(smoothed_path)-2):
                     config2 = targetConfig
                 else:
-                    config2 = self.nodes[armType][path[i+1]]
+                    config2 = self.nodes[armType][smoothed_path[i+1]]
                 ### get edge trajectory
                 config_edge_traj = self.generateTrajectory_DirectConfigPath(config1, config2)
                 result_traj.append(config_edge_traj)
 
         return result_traj
+
+
+        # for i in range(0, len(path)-1):
+        #     if i == 0:
+        #         config1 = initialConfig
+        #     else:
+        #         config1 = self.nodes[armType][path[i]]
+        #     if i == (len(path)-2):
+        #         config2 = targetConfig
+        #     else:
+        #         config2 = self.nodes[armType][path[i+1]]
+        #     ### check the edge
+        #     isEdgeValid = self.checkEdgeValidity_DirectConfigPath(config1, config2, robot, workspace, armType, motionType)
+
+        # if isEdgeValid:
+        #     ### generate the trajectory for the solution
+        #     for i in range(0, len(path)-1):
+        #         if i == 0:
+        #             config1 = initialConfig
+        #         else:
+        #             config1 = self.nodes[armType][path[i]]
+        #         if i == (len(path)-2):
+        #             config2 = targetConfig
+        #         else:
+        #             config2 = self.nodes[armType][path[i+1]]
+        #         ### get edge trajectory
+        #         config_edge_traj = self.generateTrajectory_DirectConfigPath(config1, config2)
+        #         result_traj.append(config_edge_traj)
+
+        # return result_traj
+
+
+    def smoothPath(self, path, robot, workspace, armType, motionType):
+        ### This function tries to smooth the given path
+        ### output: a smooth path [a list of indexes] and whether the path is valid or not
+        smoothed_path = []
+        start_idx = 0
+        startNode_idx = path[start_idx] ### start
+        smoothed_path.append(startNode_idx)
+        curr_idx = start_idx + 1
+        while (curr_idx <= len(path)):
+            currNode_idx = path[curr_idx]
+            ### check edge validity between start_idx and curr_idx
+            if start_idx == 0:
+                config1 = initialConfig
+            else:
+                config1 = self.nodes[armType][startNode_idx]
+            if curr_idx == (len(path)-1):
+                config2 = targetConfig
+            else:
+                config2 = self.nodes[armType][currNode_idx]
+            ### check the edge
+            isEdgeValid = self.checkEdgeValidity_DirectConfigPath(
+                            config1, config2, robot, workspace, armType, motionType)
+            if isEdgeValid:
+                validFromStart_idx = curr_idx
+                validNodeFromStart_idx = currNode_idx
+                ### move on to the next node
+                curr_idx += 1
+                continue
+            else:
+                if (curr_idx - start_idx == 1):
+                    print("Abortion\n")
+                    return smoothed_path, False
+                ### the edge is not valid
+                ### add validNodeFromStart_idx to the smoothed_path
+                smoothed_path.append(validNodeFromStart_idx)
+                ### set validNodeFromStart_idx as the new start
+                ### and the curr_idx does not change
+                start_idx = validFromStart_idx
+                startNode_idx = validNodeFromStart_idx
+
+        return smoothed_path, True
 
 
     def readPath(self, theme, armType):
