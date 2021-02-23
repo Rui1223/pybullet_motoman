@@ -8,6 +8,7 @@ from the roadmap built in robotic scenarios. */
 #include <string>
 #include <fstream>
 #include <map>
+#include <pybullet_motoman/Edge.h>
 
 class Graph_t
 {
@@ -18,6 +19,7 @@ class Graph_t
     std::vector<std::vector<int>> m_nodeNeighbors;
     std::vector<std::vector<float>> m_edgeCosts;
     std::vector<std::vector<float>> m_nodeStates;
+    std::vector<std::vector<int>> m_edgeStatus;
 
     // // specify start and goal
     // int m_start;
@@ -36,6 +38,7 @@ public:
     void constructGraph(std::string samples_file, std::string connections_file);
     void specify_nodeStates(std::string samples_file);
     void specify_neighborCosts(std::string connections_file);
+    void specify_edgeStatus();
     // void connectStartAndGoal(std::string task_file);
     float computeDist(std::vector<float> n1, std::vector<float> n2);
 
@@ -48,6 +51,8 @@ public:
     // std::vector<float> getGoalState() { return m_goalNode; }
     std::vector<int> getNodeNeighbors(int id) { return m_nodeNeighbors[id]; }
     float getEdgeCost(int id1, int id2) { return m_edgeCosts[id1][id2]; }
+    int getEdgeStatus(int id1, int id2) { return m_edgeStatus[id1][id2]; }
+    void modifyEdge(std::vector<pybullet_motoman::Edge> &violated_edges, int query_idx);
 
     // printer
     void printStates();

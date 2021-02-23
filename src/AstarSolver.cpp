@@ -47,6 +47,10 @@ void AstarSolver_t::setPlanningQuery(Graph_t &g, int query_idx,
     // given the goal, compute the heuristics
     m_H = std::vector<float>(g.getnNodes()+2, 0.0);
     computeH(g); // heuristics
+}
+
+void AstarSolver_t::prepareToSearch(Graph_t &g)
+{
     m_G = std::vector<float>(g.getnNodes()+2, std::numeric_limits<float>::max());
     m_expanded = std::vector<bool>(g.getnNodes()+2, false);
     m_isSearchSuccess = true;
@@ -54,12 +58,13 @@ void AstarSolver_t::setPlanningQuery(Graph_t &g, int query_idx,
     clearOpenAndCLosedList();
     m_path = std::vector<int>();
     m_closed = std::vector<AstarNode_t*>();
-    std::cout << "is path empty? " << (m_path.empty()) << "\n";
-    std::cout << "is open list empty? " << (m_open.empty()) << "\n";
-    std::cout << "is closed list empty? " << (m_closed.empty()) << "\n";
+    // std::cout << "is path empty? " << (m_path.empty()) << "\n";
+    // std::cout << "is open list empty? " << (m_open.empty()) << "\n";
+    // std::cout << "is closed list empty? " << (m_closed.empty()) << "\n";
 
     // put the start in the open list
-    m_open.push(new AstarNode_t(m_start, 0.0, nullptr));
+    m_G[m_start] = 0.0;
+    m_open.push(new AstarNode_t(m_start, m_G[m_start], m_H[m_start], nullptr));
     AstarNode_t *current = m_open.top();
     m_open.pop();
     // put start into the closed list
@@ -69,9 +74,8 @@ void AstarSolver_t::setPlanningQuery(Graph_t &g, int query_idx,
     for (int i = 0; i < m_start_neighbors_idx.size(); i++) {
         int neighbor_idx = m_start_neighbors_idx[i];
         m_G[neighbor_idx] = m_start_neighbors_cost[i];
-        m_open.push(new AstarNode_t(neighbor_idx, m_G[neighbor_idx], current));
+        m_open.push(new AstarNode_t(neighbor_idx, m_G[neighbor_idx], m_H[neighbor_idx], current));
     }
-
 }
 
 
@@ -106,6 +110,8 @@ void AstarSolver_t::computeH(Graph_t &g)
         m_H[i] = computeDist(g.getState(i), m_goalState);
         // m_H.push_back(computeDist(g.getState(i), g.getGoalState()));
     }
+    // also compute the heuristic for the start
+    m_H[m_start] = computeDist(m_startState, m_goalState);
 
 }
 
@@ -148,13 +154,15 @@ void AstarSolver_t::Astar_search(Graph_t &g)
         // get neighbors of the current node
         std::vector<int> neighbors = g.getNodeNeighbors(current->m_id);
         for (auto const &neighbor : neighbors)
-        {
+        {   
+            // check if the edge is still valid or not
+            if ( g.getEdgeStatus(current->m_id, neighbor) == m_query_idx ) {continue;}
             // check if the neighbor node has been visited or extended before
             if ( m_expanded[neighbor] ) {continue;}
             if ( m_G[neighbor] > m_G[current->m_id] + g.getEdgeCost(current->m_id, neighbor) )
             {
                 m_G[neighbor] = m_G[current->m_id] + g.getEdgeCost(current->m_id, neighbor);
-                m_open.push(new AstarNode_t(neighbor, m_G[neighbor], current));
+                m_open.push(new AstarNode_t(neighbor, m_G[neighbor], m_H[neighbor], current));
             }
         }
         // Consider one more case here! The goal may also be the neighbor
@@ -164,7 +172,7 @@ void AstarSolver_t::Astar_search(Graph_t &g)
             int index = it - m_goal_neighbors_idx.begin();
             if ( m_G[m_goal] > m_G[current->m_id] + m_goal_neighbors_cost[index] ) {
                 m_G[m_goal] = m_G[current->m_id] + m_goal_neighbors_cost[index];
-                m_open.push(new AstarNode_t(m_goal, m_G[m_goal], current));
+                m_open.push(new AstarNode_t(m_goal, m_G[m_goal], m_H[m_goal], current));
             }
         }
     }

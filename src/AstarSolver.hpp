@@ -16,22 +16,40 @@ struct AstarNode_t
 {
     int m_id;
     float m_g;
+    float m_h;
+    float m_f;
     AstarNode_t *m_parent;
 
-    AstarNode_t(int id, float g, AstarNode_t *p) {
+    AstarNode_t(int id, float g, float h, AstarNode_t *p) {
         m_id = id;
         m_g = g;
+        m_h = h;
+        m_f = m_g + m_h;
         m_parent = p;
     }
 };
+
+// struct AstarNode_comparison
+// {
+//     bool operator()(const AstarNode_t* a, const AstarNode_t* b)
+//     {
+//         return (a->m_g) > (b->m_g);
+//     }
+// };
+
 
 struct AstarNode_comparison
 {
     bool operator()(const AstarNode_t* a, const AstarNode_t* b)
     {
-        return (a->m_g) > (b->m_g);
+        if (a->m_f == b->m_f)
+        {
+            return (a->m_h) > (b->m_h);
+        }
+        return (a->m_f) > (b->m_f);
     }
 };
+
 
 class AstarSolver_t
 {
@@ -72,6 +90,7 @@ public:
             std::vector<float> start_neighbors_cost, std::vector<float> goal_neighbors_cost,
             std::vector<pybullet_motoman::Edge> violated_edges
             );
+    void prepareToSearch(Graph_t &g);
     void Astar_search(Graph_t &g);
 
     void clearOpenAndCLosedList();
@@ -88,6 +107,7 @@ public:
     void printAll();
 
     // getter
+    int getQueryIdx() { return m_query_idx; }
     bool getSearchSuccessInfo() { return m_isSearchSuccess; }
     std::vector<int> getPath() { return m_path; }
     std::vector<std::vector<float>> getTrajectory() { return m_trajectory; }

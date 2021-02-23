@@ -809,8 +809,14 @@ class Planner(object):
                 ### the plan fails, could not find a solution
                 return result_traj ### an empty trajectory
             ### otherwise, we need collision check and smoothing (len(path) >= 3)
+            # print("TEST LAZY A*\n")
+            # path = [5000, 45, 467, 5001]
             smoothed_path, isPathValid, violated_edges = self.smoothPath(
                     path, initialConfig, targetConfig, robot, workspace, armType, motionType)
+            print("isPathValid: ", isPathValid)
+            if not isPathValid:
+                print("violated_edges: ")
+                print(str(violated_edges[0].idx1) + "," + str(violated_edges[0].idx2))
 
         ### congrats, the path is valid and finally smoothed, let's generate trajectory
         print("smoothed path: ", smoothed_path)
@@ -970,6 +976,7 @@ class Planner(object):
             else:
                 if (curr_idx - start_idx == 1):
                     print("Edge invalid, we need call A* again with the change of edge information")
+                    print(str(startNode_idx) + "," + str(currNode_idx))
                     edge = Edge()
                     edge.idx1 = startNode_idx
                     edge.idx2 = currNode_idx
@@ -986,43 +993,6 @@ class Planner(object):
         smoothed_path.append(validNodeFromStart_idx)
 
         return smoothed_path, True, violated_edges
-
-
-    def readPath(self, theme, armType):
-        path = []
-        traj_file = os.path.join(self.rosPackagePath, "src/") + theme + "_traj.txt"
-        f = open(traj_file, "r")
-        nline = 0
-        for line in f:
-            nline += 1
-            if nline == 1:
-                line = line.split()
-                isFailure = bool(int(line[0]))
-                if isFailure:
-                    f.close()
-                    return path
-            else:
-                line = line.split()
-                path = [int(e) for e in line]
-                path.reverse()
-        f.close()
-
-        return path
-
-
-    def writeStartGoal(self, initialConfig, targetConfig, theme):
-        start_goal_file = os.path.join(self.rosPackagePath, "src/") + theme + ".txt"
-        f = open(start_goal_file, "w")
-        f.write(str(self.nsamples) + " ")
-        for e in initialConfig:
-            f.write(str(e) + " ")
-        f.write("\n")
-        f.write(str(self.nsamples+1) + " ")
-        for e in targetConfig:
-            f.write(str(e) + " ")
-        f.write("\n")
-
-        return f
 
 
     def findNeighborsForStartAndGoal(self,
@@ -1095,6 +1065,42 @@ class Planner(object):
 
         return start_neighbors_idx, goal_neighbors_idx, start_neighbors_cost, goal_neighbors_cost
 
+
+    def readPath(self, theme, armType):
+        path = []
+        traj_file = os.path.join(self.rosPackagePath, "src/") + theme + "_traj.txt"
+        f = open(traj_file, "r")
+        nline = 0
+        for line in f:
+            nline += 1
+            if nline == 1:
+                line = line.split()
+                isFailure = bool(int(line[0]))
+                if isFailure:
+                    f.close()
+                    return path
+            else:
+                line = line.split()
+                path = [int(e) for e in line]
+                path.reverse()
+        f.close()
+
+        return path
+
+
+    def writeStartGoal(self, initialConfig, targetConfig, theme):
+        start_goal_file = os.path.join(self.rosPackagePath, "src/") + theme + ".txt"
+        f = open(start_goal_file, "w")
+        f.write(str(self.nsamples) + " ")
+        for e in initialConfig:
+            f.write(str(e) + " ")
+        f.write("\n")
+        f.write(str(self.nsamples+1) + " ")
+        for e in targetConfig:
+            f.write(str(e) + " ")
+        f.write("\n")
+
+        return f
 
     def connectStartGoalToArmRoadmap(
                         self, f, initialConfig, targetConfig, robot, workspace, armType, motionType):

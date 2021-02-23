@@ -17,9 +17,7 @@ Graph_t::Graph_t(std::string samples_file, std::string connections_file)
     // m_nNodes = nsamples;
     specify_nodeStates(samples_file);
     specify_neighborCosts(connections_file);
-    // start and goal should not be treated as part of the graph, 
-    // they are part of the query
-    // connectStartAndGoal(task_file); 
+    specify_edgeStatus();
     // printStates();
     // printNeighbors();
     // printEdgeCosts();
@@ -30,9 +28,7 @@ void Graph_t::constructGraph(std::string samples_file, std::string connections_f
     // m_nNodes = nsamples;
     specify_nodeStates(samples_file);
     specify_neighborCosts(connections_file);
-    // start and goal should not be treated as part of the graph, 
-    // they are part of the query
-    // connectStartAndGoal(task_file); 
+    specify_edgeStatus();
     // printStates();
     // printNeighbors();
     // printEdgeCosts();    
@@ -46,6 +42,16 @@ float Graph_t::computeDist(std::vector<float> n1, std::vector<float> n2) {
     }
     temp_dist = sqrt(temp_dist);
     return temp_dist;
+}
+
+
+void Graph_t::specify_edgeStatus()
+{
+    int iter = 0;
+    while (iter != m_nNodes) {
+        m_edgeStatus.push_back(std::vector<int>(m_nNodes, 0));
+        iter++;
+    }
 }
 
 
@@ -81,7 +87,7 @@ void Graph_t::specify_neighborCosts(std::string connections_file)
     }
     m_inFile_.close();
 
-}   
+}
 
 void Graph_t::specify_nodeStates(std::string samples_file)
 {
@@ -114,6 +120,19 @@ void Graph_t::specify_nodeStates(std::string samples_file)
 
 }
 
+
+void Graph_t::modifyEdge(std::vector<pybullet_motoman::Edge> &violated_edges, int query_idx)
+{
+    for (auto const &edge : violated_edges) {
+        std::cout << "========Now modify graph in c++============\n";
+        std::cout << edge.idx1 << ", " << edge.idx2 << "\n";
+        m_edgeStatus[edge.idx1][edge.idx2] = query_idx; // disable this edge
+        m_edgeStatus[edge.idx2][edge.idx1] = query_idx;
+        std::cout << "after modification";
+        std::cout << "m_edgeStatus: " << m_edgeStatus[edge.idx1][edge.idx2] << "\n";
+        std::cout << "m_edgeStatus: " << m_edgeStatus[edge.idx2][edge.idx1] << "\n";
+    }
+}
 
 void Graph_t::printStates()
 {

@@ -34,30 +34,38 @@ public:
 
     }
 
-
-
     bool astarSolverCallback(
         pybullet_motoman::AstarPathFinding::Request &req,
         pybullet_motoman::AstarPathFinding::Response &resp
         ) {
         if (req.armType == "Left"){
-            m_astar_solver.setPlanningQuery(m_left_g, req.query_idx, 
-                req.start_idx, req.goal_idx, req.start_config, req.goal_config,
-                req.start_neighbors_idx, req.goal_neighbors_idx,
-                req.start_neighbors_cost, req.goal_neighbors_cost,
-                req.violated_edges);
+            if (m_astar_solver.getQueryIdx() != req.query_idx) {
+                // this is a new query, let's set the new query
+                m_astar_solver.setPlanningQuery(m_left_g, req.query_idx, 
+                    req.start_idx, req.goal_idx, req.start_config, req.goal_config,
+                    req.start_neighbors_idx, req.goal_neighbors_idx,
+                    req.start_neighbors_cost, req.goal_neighbors_cost,
+                    req.violated_edges);
+            }
+            m_left_g.modifyEdge(req.violated_edges, req.query_idx);
+            m_astar_solver.prepareToSearch(m_left_g);
             m_astar_solver.Astar_search(m_left_g);
         }
         else {
-            m_astar_solver.setPlanningQuery(m_right_g, req.query_idx, 
-                req.start_idx, req.goal_idx, req.start_config, req.goal_config,
-                req.start_neighbors_idx, req.goal_neighbors_idx,
-                req.start_neighbors_cost, req.goal_neighbors_cost,
-                req.violated_edges);
+            if (m_astar_solver.getQueryIdx() != req.query_idx) {
+                // this is a new query, let's set the new query
+                m_astar_solver.setPlanningQuery(m_right_g, req.query_idx, 
+                    req.start_idx, req.goal_idx, req.start_config, req.goal_config,
+                    req.start_neighbors_idx, req.goal_neighbors_idx,
+                    req.start_neighbors_cost, req.goal_neighbors_cost,
+                    req.violated_edges);
+            }
+            m_right_g.modifyEdge(req.violated_edges, req.query_idx);
+            m_astar_solver.prepareToSearch(m_right_g);
             m_astar_solver.Astar_search(m_right_g);
         }
 
-        // let's return the response
+        // let's return the response after a search
         resp.searchSuccess = m_astar_solver.getSearchSuccessInfo();
         resp.path = m_astar_solver.getPath();
         if (resp.searchSuccess == true) {
@@ -69,13 +77,48 @@ public:
 
     }
 
-
-    // void printWrapper() {
-    //     m_left_g.printStates();
-    //     m_right_g.printStates();
-    // }
-
 };
+
+int main(int argc, char** argv)
+{
+    // initialize the ros node
+    ros::init(argc, argv, "main_planner");
+    ros::NodeHandle nh;
+
+    ROS_INFO_STREAM("initialize main_plannner_node");
+
+    std::string package_path = ros::package::getPath("pybullet_motoman");
+    Timer t;
+
+    // load the roadmap for left and right arm
+    std::string left_samples_file = package_path + "/roadmaps/samples_Left.txt";
+    std::string left_connections_file = package_path + "/roadmaps/connections_Left.txt";
+    std::string right_samples_file = package_path + "/roadmaps/samples_Right.txt";
+    std::string right_connections_file = package_path + "/roadmaps/connections_Right.txt";
+    // Graph_t left_g(left_samples_file, left_connections_file);
+    // Graph_t right_g(right_samples_file, right_connections_file);
+    Planner_t planner(left_samples_file, left_connections_file, right_samples_file, right_connections_file);
+
+    // planner.printWrapper();
+    std::cout << "time to load graph with " << planner.m_left_g.getnNodes() << " nodes is " << t.elapsed() << "\n";
+    std::cout << "time to load graph with " << planner.m_right_g.getnNodes() << " nodes is " << t.elapsed() << "\n";
+
+    // claim service the node provide (server)
+    ros::ServiceServer server = nh.advertiseService("astar_path_finding", &Planner_t::astarSolverCallback, &planner);
+
+    // Loop at 2Hz until the node is shut down
+    // ros::Rate rate(2);
+    while (ros::ok()) {
+        ros::spin();
+        // rate.sleep();
+    }
+
+    return 0;
+
+}
+
+
+//////////////// below is not used but just kept for legacy ////////////////
 
 // bool astarSolverCallback(
 //     pybullet_motoman::AstarPathFinding::Request &req,
@@ -129,45 +172,6 @@ public:
 
 //     // std::cout << "***************\n";
 
-//     return true;
+//     // return true;
 
-
-// }
-
-int main(int argc, char** argv)
-{
-    // initialize the ros node
-    ros::init(argc, argv, "main_planner");
-    ros::NodeHandle nh;
-
-    ROS_INFO_STREAM("initialize main_plannner_node");
-
-    std::string package_path = ros::package::getPath("pybullet_motoman");
-    Timer t;
-
-    // load the roadmap for left and right arm
-    std::string left_samples_file = package_path + "/roadmaps/samples_Left.txt";
-    std::string left_connections_file = package_path + "/roadmaps/connections_Left.txt";
-    std::string right_samples_file = package_path + "/roadmaps/samples_Right.txt";
-    std::string right_connections_file = package_path + "/roadmaps/connections_Right.txt";
-    // Graph_t left_g(left_samples_file, left_connections_file);
-    // Graph_t right_g(right_samples_file, right_connections_file);
-    Planner_t planner(left_samples_file, left_connections_file, right_samples_file, right_connections_file);
-
-    // planner.printWrapper();
-    std::cout << "time to load graph with " << planner.m_left_g.getnNodes() << " nodes is " << t.elapsed() << "\n";
-    std::cout << "time to load graph with " << planner.m_right_g.getnNodes() << " nodes is " << t.elapsed() << "\n";
-
-    // claim service the node provide (server)
-    ros::ServiceServer server = nh.advertiseService("astar_path_finding", &Planner_t::astarSolverCallback, &planner);
-
-    // Loop at 2Hz until the node is shut down
-    // ros::Rate rate(2);
-    while (ros::ok()) {
-        ros::spin();
-        // rate.sleep();
-    }
-
-    return 0;
-
-}
+// // }
