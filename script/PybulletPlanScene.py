@@ -49,8 +49,8 @@ class PybulletPlanScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet planning scene
-        self.planningClientID = p.connect(p.DIRECT)
-        # self.planningClientID = p.connect(p.GUI)
+        # self.planningClientID = p.connect(p.DIRECT)
+        self.planningClientID = p.connect(p.GUI)
 
         ### create a planner assistant
         self.planner_p = Planner(
@@ -269,6 +269,7 @@ class PybulletPlanScene(object):
         ### first check if we can direct connect current pose to pre-grasp_pose
         isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
             initialConfig, configToGraspPose, self.robot_p, self.workspace_p, armType, motionType)
+        isDirectPathValid = False
         if isDirectPathValid:
             ### it is feasible to directly move from current pose to grasp pose
             print("the poses can be directly connected")
@@ -279,9 +280,12 @@ class PybulletPlanScene(object):
             result_traj.append(config_edge_traj)
         else:
             # ### if it's not possible, then we have to trigger motion planning
-            result_traj = self.planner_p.shortestPathPlanning(
-                    initialConfig, configToGraspPose, theme, 
+            result_traj = self.planner_p.AstarPathFinding(
+                    initialConfig, configToGraspPose,
                     self.robot_p, self.workspace_p, armType, motionType)
+            # result_traj = self.planner_p.shortestPathPlanning(
+            #         initialConfig, configToGraspPose, theme, 
+            #         self.robot_p, self.workspace_p, armType, motionType)
 
         ## the planning has been finished, either success or failure
         if result_traj != []:
@@ -439,8 +443,9 @@ class PybulletPlanScene(object):
         ### no matter left or right arm, the target pose is always the same
         ### figure out the shortest distance between the table and the object
         distance_from_tableSurface = self.workspace_p.detectHeight()
-        if distance_from_tableSurface > 0.15:
-            distance_to_moveDown = distance_from_tableSurface - 0.15
+        print("distance_from_tableSurface: ", distance_from_tableSurface)
+        if distance_from_tableSurface > 0.02:
+            distance_to_moveDown = distance_from_tableSurface - 0.02
             targetPose = [[initialPose[0][0], initialPose[0][1], \
                         initialPose[0][2] - distance_to_moveDown], initialPose[1]]
             isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(

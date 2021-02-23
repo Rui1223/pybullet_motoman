@@ -12,17 +12,30 @@ from the roadmap built in robotic scenarios.*/
 
 #include "Graph.hpp"
 
-Graph_t::Graph_t(std::string samples_file, std::string connections_file, std::string task_file, int nsamples)
+Graph_t::Graph_t(std::string samples_file, std::string connections_file)
 {
-    m_nNodes = nsamples + 2;
+    // m_nNodes = nsamples;
     specify_nodeStates(samples_file);
     specify_neighborCosts(connections_file);
-    connectStartAndGoal(task_file);
-
-
+    // start and goal should not be treated as part of the graph, 
+    // they are part of the query
+    // connectStartAndGoal(task_file); 
     // printStates();
     // printNeighbors();
     // printEdgeCosts();
+}
+
+void Graph_t::constructGraph(std::string samples_file, std::string connections_file)
+{
+    // m_nNodes = nsamples;
+    specify_nodeStates(samples_file);
+    specify_neighborCosts(connections_file);
+    // start and goal should not be treated as part of the graph, 
+    // they are part of the query
+    // connectStartAndGoal(task_file); 
+    // printStates();
+    // printNeighbors();
+    // printEdgeCosts();    
 }
 
 
@@ -33,60 +46,6 @@ float Graph_t::computeDist(std::vector<float> n1, std::vector<float> n2) {
     }
     temp_dist = sqrt(temp_dist);
     return temp_dist;
-}
-
-
-
-void Graph_t::connectStartAndGoal(std::string task_file)
-{
-    // specify start and goal
-    m_start = m_nNodes - 2;
-    m_goal = m_nNodes - 1;
-    /// Now read in the task file to get start & goal information
-    m_inFile_.open(task_file);
-    if (!m_inFile_)
-    {
-        std::cerr << "Unable to open the task file\n";
-        exit(1); // call system to stop     
-    }
-
-    int nline = 0;
-    std::string temp_str;
-    while (std::getline(m_inFile_, temp_str))
-    {
-        nline += 1;
-        std::stringstream ss(temp_str);
-
-        if (nline == 1 or nline == 2) {
-            int temp_nodeIdx;
-            ss >> temp_nodeIdx;
-            std::vector<float> temp_d;
-            float d;
-            while (ss >> d)
-            {
-                temp_d.push_back(d);
-            }
-            m_nodeStates.push_back(temp_d);
-        }
-        else {
-            // add connection information for the start and goal
-            int temp_n1;
-            int temp_n2;
-            float temp_cost;
-            ss >> temp_n1 >> temp_n2 >> temp_cost;
-            m_nodeNeighbors[temp_n1].push_back(temp_n2);
-            m_nodeNeighbors[temp_n2].push_back(temp_n1);
-            m_edgeCosts[temp_n1][temp_n2] = temp_cost;
-            m_edgeCosts[temp_n2][temp_n1] = temp_cost;
-
-        }
-
-    }
-    m_inFile_.close();
-    
-    m_startNode = m_nodeStates[m_start];
-    m_goalNode = m_nodeStates[m_goal];
-
 }
 
 
@@ -151,6 +110,8 @@ void Graph_t::specify_nodeStates(std::string samples_file)
     }
     m_inFile_.close();
 
+    m_nNodes = m_nodeStates.size();
+
 }
 
 
@@ -183,3 +144,57 @@ void Graph_t::printEdgeCosts()
         std::cout << "\n";
     }
 }
+
+
+
+// void Graph_t::connectStartAndGoal(std::string task_file)
+// {
+//     // specify start and goal
+//     m_start = m_nNodes - 2;
+//     m_goal = m_nNodes - 1;
+//     /// Now read in the task file to get start & goal information
+//     m_inFile_.open(task_file);
+//     if (!m_inFile_)
+//     {
+//         std::cerr << "Unable to open the task file\n";
+//         exit(1); // call system to stop     
+//     }
+
+//     int nline = 0;
+//     std::string temp_str;
+//     while (std::getline(m_inFile_, temp_str))
+//     {
+//         nline += 1;
+//         std::stringstream ss(temp_str);
+
+//         if (nline == 1 or nline == 2) {
+//             int temp_nodeIdx;
+//             ss >> temp_nodeIdx;
+//             std::vector<float> temp_d;
+//             float d;
+//             while (ss >> d)
+//             {
+//                 temp_d.push_back(d);
+//             }
+//             m_nodeStates.push_back(temp_d);
+//         }
+//         else {
+//             // add connection information for the start and goal
+//             int temp_n1;
+//             int temp_n2;
+//             float temp_cost;
+//             ss >> temp_n1 >> temp_n2 >> temp_cost;
+//             m_nodeNeighbors[temp_n1].push_back(temp_n2);
+//             m_nodeNeighbors[temp_n2].push_back(temp_n1);
+//             m_edgeCosts[temp_n1][temp_n2] = temp_cost;
+//             m_edgeCosts[temp_n2][temp_n1] = temp_cost;
+
+//         }
+
+//     }
+//     m_inFile_.close();
+    
+//     m_startNode = m_nodeStates[m_start];
+//     m_goalNode = m_nodeStates[m_goal];
+
+// }

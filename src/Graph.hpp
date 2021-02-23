@@ -19,11 +19,11 @@ class Graph_t
     std::vector<std::vector<float>> m_edgeCosts;
     std::vector<std::vector<float>> m_nodeStates;
 
-    // specify start and goal
-    int m_start;
-    std::vector<float> m_startNode;
-    int m_goal;
-    std::vector<float> m_goalNode;
+    // // specify start and goal
+    // int m_start;
+    // std::vector<float> m_startNode;
+    // int m_goal;
+    // std::vector<float> m_goalNode;
 
     // file reader
     std::ifstream m_inFile_;
@@ -32,19 +32,20 @@ class Graph_t
 public:
     // constructor
     Graph_t() {}
-    Graph_t(std::string samples_file, std::string connections_file, std::string task_file, int nsamples);
+    Graph_t(std::string samples_file, std::string connections_file);
+    void constructGraph(std::string samples_file, std::string connections_file);
     void specify_nodeStates(std::string samples_file);
     void specify_neighborCosts(std::string connections_file);
-    void connectStartAndGoal(std::string task_file);
+    // void connectStartAndGoal(std::string task_file);
     float computeDist(std::vector<float> n1, std::vector<float> n2);
 
     // getter
     int getnNodes() { return m_nNodes; }
     std::vector<float> getState(int idx) { return m_nodeStates[idx]; }
-    int getStart() { return m_start; }
-    int getGoal() { return m_goal; }
-    std::vector<float> getStartState() { return m_startNode; }
-    std::vector<float> getGoalState() { return m_goalNode; }
+    // int getStart() { return m_start; }
+    // int getGoal() { return m_goal; }
+    // std::vector<float> getStartState() { return m_startNode; }
+    // std::vector<float> getGoalState() { return m_goalNode; }
     std::vector<int> getNodeNeighbors(int id) { return m_nodeNeighbors[id]; }
     float getEdgeCost(int id1, int id2) { return m_edgeCosts[id1][id2]; }
 

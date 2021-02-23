@@ -8,6 +8,7 @@ with specified start and goal */
 #include <queue>
 #include <cstring>
 #include <fstream>
+#include <pybullet_motoman/Edge.h>
 
 #include "Graph.hpp"
 
@@ -46,18 +47,34 @@ class AstarSolver_t
     int m_goal;
 
     std::ofstream m_outFile_;
-    bool m_isFailure;
+    bool m_isSearchSuccess;
     bool m_isPathSuccess;
     float m_pathCost;
 
+    int m_query_idx;
+    std::vector<float> m_startState;
+    std::vector<float> m_goalState;
+    std::vector<int> m_start_neighbors_idx;
+    std::vector<int> m_goal_neighbors_idx;
+    std::vector<float> m_start_neighbors_cost;
+    std::vector<float> m_goal_neighbors_cost;
+
 public:
     // Constructor
-    AstarSolver_t(Graph_t &g, int start, int goal);
+    AstarSolver_t() {}
+    // AstarSolver_t(Graph_t &g, int start, int goal);
     // destructor
     ~AstarSolver_t();
 
+    void setPlanningQuery(Graph_t &g, int query_idx, 
+            int start_idx, int goal_idx, std::vector<float> start_config, std::vector<float> goal_config,
+            std::vector<int> start_neighbors_idx, std::vector<int> goal_neighbors_idx,
+            std::vector<float> start_neighbors_cost, std::vector<float> goal_neighbors_cost,
+            std::vector<pybullet_motoman::Edge> violated_edges
+            );
     void Astar_search(Graph_t &g);
 
+    void clearOpenAndCLosedList();
     void computeH(Graph_t &g);
     float computeDist(std::vector<float> state1, std::vector<float> state2);
     void back_track_path();
@@ -71,7 +88,8 @@ public:
     void printAll();
 
     // getter
-    bool getFailure() { return m_isFailure; }
+    bool getSearchSuccessInfo() { return m_isSearchSuccess; }
+    std::vector<int> getPath() { return m_path; }
     std::vector<std::vector<float>> getTrajectory() { return m_trajectory; }
 
 };

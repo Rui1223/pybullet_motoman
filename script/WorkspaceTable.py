@@ -266,6 +266,8 @@ class WorkspaceTable(object):
         ### this function check the shortest distance between the object and the table
         pts = p.getClosestPoints(
             bodyA=self.known_geometries[-1], bodyB=self.object_geometries.keys()[0], distance=20)
+        print("pts")
+        print(pts)
         return pts[0][8] ### shortest contactDistance between the table and the object
 
 
