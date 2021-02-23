@@ -120,6 +120,7 @@ class Planner(object):
                 self.nodes[armType].append(ikSolution)
                 temp_counter += 1
                 print("finish the %s node" % str(temp_counter))
+                # raw_input("enter to continue")
 
     def sampleRegionCheck(self, ikSolution, robot, workspace, armType):
         if armType == "Left":
@@ -131,11 +132,20 @@ class Planner(object):
         robot.setSingleArmToConfig(ikSolution, armType)
         pos_quat = p.getLinkState(robot.motomanGEO, ee_idx, physicsClientId=self.planningServer)
         pos = list(pos_quat[0])
-        if (pos[0] <= workspace.standingBasePosition[0]+workspace.standingBase_dim[0]/2 or \
+        ### conservative version
+        # if (pos[0] <= workspace.standingBasePosition[0]+workspace.standingBase_dim[0]/2 or \
+        #     pos[2] <= workspace.tablePosition[2]+workspace.table_dim[2]/2 or \
+        #     pos[2] >= workspace.tablePosition[2]+workspace.table_dim[2]/2 + 0.3 or
+        #     pos[1] >= workspace.tablePosition[1]+0.5 or
+        #     pos[1] <= workspace.tablePosition[1]-0.5):
+        #     # print("bad sample region")
+        #     return isIKFallIntoRightRegion
+        ### normal version
+        if (pos[0] <= workspace.standingBasePosition[0]+0.25 or \
             pos[2] <= workspace.tablePosition[2]+workspace.table_dim[2]/2 or \
-            pos[2] >= workspace.tablePosition[2]+workspace.table_dim[2]/2 + 0.3 or
-            pos[1] >= workspace.tablePosition[1]+0.5 or
-            pos[1] <= workspace.tablePosition[1]-0.5):
+            pos[2] >= workspace.tablePosition[2]+workspace.table_dim[2]/2 + 0.4 or
+            pos[1] >= workspace.tablePosition[1]+0.6 or
+            pos[1] <= workspace.tablePosition[1]-0.6):
             # print("bad sample region")
             return isIKFallIntoRightRegion
         ### congrats
