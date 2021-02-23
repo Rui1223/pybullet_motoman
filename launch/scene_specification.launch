@@ -40,8 +40,8 @@
 <!-- 	<node pkg="pybullet_motoman" type="PybulletExecutionScene.py" name="pybullet_execution_scene"
 		args="$(arg pybullet_execution_scene)" output="screen" required="True" /> -->
 
-<!-- 	<node pkg="pybullet_motoman" type="PybulletPlanScene.py" name="pybullet_plan_scene"
-		output="screen" required="True" /> -->
+	<node pkg="pybullet_motoman" type="PybulletPlanScene.py" name="pybullet_plan_scene"
+		output="screen" required="True" />
 
 <!-- 	<node pkg="pybullet_motoman" type="TestPipeline.py" name="test_pipeline"
 		output="screen" required="True" />
