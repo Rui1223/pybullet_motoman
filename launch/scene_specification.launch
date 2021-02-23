@@ -20,7 +20,7 @@
 		<!-- the following parameter specifies how the far the inner periphery of table is from the robot rigid body in x direction -->
 		<rosparam param="table_offset_x">0.55</rosparam>
 		<!-- the following parameter specifies the height up to which the left arm transfer the object (either drop or trigger handoff) -->
-		<rosparam param="transitCenterHeight">0.8</rosparam>
+<!-- 		<rosparam param="transitCenterHeight">0.8</rosparam> -->
 	</group>
 
 	<group ns="simulated_camera">
@@ -46,8 +46,6 @@
 		output="screen" required="True" />
 
 
-
-
 	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" output="screen" if="$(arg sim)" />
 	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen" if="$(arg sim)" />
 
@@ -59,6 +57,8 @@
 
 	<node pkg="pybullet_motoman" type="TestPipeline.py" name="test_pipeline"
 		output="screen" if="$(arg sim)" />
+
+	<node pkg="pybullet_motoman" type="main_planner_node" name="main_planner" output="screen" /> -->
 
 
 </launch>

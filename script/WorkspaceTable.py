@@ -21,7 +21,7 @@ delta_y = -0.1
 class WorkspaceTable(object):
     def __init__(self,
         robotBasePosition,
-        standingBase_dim, table_dim, table_offset_x, transitCenterHeight,
+        standingBase_dim, table_dim, table_offset_x, 
         mesh_path, isPhysicsTurnOn, server):
         ### get the server
         self.server = server
@@ -32,7 +32,7 @@ class WorkspaceTable(object):
             robotBasePosition, standingBase_dim, table_dim, table_offset_x, isPhysicsTurnOn)
         ### specify the transit center
         self.objectTransitCenter = [
-            self.tablePosition[0], self.tablePosition[1], self.tablePosition[2]+transitCenterHeight]
+            self.tablePosition[0], self.tablePosition[1], self.tablePosition[2]+self.table_dim[2]/2+0.305]
 
 
 
@@ -75,6 +75,15 @@ class WorkspaceTable(object):
                                             basePosition=self.tablePosition, physicsClientId=self.server)
         print("table: " + str(self.tableM))
         self.known_geometries.append(self.tableM)
+
+        print("inner edge of the table: ")
+        print(self.tablePosition[0]-table_dim[0]/2)
+        print("table surface: ")
+        print(self.tablePosition[2]+table_dim[2]/2)
+        print("left side of the table: ")
+        print(self.tablePosition[1]+table_dim[1]/2)
+        print("right side of the table: ")
+        print(self.tablePosition[1]-table_dim[1]/2)
         #################################################################################
 
 
@@ -179,9 +188,10 @@ class WorkspaceTable(object):
         # temp_pos = [random.uniform(self.tablePosition[0]-self.table_dim[0]/2+0.1, self.tablePosition[0]+self.table_dim[0]/2-0.1), \
         #             random.uniform(self.tablePosition[1]+0.1, self.tablePosition[1]+self.table_dim[1]/2-0.1), \
         #             self.tablePosition[2]+self.table_dim[2]/2]
-        temp_pos = [0.80-0.1+delta_x, 0.45+delta_y, 0.61 + 0.025 + 0.1 + 0.02 - 0.1]
-        temp_quat = [0.0, 1.0, 0.0, 1.0]
-
+        # temp_pos = [0.80-0.1+delta_x, 0.45+delta_y, 0.61 + 0.025 + 0.1 + 0.02 - 0.1]
+        # temp_quat = [0.0, 1.0, 0.0, 1.0]
+        temp_pos = [0.80, 0.45, self.tablePosition[2] + self.table_dim[2]/2 + 0.03]
+        temp_quat = [0.0, 0.707, 0.0, 0.707]
 
         ### select one configuration
         # temp_angles = object_configs_angles[obj_name][0]
@@ -260,28 +270,36 @@ class WorkspaceTable(object):
             # print(_m)
             # print(self.object_geometries)
 
+    def detectHeight(self):
+        ### this function check the shortest distance between the object and the table
+        pts = p.getClosestPoints(
+            bodyA=self.known_geometries[-1], bodyB=self.object_geometries.keys()[0], distance=20)
+        print("pts")
+        print(pts)
+        return pts[0][8] ### shortest contactDistance between the table and the object
 
-    # def updateObjectGeomeotry_BoundingBox(self, object_pose, object_dim):
-    #     ### This function update the object given
-    #     ### (1) object_pose Pose3D (position(x,y,z), orientation(x,y,z,w))
-    #     ### (2) object_dim BoundingBox3D (x, y, z)
-    #     ### we assume the object is modelled as the bounding box in the planning scene
-    #     object_dim = np.array([object_dim[0], object_dim[1], object_dim[2]])
-    #     object_pose = [[object_pose.position.x, object_pose.position.y, object_pose.position.z], \
-    #         [object_pose.orientation.x, object_pose.orientation.y, object_pose.orientation.z, object_pose.orientation.w]]
 
-    #     if not bool(self.object_geometries):
-    #         ### no object geometries has been introduced before
-    #         ### then create the object geometry
-    #         geo_c = p.createCollisionShape(shapeType=p.GEOM_BOX,
-    #                             halfExtents=object_dim/2, physicsClientId=self.server)
-    #         geo_v = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=object_dim/2,
-    #                     rgbaColor=[128.0/255.0, 128.0/255.0, 128.0/255.0, 0.8], physicsClientId=self.server)
-    #         tableM = p.createMultiBody(baseCollisionShapeIndex=geo_c, baseVisualShapeIndex=geo_v,
-    #                 basePosition=object_pose[0], baseOrientation=object_pose[1], physicsClientId=self.server)
-    #     else:
-    #         print("The idea is to update the mesh")
-    #         print("will come back later")
+    def updateObjectGeomeotry_BoundingBox(self, object_pose, object_dim):
+        ### This function update the object given
+        ### (1) object_pose Pose3D (position(x,y,z), orientation(x,y,z,w))
+        ### (2) object_dim BoundingBox3D (x, y, z)
+        ### we assume the object is modelled as the bounding box in the planning scene
+        object_dim = np.array([object_dim[0], object_dim[1], object_dim[2]])
+        object_pose = [[object_pose.position.x, object_pose.position.y, object_pose.position.z], \
+            [object_pose.orientation.x, object_pose.orientation.y, object_pose.orientation.z, object_pose.orientation.w]]
+
+        if not bool(self.object_geometries):
+            ### no object geometries has been introduced before
+            ### then create the object geometry
+            geo_c = p.createCollisionShape(shapeType=p.GEOM_BOX,
+                                halfExtents=object_dim/2, physicsClientId=self.server)
+            geo_v = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=object_dim/2,
+                        rgbaColor=[128.0/255.0, 128.0/255.0, 128.0/255.0, 0.8], physicsClientId=self.server)
+            tableM = p.createMultiBody(baseCollisionShapeIndex=geo_c, baseVisualShapeIndex=geo_v,
+                    basePosition=object_pose[0], baseOrientation=object_pose[1], physicsClientId=self.server)
+        else:
+            print("The idea is to update the mesh")
+            print("will come back later")
 
 
     def enablePhysicsEnv(self):

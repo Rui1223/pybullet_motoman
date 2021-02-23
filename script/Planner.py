@@ -25,6 +25,8 @@ from CollisionChecker import CollisionChecker
 
 import rospy
 from rospkg import RosPack
+from pybullet_motoman.srv import AstarPathFinding, AstarPathFindingRequest
+from pybullet_motoman.msg import Edge
 
 
 from trac_ik_python.trac_ik import IK
@@ -57,6 +59,8 @@ class Planner(object):
         self.left_ik_solver = IK('torso_link_b1', 'motoman_left_ee', timeout=.05, epsilon=1e-5)
         self.right_ik_solver  = IK('torso_link_b1', 'motoman_right_ee', timeout=.05, epsilon=1e-5)
         self.rp_db = self.readRestposeFromJson("joint_to_pose.json")
+
+        self.query_idx = 1
 
     def readRestposeFromJson(self, fileName):
         file_path = os.path.join(self.rosPackagePath, "script", "joint_to_pose.json")
@@ -162,7 +166,7 @@ class Planner(object):
         self.nsamples = len(self.nodes["Left"])
 
         ### specify the needed parameters
-        self.neighbors_const = 2.5 * math.e * (1 + 1/len(self.nodes["Left"][0]))
+        self.neighbors_const = 3.5 * math.e * (1 + 1.0/7)
         ### use k_n to decide the number of neighbors: #neighbors = k_n * log(#samples)
         self.num_neighbors = int(self.neighbors_const * math.log(self.nsamples))
         if self.num_neighbors > self.nsamples:
@@ -172,8 +176,19 @@ class Planner(object):
 
 
     def generateSamples(self, nsamples, robot, workspace):
+
         self.nsamples = nsamples
+        ### specify the needed parameters
+        self.neighbors_const = 3.5 * math.e * (1 + 1.0/7)
+        ### use k_n to decide the number of neighbors: #neighbors = k_n * log(#samples)
+        self.num_neighbors = int(self.neighbors_const * math.log(self.nsamples))
+        if self.num_neighbors > self.nsamples:
+            self.num_neighbors = self.nsamples
+        print("nsamples: ", self.nsamples)
+        print("num_neighbors: ", self.num_neighbors)
+
         arms = ["Left", "Right"]
+        # arms = ["Left", "Right"]
         for armType in arms:
             samplesFile = self.roadmapFolder + "/samples_" + str(armType) + ".txt"
             if armType == "Left":
@@ -182,15 +197,6 @@ class Planner(object):
                 ee_idx = robot.right_ee_idx
             self.samplingNodes(ee_idx, robot, workspace, armType)
             self.saveSamplesToFile(samplesFile, armType)
-
-        ### specify the needed parameters
-        self.neighbors_const = 2.5 * math.e * (1 + 1/len(self.nodes["Left"][0]))
-        ### use k_n to decide the number of neighbors: #neighbors = k_n * log(#samples)
-        self.num_neighbors = int(self.neighbors_const * math.log(self.nsamples))
-        if self.num_neighbors > self.nsamples:
-            self.num_neighbors = self.nsamples
-        print("nsamples: ", self.nsamples)
-        print("num_neighbors: ", self.num_neighbors)
 
 
     def samplingNodes(self, ee_idx, robot, workspace, armType):
@@ -202,12 +208,50 @@ class Planner(object):
             #     print("Now finish " + str(temp_counter) + " samples.")
             ### sample an IK configuration
             ikSolution = self.singleSampling_CSpace(robot, armType) ### this is for a single arm
+            ### check where the IK reaches
+            ### if it does not land where we want
+            ### we disgard it
+            isIKFallIntoRightRegion = self.sampleRegionCheck(ikSolution, robot, workspace, armType)
+            if not isIKFallIntoRightRegion:
+                continue
             ### check if the IK solution is valid in terms of
             ### no collision with the robot and other known geometries like table/shelf/etc..
             isValid = self.checkIK_CollisionWithRobotAndKnownGEO(ikSolution, robot, workspace, armType)
             if isValid:
                 self.nodes[armType].append(ikSolution)
                 temp_counter += 1
+                print("finish the %s node" % str(temp_counter))
+                # raw_input("enter to continue")
+
+    def sampleRegionCheck(self, ikSolution, robot, workspace, armType):
+        if armType == "Left":
+            ee_idx = robot.left_ee_idx
+        else:
+            ee_idx = robot.right_ee_idx
+
+        isIKFallIntoRightRegion = False
+        robot.setSingleArmToConfig(ikSolution, armType)
+        pos_quat = p.getLinkState(robot.motomanGEO, ee_idx, physicsClientId=self.planningServer)
+        pos = list(pos_quat[0])
+        ### conservative version
+        # if (pos[0] <= workspace.standingBasePosition[0]+workspace.standingBase_dim[0]/2 or \
+        #     pos[2] <= workspace.tablePosition[2]+workspace.table_dim[2]/2 or \
+        #     pos[2] >= workspace.tablePosition[2]+workspace.table_dim[2]/2 + 0.3 or
+        #     pos[1] >= workspace.tablePosition[1]+0.5 or
+        #     pos[1] <= workspace.tablePosition[1]-0.5):
+        #     # print("bad sample region")
+        #     return isIKFallIntoRightRegion
+        ### normal version
+        if (pos[0] <= workspace.standingBasePosition[0]+0.25 or \
+            pos[2] <= workspace.tablePosition[2]+workspace.table_dim[2]/2 or \
+            pos[2] >= workspace.tablePosition[2]+workspace.table_dim[2]/2 + 0.4 or
+            pos[1] >= workspace.tablePosition[1]+0.6 or
+            pos[1] <= workspace.tablePosition[1]-0.6):
+            # print("bad sample region")
+            return isIKFallIntoRightRegion
+        ### congrats
+        # print("good sample region")
+        return True
 
 
     def singleSampling_CSpace(self, robot, armType):
@@ -693,7 +737,7 @@ class Planner(object):
         if self.collisionAgent_p.collisionCheck_robot_objectGEO(
             robot.motomanGEO, object_geometry, armType, 
             self.isObjectInLeftHand, self.isObjectInRightHand) == True:
-            print("robot collide with moving object_geometry")
+            # print("robot collide with moving object_geometry")
             return isValid
         else:
             pass
@@ -701,7 +745,7 @@ class Planner(object):
         ### if the moving object collides with known GEO (e.g., table)
         if self.collisionAgent_p.collisionCheck_object_knownGEO(
                                     object_geometry, workspace.known_geometries) == True:
-            print("moving object collide with known geomtries")
+            # print("moving object collide with known geomtries")
             return isValid
         else:
             pass
@@ -720,7 +764,7 @@ class Planner(object):
         if self.collisionAgent_p.collisionCheck_robot_objectGEO(
             robot.motomanGEO, object_geometry, armType, 
             self.isObjectInLeftHand, self.isObjectInRightHand) == True:
-            print("robot collide with static object_geometry")
+            # print("robot collide with static object_geometry")
             return isValid
         else:
             pass
@@ -741,7 +785,7 @@ class Planner(object):
 
         if self.collisionAgent_p.collisionCheck_robot_knownGEO(
                     robot.motomanGEO, workspace.known_geometries, armType) == True:
-            print("robot collide with known geometries")
+            # print("robot collide with known geometries")
             return isValid
 
 
@@ -793,13 +837,8 @@ class Planner(object):
                                     targetPosition=interm_pos,
                                     targetOrientation=interm_quat,
                                     lowerLimits=robot.ll, upperLimits=robot.ul, 
-                                    jointRanges=robot.jr, restPoses=robot.rp,
                                     maxNumIterations=2000, residualThreshold=0.001,
                                     physicsClientId=robot.server)
-                interm_IK = list(interm_IK[first_joint_index:first_joint_index+7])
-
-
-                config_edge_traj.append(interm_IK)
             
             ### finish the current edge
             config_traj.append(config_edge_traj)
@@ -1081,7 +1120,7 @@ class Planner(object):
         config_edge_traj = []
 
         # nseg = 5
-        min_degree = math.pi / 90 * 2 ### want more waypoint to move more naturally
+        min_degree = math.pi / 90 * 4 ### want more waypoint to move more naturally
         nseg = int(max(
             abs(n1[0]-n2[0]), abs(n1[1]-n2[1]), abs(n1[2]-n2[2]), abs(n1[3]-n2[3]),
             abs(n1[4]-n2[4]), abs(n1[5]-n2[5]), abs(n1[6]-n2[6])) / min_degree)
@@ -1221,82 +1260,129 @@ class Planner(object):
         return config_edge_traj
 
 
-    # def checkAndGenerateSolution_DirectConfigPath(self, n1, n2):
-    #     ### This function checks an edge coming from the solution
-    #     ### and will generate an edge trajectory if the edge is valid
-    #     ### so this function has the features from both generateTrajectory_DirectConfigPath and checkEdgeValidity_DirectConfigPath
-    #     ### Input: n1, n2: node (a list of 7 joint values)
-    #     ### output: an edge trajectory (config_edge_traj) which includes the endtail but not the head
-    #     ###         format: a list of list(7 joint values)
-    #     ###         isEdgeValid
+    def serviceCall_astarPathFinding(self, 
+            violated_edges, initialConfig, targetConfig, 
+            start_neighbors_idx, goal_neighbors_idx, start_neighbors_cost, goal_neighbors_cost,
+            robot, workspace, armType, motionType):
+        ### violated_edges: [Edge(), Edge(), ...]
+        ### prepare the astarPathFindingRequest
+        rospy.wait_for_service("astar_path_finding")
+        request = AstarPathFindingRequest()
+        request.query_idx = self.query_idx
+        request.start_idx = self.nsamples
+        request.goal_idx = self.nsamples + 1
+        request.start_config = initialConfig
+        request.goal_config = targetConfig
+        request.violated_edges = violated_edges
+        request.armType = armType
+        request.start_neighbors_idx = start_neighbors_idx
+        request.goal_neighbors_idx = goal_neighbors_idx
+        request.start_neighbors_cost = start_neighbors_cost
+        request.goal_neighbors_cost = goal_neighbors_cost
+        # print("=========PRINT FROM PYTHON==========")
+        # print("query_idx: ")
+        # print(request.query_idx)
+        # print("start_idx: ")
+        # print(request.start_idx)
+        # print("goal_idx: ")
+        # print(request.goal_idx)
+        # print("start_config: ")
+        # print(request.start_config)
+        # print("goal_config: ")
+        # print(request.goal_config)
+        # print("violated_edges: ")
+        # print(request.violated_edges)
+        # print("armType: ")
+        # print(request.armType)
+        # print("start_neighbors_idx: ")
+        # print(request.start_neighbors_idx)
+        # print("start_neighbors_cost: ")
+        # print(request.start_neighbors_cost)
+        # print("goal_neighbors_idx: ")
+        # print(request.goal_neighbors_idx)
+        # print("goal_neighbors_cost: ")
+        # print(request.goal_neighbors_cost)
+
+        try:
+            astarSearch = rospy.ServiceProxy("astar_path_finding", AstarPathFinding)
+            response = astarSearch(request.query_idx, 
+                request.start_idx, request.goal_idx,
+                request.start_config, request.goal_config,
+                request.start_neighbors_idx, request.goal_neighbors_idx,
+                request.start_neighbors_cost, request.goal_neighbors_cost,
+                request.violated_edges, request.armType)
+            return response.searchSuccess, list(response.path)
+        except rospy.ServiceException as e:
+            print("Service call failed: %s" % e)        
 
 
-    def shortestPathPlanning(self, initialConfig, targetConfig, theme, robot, workspace, armType, motionType):
+
+    def AstarPathFinding(self, initialConfig, targetConfig, robot, workspace, armType, motionType):
         ### Input: initialConfig, configToPreGraspPose [q1, q2, ..., q7]
         ### Output: traj (format: [edge_config1, edge_config2, ...])
         ###         and each edge_config is a list of [7*1 config]
         ### first prepare the start_goal file
 
         result_traj = [] ### the output we want to construct
-
-        f = self.writeStartGoal(initialConfig, targetConfig, theme)
-        self.connectStartGoalToArmRoadmap(f,
+        isPathValid = False
+        print("current planning query: ", self.query_idx)
+        violated_edges = [] ### initially there are no violated edges
+        ### find the neighbors for the start and the goal
+        start_neighbors_idx, goal_neighbors_idx, start_neighbors_cost, goal_neighbors_cost = \
+            self.findNeighborsForStartAndGoal(
                 initialConfig, targetConfig, robot, workspace, armType, motionType)
 
-        ### call the planning algorithm
-        executeCommand = "./main_planner" + " " + theme + " " + armType + " " + str(self.nsamples) + " shortestPath"
-        # subprocess.call(executeCommand, cwd="/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src", shell=True)
-        rospack = RosPack()
-        cwd = os.path.join(rospack.get_path("pybullet_motoman"), 'src')
-        subprocess.call(executeCommand, cwd=cwd, shell=True)
+        counter = 0
+        while (isPathValid == False):
+            counter += 1
+            ### trigger new call within the same query idx
+            searchSuccess, path =  self.serviceCall_astarPathFinding(
+                    violated_edges, initialConfig, targetConfig, 
+                    start_neighbors_idx, goal_neighbors_idx,
+                    start_neighbors_cost, goal_neighbors_cost,
+                    robot, workspace, armType, motionType)
+            if searchSuccess == False:
+                print("the plan fails at the " + str(counter) + "th trial...")
+                ### the plan fails, could not find a solution
+                return result_traj ### an empty trajectory
+            ### otherwise, we need collision check and smoothing (len(path) >= 3)
+            # print("TEST LAZY A*\n")
+            # path = [5000, 45, 467, 5001]
+            smoothed_path, isPathValid, violated_edges = self.smoothPath(
+                    path, initialConfig, targetConfig, robot, workspace, armType, motionType)
+            print("isPathValid: ", isPathValid)
+            if not isPathValid:
+                print("violated_edges: ")
+                print(str(violated_edges[0].idx1) + "," + str(violated_edges[0].idx2))
 
-        path = self.readPath(theme, armType)
-        if path == []:
-            ### the plan fails, could not find a solution
-            return result_traj ### an empty trajectory
+        ### congrats, the path is valid and finally smoothed, let's generate trajectory
+        print("smoothed path: ", smoothed_path)
+        ### directly generate trajectory based on the new path
+        for i in range(0, len(smoothed_path)-1):
+            if i == 0:
+                config1 = initialConfig
+            else:
+                config1 = self.nodes[armType][smoothed_path[i]]
+            if i == (len(smoothed_path)-2):
+                config2 = targetConfig
+            else:
+                config2 = self.nodes[armType][smoothed_path[i+1]]
+            ### get edge trajectory
+            config_edge_traj = self.generateTrajectory_DirectConfigPath(config1, config2)
+            result_traj.append(config_edge_traj)
 
-        ############ LET'S DO SMOOTHING #############
-        # if len(path) == 3:
-        #     ### no need for collision check and smoothing
-        #     for i in range(0, len(path)-1):
-        #         if i == 0:
-        #             config1 = initialConfig
-        #             config2 = self.nodes[armType][path[i+1]]
-        #         else:
-        #             ### i == 1
-        #             config1 = self.nodes[armType][path[i]]
-        #             config2 = targetConfig
-        #         ### get edge trajectory
-        #         config_edge_traj = self.generateTrajectory_DirectConfigPath(config1, config2)
-        #         result_traj.append(config_edge_traj)
-        # else:
-            ### len(path) > 3
-            ### we need collision check and smoothing
-            smoothed_path, isPathValid = self.smoothPath(path, initialConfig, targetConfig, robot, workspace, armType, motionType)
-            print("smoothed path: ", smoothed_path)
-            if isPathValid == False:
-                return result_traj
-            ### directly generate trajectory based on the new path
-            for i in range(0, len(smoothed_path)-1):
-                if i == 0:
-                    config1 = initialConfig
-                else:
-                    config1 = self.nodes[armType][smoothed_path[i]]
-                if i == (len(smoothed_path)-2):
-                    config2 = targetConfig
-                else:
-                    config2 = self.nodes[armType][smoothed_path[i+1]]
-                ### get edge trajectory
-                config_edge_traj = self.generateTrajectory_DirectConfigPath(config1, config2)
-                result_traj.append(config_edge_traj)
+        ### before you claim the victory of this query, increment the planning query
+        ### so as to tell people this query is over, next time is a new query
+        self.query_idx += 1
 
         return result_traj
 
-
+    
     def smoothPath(self, path, initialConfig, targetConfig, robot, workspace, armType, motionType):
         ### This function tries to smooth the given path
         ### output: a smooth path [a list of indexes] and whether the path is valid or not
         smoothed_path = []
+        violated_edges = []
         start_idx = 0
         startNode_idx = path[start_idx] ### start
         smoothed_path.append(startNode_idx)
@@ -1323,8 +1409,14 @@ class Planner(object):
                 continue
             else:
                 if (curr_idx - start_idx == 1):
-                    print("Abortion\n")
-                    return smoothed_path, False
+                    print("Edge invalid, we need call A* again with the change of edge information")
+                    print(str(startNode_idx) + "," + str(currNode_idx))
+                    edge = Edge()
+                    edge.idx1 = startNode_idx
+                    edge.idx2 = currNode_idx
+                    violated_edges.append(edge)
+                    smoothed_path = [] ### turn it back to empty path
+                    return smoothed_path, False, violated_edges
                 ### the edge is not valid
                 ### add validNodeFromStart_idx to the smoothed_path
                 smoothed_path.append(validNodeFromStart_idx)
@@ -1333,59 +1425,21 @@ class Planner(object):
                 start_idx = validFromStart_idx
                 startNode_idx = validNodeFromStart_idx
         smoothed_path.append(validNodeFromStart_idx)
-        # smoothed_path.append(path[-1])
 
-        return smoothed_path, True
-
-
-    def readPath(self, theme, armType):
-        path = []
-        traj_file = os.path.join(self.rosPackagePath, "src/") + theme + "_traj.txt"
-        f = open(traj_file, "r")
-        nline = 0
-        for line in f:
-            nline += 1
-            if nline == 1:
-                line = line.split()
-                isFailure = bool(int(line[0]))
-                if isFailure:
-                    f.close()
-                    return path
-            else:
-                line = line.split()
-                path = [int(e) for e in line]
-                path.reverse()
-        f.close()
-
-        return path
+        return smoothed_path, True, violated_edges
 
 
-    def writeStartGoal(self, initialConfig, targetConfig, theme):
-        start_goal_file = os.path.join(self.rosPackagePath, "src/") + theme + ".txt"
-        f = open(start_goal_file, "w")
-        f.write(str(self.nsamples) + " ")
-        for e in initialConfig:
-            f.write(str(e) + " ")
-        f.write("\n")
-        f.write(str(self.nsamples+1) + " ")
-        for e in targetConfig:
-            f.write(str(e) + " ")
-        f.write("\n")
-
-        return f
-
-
-    def connectStartGoalToArmRoadmap(
-                        self, f, initialConfig, targetConfig, robot, workspace, armType, motionType):
-        ### initialConfig, targetConfig [q1, q2, ..., q7]
-        ### if you trigger plan, it indicates the start and goal cannot be directly connected
-        ### so in this case, we do not let start and goal be the neighbors
-        start_id = self.nsamples
-        target_id = self.nsamples + 1
-        if armType == "Left":
-            ee_idx = robot.left_ee_idx
-        else:
-            ee_idx = robot.right_ee_idx
+    def findNeighborsForStartAndGoal(self,
+                    initialConfig, targetConfig, robot, workspace, armType, motionType):
+        ### return four things
+        ### (1) start_neighbors_idx (a list of integer)
+        ### (2) goal_neighbors_idx (a list of integer)
+        ### (3) start_neighbors_cost (a list of float)
+        ### (4) goal_neighbors_cost (a list of float)
+        start_neighbors_idx = []
+        goal_neighbors_idx = []
+        start_neighbors_cost = []
+        goal_neighbors_cost = []
 
         # neighborIndex_to_start = sorted(range(len(dist_to_start)), key=dist_to_start.__getitem__)
         dist_to_start = [
@@ -1403,12 +1457,12 @@ class Planner(object):
         neighborDist_to_goal = list(neighborDist_to_goal)
 
         # max_neighbors = self.num_neighbors
-        max_neighbors = 15
+        max_neighbors = 10
         max_candiates_to_consider = self.num_neighbors
 
         ####### now connect potential neighbors for the start and the goal #######
         ### for start
-        # print("for start")        
+        # print("for start")
         neighbors_connected = 0
         for j in range(max_candiates_to_consider):
             ### first check if the query node has already connected to enough neighbors
@@ -1420,15 +1474,15 @@ class Planner(object):
             isEdgeValid = self.checkEdgeValidity_DirectConfigPath(
                         initialConfig, neighbor, robot, workspace, armType, motionType)
             if isEdgeValid:
-                f.write(str(start_id) + " " + str(neighborIndex_to_start[j]) + \
-                                             " " + str(neighborDist_to_start[j]) + "\n")
+                start_neighbors_idx.append(neighborIndex_to_start[j])
+                start_neighbors_cost.append(neighborDist_to_start[j])
                 neighbors_connected += 1
-        print("Number of neighbors for start node " + str(start_id) + ": " + str(neighbors_connected))
+        print("Number of neighbors for start node: " + str(neighbors_connected))
 
         ### for goal
         # print("for goal")
         neighbors_connected = 0
-        for j in range(max_candiates_to_consider):        
+        for j in range(max_candiates_to_consider):
             ### first check if the query node has already connected to enough neighbors
             if neighbors_connected >= max_neighbors:
                 break
@@ -1436,14 +1490,193 @@ class Planner(object):
             neighbor = self.nodes[armType][neighborIndex_to_goal[j]]
             ### check the edge validity
             isEdgeValid = self.checkEdgeValidity_DirectConfigPath(
-                        neighbor, targetConfig, robot, workspace, armType, motionType)
+                        initialConfig, neighbor, robot, workspace, armType, motionType)
             if isEdgeValid:
-                f.write(str(target_id) + " " + str(neighborIndex_to_goal[j]) + \
-                                            " " + str(neighborDist_to_goal[j]) + "\n")            
+                goal_neighbors_idx.append(neighborIndex_to_goal[j])
+                goal_neighbors_cost.append(neighborDist_to_goal[j])
                 neighbors_connected += 1
-        print("Number of neighbors for goal node " + str(target_id) + ": " + str(neighbors_connected))
+        print("Number of neighbors for goal node: " + str(neighbors_connected))
 
-        f.close()
+        return start_neighbors_idx, goal_neighbors_idx, start_neighbors_cost, goal_neighbors_cost
+
+
+    # def shortestPathPlanning(self, initialConfig, targetConfig, theme, robot, workspace, armType, motionType):
+    #     ### Input: initialConfig, configToPreGraspPose [q1, q2, ..., q7]
+    #     ### Output: traj (format: [edge_config1, edge_config2, ...])
+    #     ###         and each edge_config is a list of [7*1 config]
+    #     ### first prepare the start_goal file
+
+    #     result_traj = [] ### the output we want to construct
+
+    #     f = self.writeStartGoal(initialConfig, targetConfig, theme)
+    #     self.connectStartGoalToArmRoadmap(f,
+    #             initialConfig, targetConfig, robot, workspace, armType, motionType)
+
+    #     ### call the planning algorithm
+    #     executeCommand = "./main_planner" + " " + theme + " " + armType + " " + str(self.nsamples) + " shortestPath"
+    #     # subprocess.call(executeCommand, cwd="/home/rui/Documents/research/motoman_ws/src/pybullet_motoman/src", shell=True)
+    #     rospack = RosPack()
+    #     cwd = os.path.join(rospack.get_path("pybullet_motoman"), 'src')
+    #     subprocess.call(executeCommand, cwd=cwd, shell=True)
+
+    #     path = self.readPath(theme, armType)
+    #     if path == []:
+    #         ### the plan fails, could not find a solution
+    #         return result_traj ### an empty trajectory
+
+    #     ### Once we have the path, let's check the validity of the path
+    #     # if len(path) > 3:
+    #     #     ### we have more than one waypoint other than the start and the goal
+    #     #     for i in range(1, len(path)-2):
+    #     #         config1 = self.nodes[armType][path[i]]
+    #     #         config2 = self.nodes[armType][path[i+1]]
+    #     #         ### check the edge
+    #     #         isEdgeValid = checkEdgeValidity_DirectConfigPath(config1, config2, robot, workspace, armType, motionType)
+
+    #     ############ LET'S DO SMOOTHING #############
+    #     # if len(path) == 3:
+    #     #     ### no need for collision check and smoothing
+    #     #     for i in range(0, len(path)-1):
+    #     #         if i == 0:
+    #     #             config1 = initialConfig
+    #     #             config2 = self.nodes[armType][path[i+1]]
+    #     #         else:
+    #     #             ### i == 1
+    #     #             config1 = self.nodes[armType][path[i]]
+    #     #             config2 = targetConfig
+    #     #         ### get edge trajectory
+    #     #         config_edge_traj = self.generateTrajectory_DirectConfigPath(config1, config2)
+    #     #         result_traj.append(config_edge_traj)
+    #     # else:
+    #     ### len(path) >= 3
+    #     ### we need collision check and smoothing
+    #     smoothed_path, isPathValid = self.smoothPath(
+    #             path, initialConfig, targetConfig, robot, workspace, armType, motionType)
+    #     print("smoothed path: ", smoothed_path)
+    #     if isPathValid == False:
+    #         return result_traj
+    #     ### directly generate trajectory based on the new path
+    #     for i in range(0, len(smoothed_path)-1):
+    #         if i == 0:
+    #             config1 = initialConfig
+    #         else:
+    #             config1 = self.nodes[armType][smoothed_path[i]]
+    #         if i == (len(smoothed_path)-2):
+    #             config2 = targetConfig
+    #         else:
+    #             config2 = self.nodes[armType][smoothed_path[i+1]]
+    #         ### get edge trajectory
+    #         config_edge_traj = self.generateTrajectory_DirectConfigPath(config1, config2)
+    #         result_traj.append(config_edge_traj)
+
+    #     return result_traj
+
+
+    # def readPath(self, theme, armType):
+    #     path = []
+    #     traj_file = os.path.join(self.rosPackagePath, "src/") + theme + "_traj.txt"
+    #     f = open(traj_file, "r")
+    #     nline = 0
+    #     for line in f:
+    #         nline += 1
+    #         if nline == 1:
+    #             line = line.split()
+    #             isFailure = bool(int(line[0]))
+    #             if isFailure:
+    #                 f.close()
+    #                 return path
+    #         else:
+    #             line = line.split()
+    #             path = [int(e) for e in line]
+    #             path.reverse()
+    #     f.close()
+
+    #     return path
+
+
+    # def writeStartGoal(self, initialConfig, targetConfig, theme):
+    #     start_goal_file = os.path.join(self.rosPackagePath, "src/") + theme + ".txt"
+    #     f = open(start_goal_file, "w")
+    #     f.write(str(self.nsamples) + " ")
+    #     for e in initialConfig:
+    #         f.write(str(e) + " ")
+    #     f.write("\n")
+    #     f.write(str(self.nsamples+1) + " ")
+    #     for e in targetConfig:
+    #         f.write(str(e) + " ")
+    #     f.write("\n")
+
+    #     return f
+
+    # def connectStartGoalToArmRoadmap(
+    #                     self, f, initialConfig, targetConfig, robot, workspace, armType, motionType):
+    #     ### initialConfig, targetConfig [q1, q2, ..., q7]
+    #     ### if you trigger plan, it indicates the start and goal cannot be directly connected
+    #     ### so in this case, we do not let start and goal be the neighbors
+    #     start_id = self.nsamples
+    #     target_id = self.nsamples + 1
+    #     if armType == "Left":
+    #         ee_idx = robot.left_ee_idx
+    #     else:
+    #         ee_idx = robot.right_ee_idx
+
+    #     # neighborIndex_to_start = sorted(range(len(dist_to_start)), key=dist_to_start.__getitem__)
+    #     dist_to_start = [
+    #         utils.calculateNorm2(initialConfig, neighborConfig) for neighborConfig in self.nodes[armType]]
+    #     neighborIndex_to_start, neighborDist_to_start = zip(
+    #                                 *sorted(enumerate(dist_to_start), key=itemgetter(1)))
+    #     neighborIndex_to_start = list(neighborIndex_to_start)
+    #     neighborDist_to_start = list(neighborDist_to_start)
+
+    #     dist_to_goal = [
+    #         utils.calculateNorm2(targetConfig, neighborConfig) for neighborConfig in self.nodes[armType]]
+    #     neighborIndex_to_goal, neighborDist_to_goal = zip(
+    #                                 *sorted(enumerate(dist_to_goal), key=itemgetter(1)))
+    #     neighborIndex_to_goal = list(neighborIndex_to_goal) 
+    #     neighborDist_to_goal = list(neighborDist_to_goal)
+
+    #     # max_neighbors = self.num_neighbors
+    #     max_neighbors = 15
+    #     max_candiates_to_consider = self.num_neighbors
+
+    #     ####### now connect potential neighbors for the start and the goal #######
+    #     ### for start
+    #     # print("for start")
+    #     neighbors_connected = 0
+    #     for j in range(max_candiates_to_consider):
+    #         ### first check if the query node has already connected to enough neighbors
+    #         if neighbors_connected >= max_neighbors:
+    #             break
+    #         ### otherwise, find the neighbor
+    #         neighbor = self.nodes[armType][neighborIndex_to_start[j]]
+    #         ### check the edge validity
+    #         isEdgeValid = self.checkEdgeValidity_DirectConfigPath(
+    #                     initialConfig, neighbor, robot, workspace, armType, motionType)
+    #         if isEdgeValid:
+    #             f.write(str(start_id) + " " + str(neighborIndex_to_start[j]) + \
+    #                                          " " + str(neighborDist_to_start[j]) + "\n")
+    #             neighbors_connected += 1
+    #     print("Number of neighbors for start node " + str(start_id) + ": " + str(neighbors_connected))
+
+    #     ### for goal
+    #     # print("for goal")
+    #     neighbors_connected = 0
+    #     for j in range(max_candiates_to_consider):        
+    #         ### first check if the query node has already connected to enough neighbors
+    #         if neighbors_connected >= max_neighbors:
+    #             break
+    #         ### otherwise, find the neighbor
+    #         neighbor = self.nodes[armType][neighborIndex_to_goal[j]]
+    #         ### check the edge validity
+    #         isEdgeValid = self.checkEdgeValidity_DirectConfigPath(
+    #                     neighbor, targetConfig, robot, workspace, armType, motionType)
+    #         if isEdgeValid:
+    #             f.write(str(target_id) + " " + str(neighborIndex_to_goal[j]) + \
+    #                                         " " + str(neighborDist_to_goal[j]) + "\n")            
+    #             neighbors_connected += 1
+    #     print("Number of neighbors for goal node " + str(target_id) + ": " + str(neighbors_connected))
+
+    #     f.close()
 
 
 
