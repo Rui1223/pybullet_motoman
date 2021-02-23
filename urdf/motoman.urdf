@@ -31,10 +31,10 @@
   </link>
 
   <!-- joint list -->
-  <!-- <joint name="torso_joint_0" type="revolute"> -->
-  <joint name="torso_joint_0" type="fixed">
+  <!-- <joint name="torso_joint_b1" type="revolute"> -->
+  <joint name="torso_joint_b1" type="fixed">
     <parent link="base_link"/>
-    <child link="torso_link"/>
+    <child link="torso_link_b1"/>
     <origin rpy="0 0 0" xyz="0.09257 0 0.877"/>
     <!-- <axis xyz="0 0 1"/> -->
     <!-- <limit effort="100" lower="-2.9570" upper="2.9570" velocity="2.26"/> -->
@@ -42,7 +42,7 @@
   </joint>
   <!-- end of joint list -->
 
-  <link name="torso_link">
+  <link name="torso_link_b1">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
@@ -191,7 +191,7 @@
   <link name="arm_left_link_tool0"/>
 
   <joint name="arm_left_joint_1_s" type="revolute">
-    <parent link="torso_link"/>
+    <parent link="torso_link_b1"/>
     <child link="arm_left_link_1_s"/>
      <origin rpy="1.57 0 0.0" xyz="0.09996 0.0375 0.32214"/>
     <axis xyz="0 0 -1.0"/>
@@ -203,8 +203,7 @@
     <child link="arm_left_link_2_l"/>
     <origin rpy="-1.57 0 0" xyz="0 0.0427 -0.2255"/>
     <axis xyz="0 0 -1.0"/>
-    <!-- <limit effort="0" lower="-1.90" upper="1.90" velocity="2.95"/> -->
-    <limit effort="0" lower="-1.90" upper="1.70" velocity="2.95"/>
+    <limit effort="0" lower="-1.90" upper="1.90" velocity="2.95"/>
     <!-- <dynamics damping="3.5"/> -->
   </joint>
   <joint name="arm_left_joint_3_e" type="revolute">
@@ -220,8 +219,7 @@
     <child link="arm_left_link_4_u"/>
     <origin rpy="-1.57 0 0" xyz="0 -0.0175 -0.181"/>
     <axis xyz="0 0 1"/>
-    <!-- <limit effort="0" lower="-2.36" upper="2.36" velocity="2.95"/> -->
-    <limit effort="0" lower="-2.36" upper="0" velocity="2.95"/>
+    <limit effort="0" lower="-2.36" upper="2.36" velocity="2.95"/>
     <!-- <dynamics damping="3.5"/> -->
   </joint>
   <joint name="arm_left_joint_5_r" type="revolute">
@@ -389,7 +387,7 @@
   <link name="arm_right_link_tool0"/>
 
   <joint name="arm_right_joint_1_s" type="revolute">
-    <parent link="torso_link"/>
+    <parent link="torso_link_b1"/>
     <child link="arm_right_link_1_s"/>
     <origin rpy="1.57 0 -3.14" xyz="0.09996 -0.0375 0.32214"/>
     <axis xyz="0 0 1.0"/>
@@ -400,8 +398,7 @@
     <child link="arm_right_link_2_l"/>
     <origin rpy="-1.57 0 0" xyz="0 0.0427 -0.2255"/>
     <axis xyz="0 0 1.0"/>
-    <!-- <limit effort="0" lower="-1.90" upper="1.90" velocity="2.95"/> -->
-    <limit effort="0" lower="-1.90" upper="1.70" velocity="2.95"/>
+    <limit effort="0" lower="-1.90" upper="1.90" velocity="2.95"/>
   </joint>
   <joint name="arm_right_joint_3_e" type="revolute">
     <parent link="arm_right_link_2_l"/>
@@ -415,8 +412,7 @@
     <child link="arm_right_link_4_u"/>
     <origin rpy="-1.57 0 0" xyz="0 -0.0175 -0.181"/>
     <axis xyz="0 0 -1"/>
-    <limit effort="0" lower="-2.36" upper="0" velocity="2.95"/>
-    <!-- <limit effort="0" lower="-2.36" upper="2.36" velocity="2.95"/> -->
+    <limit effort="0" lower="-2.36" upper="2.36" velocity="2.95"/>
   </joint>
   <joint name="arm_right_joint_5_r" type="revolute">
     <parent link="arm_right_link_4_u"/>

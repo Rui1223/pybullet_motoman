@@ -7,14 +7,14 @@
 
 # for easy look-up, here are the joint values and their corresponding limits (lower -> upper)
 # "arm_left_joint_1_s": [-3.13, 3.13]
-# "arm_left_joint_2_l": [-1.90, 1.70]
+# "arm_left_joint_2_l": [-1.60, 1.60]
 # "arm_left_joint_3_e": [-2.95, 2.95]
 # "arm_left_joint_4_u": [-2.36, 0.0]
 # "arm_left_joint_5_r": [-3.13, 3.13]
 # "arm_left_joint_6_b": [-1.90, 1.90]
 # "arm_left_joint_7_t": [-3.13, 3.13] (wrist)
 # "arm_right_joint_1_s": [-3.13, 3.13]
-# "arm_right_joint_2_l": [-1.90, 1.70]
+# "arm_right_joint_2_l": [-1.60, 1.60]
 # "arm_right_joint_3_e": [-2.95, 2.95]
 # "arm_right_joint_4_u": [-2.36, 0.0]
 # "arm_right_joint_5_r": [-3.13, 3.13]

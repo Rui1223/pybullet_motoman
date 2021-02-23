@@ -14,6 +14,10 @@ import IPython
 
 ### This file defines workspace for the table ###
 
+
+delta_x = 0.1
+delta_y = -0.1
+
 class WorkspaceTable(object):
     def __init__(self,
         robotBasePosition,
@@ -175,7 +179,7 @@ class WorkspaceTable(object):
         # temp_pos = [random.uniform(self.tablePosition[0]-self.table_dim[0]/2+0.1, self.tablePosition[0]+self.table_dim[0]/2-0.1), \
         #             random.uniform(self.tablePosition[1]+0.1, self.tablePosition[1]+self.table_dim[1]/2-0.1), \
         #             self.tablePosition[2]+self.table_dim[2]/2]
-        temp_pos = [0.80, 0.45, 0.61 + 0.025]
+        temp_pos = [0.80-0.1+delta_x, 0.45+delta_y, 0.61 + 0.025 + 0.1 + 0.02 - 0.1]
         temp_quat = [0.0, 1.0, 0.0, 1.0]
 
 
@@ -232,6 +236,8 @@ class WorkspaceTable(object):
                 physicsClientId=self.server)
             self.object_geometries[_m] = [[list(object_pose.position), list(object_pose.orientation)], object_pose.dims]
             # print(self.object_geometries)
+            # print("tell me something, boy")
+            # print(_m)
 
         else:
             ### we first need to remove the current object mesh
@@ -250,30 +256,32 @@ class WorkspaceTable(object):
                 basePosition=object_pose.position, baseOrientation=object_pose.orientation, 
                 physicsClientId=self.server)
             self.object_geometries[_m] = [[list(object_pose.position), list(object_pose.orientation)], object_pose.dims]
+            # print("tell me something, girl")
+            # print(_m)
             # print(self.object_geometries)
 
 
-    def updateObjectGeomeotry_BoundingBox(self, object_pose, object_dim):
-        ### This function update the object given
-        ### (1) object_pose Pose3D (position(x,y,z), orientation(x,y,z,w))
-        ### (2) object_dim BoundingBox3D (x, y, z)
-        ### we assume the object is modelled as the bounding box in the planning scene
-        object_dim = np.array([object_dim[0], object_dim[1], object_dim[2]])
-        object_pose = [[object_pose.position.x, object_pose.position.y, object_pose.position.z], \
-            [object_pose.orientation.x, object_pose.orientation.y, object_pose.orientation.z, object_pose.orientation.w]]
+    # def updateObjectGeomeotry_BoundingBox(self, object_pose, object_dim):
+    #     ### This function update the object given
+    #     ### (1) object_pose Pose3D (position(x,y,z), orientation(x,y,z,w))
+    #     ### (2) object_dim BoundingBox3D (x, y, z)
+    #     ### we assume the object is modelled as the bounding box in the planning scene
+    #     object_dim = np.array([object_dim[0], object_dim[1], object_dim[2]])
+    #     object_pose = [[object_pose.position.x, object_pose.position.y, object_pose.position.z], \
+    #         [object_pose.orientation.x, object_pose.orientation.y, object_pose.orientation.z, object_pose.orientation.w]]
 
-        if not bool(self.object_geometries):
-            ### no object geometries has been introduced before
-            ### then create the object geometry
-            geo_c = p.createCollisionShape(shapeType=p.GEOM_BOX,
-                                halfExtents=object_dim/2, physicsClientId=self.server)
-            geo_v = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=object_dim/2,
-                        rgbaColor=[128.0/255.0, 128.0/255.0, 128.0/255.0, 0.8], physicsClientId=self.server)
-            tableM = p.createMultiBody(baseCollisionShapeIndex=geo_c, baseVisualShapeIndex=geo_v,
-                    basePosition=object_pose[0], baseOrientation=object_pose[1], physicsClientId=self.server)
-        else:
-            print("The idea is to update the mesh")
-            print("will come back later")
+    #     if not bool(self.object_geometries):
+    #         ### no object geometries has been introduced before
+    #         ### then create the object geometry
+    #         geo_c = p.createCollisionShape(shapeType=p.GEOM_BOX,
+    #                             halfExtents=object_dim/2, physicsClientId=self.server)
+    #         geo_v = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=object_dim/2,
+    #                     rgbaColor=[128.0/255.0, 128.0/255.0, 128.0/255.0, 0.8], physicsClientId=self.server)
+    #         tableM = p.createMultiBody(baseCollisionShapeIndex=geo_c, baseVisualShapeIndex=geo_v,
+    #                 basePosition=object_pose[0], baseOrientation=object_pose[1], physicsClientId=self.server)
+    #     else:
+    #         print("The idea is to update the mesh")
+    #         print("will come back later")
 
 
     def enablePhysicsEnv(self):

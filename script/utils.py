@@ -58,8 +58,8 @@ def interpolatePosition(P1, P2, f):
     return P
 
 
-def interpolateQuaternion(Q1, Q2, f):
-    epsilon = 0.1
+def interpolateQuaternion_bk(Q1, Q2, f):
+    epsilon = 1e-5
     ### Here quat Q: [x,y,z,w]
     x1 = Q1[0]
     y1 = Q1[1]
@@ -99,6 +99,16 @@ def interpolateQuaternion(Q1, Q2, f):
     Q_norm = norm2(Q)
     Q = [x / Q_norm, y / Q_norm, z / Q_norm, w / Q_norm]
 
+    return Q
+
+def interpolateQuaternion(Q1, Q2, f):
+
+    E1 = p.getEulerFromQuaternion(Q1)
+    E2 = p.getEulerFromQuaternion(Q2)
+    E1 = np.array(E1)
+    E2 = np.array(E2)
+    E = (E2 - E1) * f + E1
+    Q = p.getQuaternionFromEuler(E)
     return Q
 
 

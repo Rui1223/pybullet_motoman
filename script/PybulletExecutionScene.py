@@ -72,8 +72,8 @@ class PybulletExecutionScene(object):
         ### after initialize the scene,
         ### randomize an object in the scene (drop an object on the table)
         self.object_name = args[3]
-        self.workspace_e.dropObjectOnTable(self.object_name, dropHeight)
-        # self.workspace_e.fixAnObjectOnTable(self.object_name)
+        # self.workspace_e.dropObjectOnTable(self.object_name, dropHeight)
+        self.workspace_e.fixAnObjectOnTable(self.object_name)
 
     def readROSParam(self):
         ### This functions read in needed ROS parameters
@@ -258,14 +258,14 @@ def main(args):
         joint_state_msg.position = armCurrConfiguration
 
         ### publish the message
-        rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
-        rgb_msg = bridge.cv2_to_imgmsg(rgbImg, 'rgb8')
-        depth_msg = bridge.cv2_to_imgmsg((1000 * depthImg).astype(np.uint16), 'mono16')
-        pybullet_execution_scene.color_im_pub.publish(rgb_msg)
-        pybullet_execution_scene.depth_im_pub.publish(depth_msg)
-        if count == 0:
-            cv2.imwrite(os.path.expanduser('~/color.png'), cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR))
-            cv2.imwrite(os.path.expanduser('~/depth.png'), (1000 * depthImg).astype(np.uint16))
+        # rgbImg, depthImg = pybullet_execution_scene.camera_e.takeRGBImage()
+        # rgb_msg = bridge.cv2_to_imgmsg(rgbImg, 'rgb8')
+        # depth_msg = bridge.cv2_to_imgmsg((1000 * depthImg).astype(np.uint16), 'mono16')
+        # pybullet_execution_scene.color_im_pub.publish(rgb_msg)
+        # pybullet_execution_scene.depth_im_pub.publish(depth_msg)
+        # if count == 0:
+        #     cv2.imwrite(os.path.expanduser('~/color.png'), cv2.cvtColor(rgbImg, cv2.COLOR_RGB2BGR))
+        #     cv2.imwrite(os.path.expanduser('~/depth.png'), (1000 * depthImg).astype(np.uint16))
 
         pybullet_execution_scene.jointState_pub.publish(joint_state_msg)
         ee_poses_msgs = pybullet_execution_scene.executor_e.prepare_ee_poses_msgs(pybullet_execution_scene.robot_e)

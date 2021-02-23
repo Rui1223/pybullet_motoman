@@ -22,6 +22,12 @@ from pybullet_motoman.srv import SingleJointChange, SingleJointChangeRequest
 ### (2) plan node
 ### (3) perception node
 
+
+
+
+delta_x = 0.1
+delta_y = -0.1
+
 def shiyang_obtain_gripper_poses_for_left_hand(armType, motionType):
     ### In reality, the pose is provided by Shiyang's perception process
     ### here is just for a test
@@ -29,15 +35,15 @@ def shiyang_obtain_gripper_poses_for_left_hand(armType, motionType):
     planning_requests = [] ### a list of MotionPlanningRequest
 
     request1 = MotionPlanningRequest()
-    request1.gripper_pose.position.x = 0.8
-    request1.gripper_pose.position.y = 0.45
-    request1.gripper_pose.position.z = 0.64 + 0.025 ### hard-coded
+    request1.gripper_pose.position.x = 0.8 - 0.1 + delta_x
+    request1.gripper_pose.position.y = 0.45 + delta_y
+    request1.gripper_pose.position.z = 0.64 + 0.025 + 0.1 + 0.02 - 0.1 ### hard-coded
     request1.gripper_pose.orientation.x = 0.0
     request1.gripper_pose.orientation.y = 0.8
     request1.gripper_pose.orientation.z = 0.0
     request1.gripper_pose.orientation.w = 0.0
     request1.object_pose.dims = [0.06, 0.16, 0.23]
-    request1.object_pose.position = [0.8, 0.45, 0.61 + 0.025]
+    request1.object_pose.position = [0.8-0.1+delta_x, 0.45+delta_y, 0.61 + 0.025 + 0.1 + 0.02 - 0.1]
     request1.object_pose.orientation = [0.0, 0.707, 0.0, 0.707]
     request1.armType = armType
     request1.motionType = motionType
@@ -71,9 +77,9 @@ def shiyang_obtain_gripper_poses_at_transit_center(armType, motionType):
     planning_requests = []
 
     request1 = MotionPlanningRequest()
-    request1.gripper_pose.position.x = 0.8
+    request1.gripper_pose.position.x = 0.8 - 0.1 
     request1.gripper_pose.position.y = 0.0
-    request1.gripper_pose.position.z = 0.885 + 0.025 
+    request1.gripper_pose.position.z = 0.885 + 0.025 - 0.1
     request1.gripper_pose.orientation.x = 0.0
     request1.gripper_pose.orientation.y = 0.8
     request1.gripper_pose.orientation.z = 0.0
@@ -95,15 +101,15 @@ def shiyang_obtain_gripper_poses_for_right_hand(armType, motionType):
     planning_requests = [] ### a list of MotionPlanningRequest
 
     request1 = MotionPlanningRequest()
-    request1.gripper_pose.position.x = 0.8
+    request1.gripper_pose.position.x = 0.8 - 0.1
     request1.gripper_pose.position.y = -0.07
-    request1.gripper_pose.position.z = 0.85 + 0.025
+    request1.gripper_pose.position.z = 0.85 + 0.025 - 0.1
     request1.gripper_pose.orientation.x = 0.0
     request1.gripper_pose.orientation.y = 0.707
     request1.gripper_pose.orientation.z = 0.707
     request1.gripper_pose.orientation.w = 0.0
     request1.object_pose.dims = [0.06, 0.16, 0.23]
-    request1.object_pose.position = [0.79999, 1.549e-09, 0.84499 + 0.025]
+    request1.object_pose.position = [0.79999-0.1, 1.549e-09, 0.84499 + 0.025 - 0.1]
     request1.object_pose.orientation = [-4.12e-09, 0.707, 3.4397e-09, 0.707]
     request1.armType = armType
     request1.motionType = motionType
@@ -125,9 +131,9 @@ def shiyang_obtain_gripper_poses_at_drop_center(armType, motionType):
     planning_requests = []
 
     request1 = MotionPlanningRequest()
-    request1.gripper_pose.position.x = 0.8
+    request1.gripper_pose.position.x = 0.8 - 0.1
     request1.gripper_pose.position.y = 0.0
-    request1.gripper_pose.position.z = 0.795 + 0.025
+    request1.gripper_pose.position.z = 0.795 + 0.025 + 0.1
     request1.gripper_pose.orientation.x = 0.0
     request1.gripper_pose.orientation.y = 0.8
     request1.gripper_pose.orientation.z = 0.0
@@ -213,7 +219,8 @@ if __name__ == '__main__':
         print("plan_success: ", plan_success)
         print("\n")
         if plan_success: break
-
+    
+    # time.sleep(1000000)
 
     ## before next plan, we want the object to be attached to the gripper
     attach_success = serviceCall_attachObject(attach=True, armType="Left")
@@ -226,6 +233,8 @@ if __name__ == '__main__':
         print("plan_success: ", plan_success)
         print("\n")
         if plan_success: break
+    
+    # time.sleep(1000000)
     
     ## request the service to plan
     planning_requests = shiyang_obtain_gripper_poses_for_right_hand(
