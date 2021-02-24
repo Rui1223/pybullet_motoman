@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <ros/ros.h>
 #include <ros/package.h>
-#include <pybullet_motoman/AstarPathFinding.h>
+#include "pybullet_motoman/AstarPathFinding.h"
 
 #include "Graph.hpp"
 #include "AstarSolver.hpp"

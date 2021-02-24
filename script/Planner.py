@@ -379,7 +379,7 @@ class Planner(object):
 
         preGrasp_pose = [temp_pos, grasp_pose[1]] ### the quaternion remains the same as grasp_pose
         ### check the IK the pre-grasp pose
-        q_preGraspIK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO, 
+        ori_q_preGraspIK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO, 
                                 endEffectorLinkIndex=ee_idx, 
                                 targetPosition=preGrasp_pose[0], 
                                 targetOrientation=preGrasp_pose[1], 
@@ -387,7 +387,7 @@ class Planner(object):
                                 jointRanges=robot.jr, restPoses=robot.rp,
                                 maxNumIterations=10000, residualThreshold=0.001,
                                 physicsClientId=robot.server)
-        singleArmConfig_IK = list(q_preGraspIK[first_joint_index:first_joint_index+7])
+        singleArmConfig_IK = list(ori_q_preGraspIK[first_joint_index:first_joint_index+7])
         singleArmConfig_IK, isIKValid = self.AdjustIKBasedOnJointLimit(singleArmConfig_IK, robot, armType)
         isPoseValid = False
         if isIKValid:
@@ -414,11 +414,15 @@ class Planner(object):
         #                 singleArmConfig_IK, ee_idx, preGrasp_pose, robot, workspace, armType, motionType)
 
         trials = db_start_idx
-        while (not isPoseValid) and (trials < len(self.rp_db)):
+        while (not isPoseValid) and (trials <= len(self.rp_db)):
             ### try another IK (not specify rest pose)
             # rp = self.randomizeRestposes(robot, armType)
             print('IK trial %d...' % (trials))
-            rp = self.useRestPoseFromJsonFile(robot, armType, trials)
+            if trials == len(self.rp_db):
+                # use pybullet ik result
+                rp = list(ori_q_preGraspIK)
+            else:
+                rp = self.useRestPoseFromJsonFile(robot, armType, trials)
             q_preGraspIK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
                                     endEffectorLinkIndex=ee_idx,
                                     targetPosition=preGrasp_pose[0],
@@ -560,7 +564,7 @@ class Planner(object):
         #     robot.rp[7:14] = [0.43908920097926757, 1.1427753607637277, 0.15512427391062386, -0.5407061993381723, 0.1436811090335915, -1.4603468659725638, 1.061848742243989]
 
         ### we add rest pose in the IK solver to get as high-quality IK as possible
-        config_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
+        ori_config_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
                                 endEffectorLinkIndex=ee_idx,
                                 targetPosition=pose[0],
                                 targetOrientation=pose[1],
@@ -569,7 +573,7 @@ class Planner(object):
                                 maxNumIterations=20000, residualThreshold=0.001,
                                 physicsClientId=robot.server)
 
-        singleArmConfig_IK = list(config_IK[first_joint_index:first_joint_index+7])
+        singleArmConfig_IK = list(ori_config_IK[first_joint_index:first_joint_index+7])
         print("singleArmConfig_IK from pybullet: ", singleArmConfig_IK)
         singleArmConfig_IK, isIKValid = self.AdjustIKBasedOnJointLimit(singleArmConfig_IK, robot, armType)
 
@@ -594,11 +598,15 @@ class Planner(object):
                             singleArmConfig_IK, ee_idx, pose, robot, workspace, armType, motionType)
         
         trials = db_start_idx
-        while (not isPoseValid) and (trials < len(self.rp_db)):
+        while (not isPoseValid) and (trials <= len(self.rp_db)):
             print('ik trial %d...' % (trials))
             ### try another IK (not specify rest pose)
             # rp = self.randomizeRestposes(robot, armType)
-            rp = self.useRestPoseFromJsonFile(robot, armType, trials)
+            if trials == len(self.rp_db):
+                # use pybullet ik result
+                rp = list(ori_config_IK)
+            else:
+                rp = self.useRestPoseFromJsonFile(robot, armType, trials)
             config_IK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
                                     endEffectorLinkIndex=ee_idx,
                                     targetPosition=pose[0],
@@ -737,7 +745,7 @@ class Planner(object):
         if self.collisionAgent_p.collisionCheck_robot_objectGEO(
             robot.motomanGEO, object_geometry, armType, 
             self.isObjectInLeftHand, self.isObjectInRightHand) == True:
-            # print("robot collide with moving object_geometry")
+            print("robot collide with moving object_geometry")
             return isValid
         else:
             pass
@@ -745,7 +753,7 @@ class Planner(object):
         ### if the moving object collides with known GEO (e.g., table)
         if self.collisionAgent_p.collisionCheck_object_knownGEO(
                                     object_geometry, workspace.known_geometries) == True:
-            # print("moving object collide with known geomtries")
+            print("moving object collide with known geomtries")
             return isValid
         else:
             pass
@@ -764,7 +772,7 @@ class Planner(object):
         if self.collisionAgent_p.collisionCheck_robot_objectGEO(
             robot.motomanGEO, object_geometry, armType, 
             self.isObjectInLeftHand, self.isObjectInRightHand) == True:
-            # print("robot collide with static object_geometry")
+            print("robot collide with static object_geometry")
             return isValid
         else:
             pass
@@ -785,7 +793,7 @@ class Planner(object):
 
         if self.collisionAgent_p.collisionCheck_robot_knownGEO(
                     robot.motomanGEO, workspace.known_geometries, armType) == True:
-            # print("robot collide with known geometries")
+            print("robot collide with known geometries")
             return isValid
 
 
@@ -1049,13 +1057,13 @@ class Planner(object):
 
         # nseg = 5
         # min_degree = math.pi / 90
-        min_degree = math.pi / 90 * 2 ### make it sparsely interpolated to speed up collision check
+        min_degree = math.pi / 90 * 3 ### make it sparsely interpolated to speed up collision check
         # min_degree = math.pi / 90 / 25 ### JUST TEST ###
         nseg = int(max(
             abs(n1[0]-n2[0]), abs(n1[1]-n2[1]), abs(n1[2]-n2[2]), abs(n1[3]-n2[3]),
             abs(n1[4]-n2[4]), abs(n1[5]-n2[5]), abs(n1[6]-n2[6])) / min_degree)
         if nseg == 0: nseg += 1
-        print("nseg: " + str(nseg)) ### JUST TEST ### 
+        # print("nseg: " + str(nseg)) 
 
         isEdgeValid = False
         for i in range(0, nseg+1):
@@ -1399,6 +1407,9 @@ class Planner(object):
             else:
                 config2 = self.nodes[armType][currNode_idx]
             ### check the edge
+            # if (startNode_idx == self.nsamples) or (currNode_idx == self.nsamples + 1):
+            #     isEdgeValid = True;
+            # else:
             isEdgeValid = self.checkEdgeValidity_DirectConfigPath(
                             config1, config2, robot, workspace, armType, motionType)
             if isEdgeValid:
@@ -1409,14 +1420,18 @@ class Planner(object):
                 continue
             else:
                 if (curr_idx - start_idx == 1):
-                    print("Edge invalid, we need call A* again with the change of edge information")
-                    print(str(startNode_idx) + "," + str(currNode_idx))
-                    edge = Edge()
-                    edge.idx1 = startNode_idx
-                    edge.idx2 = currNode_idx
-                    violated_edges.append(edge)
-                    smoothed_path = [] ### turn it back to empty path
-                    return smoothed_path, False, violated_edges
+                    if (startNode_idx == self.nsamples) or (currNode_idx == self.nsamples + 1):
+                        print("it should not happen actually since collision checker has been performed")
+                        pass
+                    else:
+                        print("Edge invalid, we need call A* again with the change of edge information")
+                        print(str(startNode_idx) + "," + str(currNode_idx))
+                        edge = Edge()
+                        edge.idx1 = startNode_idx
+                        edge.idx2 = currNode_idx
+                        violated_edges.append(edge)
+                        smoothed_path = [] ### turn it back to empty path
+                        return smoothed_path, False, violated_edges
                 ### the edge is not valid
                 ### add validNodeFromStart_idx to the smoothed_path
                 smoothed_path.append(validNodeFromStart_idx)

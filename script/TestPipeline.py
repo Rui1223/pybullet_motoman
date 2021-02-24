@@ -42,14 +42,14 @@ def shiyang_obtain_gripper_poses_for_left_hand(
     # request1.gripper_pose.position.z = 0.64 + 0.025 + 0.1 + 0.02 - 0.1 ### hard-coded
     request1.gripper_pose.position.x = 0.8
     request1.gripper_pose.position.y = 0.45
-    request1.gripper_pose.position.z = tablePos_height + table_dim[2]/2 + 0.06 ### hard-coded
+    request1.gripper_pose.position.z = tablePos_height + table_dim[2]/2 + 0.08 ### hard-coded
     request1.gripper_pose.orientation.x = 0.0
     request1.gripper_pose.orientation.y = 0.8
     request1.gripper_pose.orientation.z = 0.0
     request1.gripper_pose.orientation.w = 0.0
     request1.object_pose.dims = [0.06, 0.16, 0.23]
     # request1.object_pose.position = [0.8-0.1+delta_x, 0.45+delta_y, 0.61 + 0.025 + 0.1 + 0.02 - 0.1]
-    request1.object_pose.position = [0.8, 0.45, tablePos_height + table_dim[2]/2 + 0.03]
+    request1.object_pose.position = [0.8, 0.45, tablePos_height + table_dim[2]/2 + 0.05]
     request1.object_pose.orientation = [0.0, 0.707, 0.0, 0.707]
     request1.armType = armType
     request1.motionType = motionType
@@ -264,9 +264,8 @@ if __name__ == '__main__':
         print("\n")
         if plan_success: break
 
-    # time.sleep(100000)
-    
-    # time.sleep(1000000)
+    time.sleep(100000)
+
     
     ## request the service to plan
     planning_requests = shiyang_obtain_gripper_poses_for_right_hand(
@@ -303,7 +302,7 @@ if __name__ == '__main__':
         print("\n")
         if plan_success: break
 
-    time.sleep(100000)
+    # time.sleep(100000)
 
     ### approach to placement
     planning_request = MotionPlanningRequest()

@@ -190,7 +190,7 @@ class WorkspaceTable(object):
         #             self.tablePosition[2]+self.table_dim[2]/2]
         # temp_pos = [0.80-0.1+delta_x, 0.45+delta_y, 0.61 + 0.025 + 0.1 + 0.02 - 0.1]
         # temp_quat = [0.0, 1.0, 0.0, 1.0]
-        temp_pos = [0.80, 0.45, self.tablePosition[2] + self.table_dim[2]/2 + 0.03]
+        temp_pos = [0.80, 0.45, self.tablePosition[2] + self.table_dim[2]/2 + 0.05]
         temp_quat = [0.0, 0.707, 0.0, 0.707]
 
         ### select one configuration

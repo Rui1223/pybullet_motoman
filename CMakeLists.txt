@@ -160,7 +160,7 @@ add_executable(main_planner_node src/main_planner_node.cpp src/Graph.cpp src/Ast
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(main_planner_node pybullet_motoman_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(main_planner_node

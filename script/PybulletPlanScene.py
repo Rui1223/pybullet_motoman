@@ -337,7 +337,7 @@ class PybulletPlanScene(object):
         # time.sleep(1000000)
         if VERBOSE:
             print('transfer_motion_planning after checkEdgeValidity_DirectConfigPath takes time: %f' % (time.time()-start_time))
-        isDirectPathValid = False
+        # isDirectPathValid = False
         if isDirectPathValid:
             ### it is feasible to directly move from current pose to grasp pose
             print("the poses can be directly connected")
@@ -625,7 +625,7 @@ class PybulletPlanScene(object):
         if armType == "Left":
             currArmConfig = copy.deepcopy(self.robot_p.leftArmCurrConfiguration)
         else:
-            currArmConfig = copy.deepcopy(self.robot_p.leftArmCurrConfiguration)
+            currArmConfig = copy.deepcopy(self.robot_p.rightArmCurrConfiguration)
 
         targetArmConfig = copy.deepcopy(currArmConfig)
         ### given the joint_name, figure out the index of the joint

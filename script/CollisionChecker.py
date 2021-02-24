@@ -37,7 +37,7 @@ class CollisionChecker(object):
         isCollision = False
         ### loop through all known geometries in the workspace
         for g in knownGEO:
-            contacts = p.getClosestPoints(robotGEO, g, distance=0., physicsClientId=self.server)
+            contacts = p.getClosestPoints(robotGEO, g, distance=0.01, physicsClientId=self.server)
             if len(contacts) != 0:
                 for contact in contacts:
                     print("body-to-body collision: ")
