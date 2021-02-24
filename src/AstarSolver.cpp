@@ -45,8 +45,8 @@ void AstarSolver_t::setPlanningQuery(Graph_t &g, int query_idx,
     m_goal_neighbors_cost = goal_neighbors_cost;
 
     // given the goal, compute the heuristics
-    m_H = std::vector<float>(g.getnNodes()+2, 0.0);
-    computeH(g); // heuristics
+    // m_H = std::vector<float>(g.getnNodes()+2, 0.0);
+    // computeH(g); // heuristics
 }
 
 void AstarSolver_t::prepareToSearch(Graph_t &g)
@@ -64,7 +64,7 @@ void AstarSolver_t::prepareToSearch(Graph_t &g)
 
     // put the start in the open list
     m_G[m_start] = 0.0;
-    m_open.push(new AstarNode_t(m_start, m_G[m_start], m_H[m_start], nullptr));
+    m_open.push(new AstarNode_t(m_start, m_G[m_start], nullptr));
     AstarNode_t *current = m_open.top();
     m_open.pop();
     // put start into the closed list
@@ -74,7 +74,7 @@ void AstarSolver_t::prepareToSearch(Graph_t &g)
     for (int i = 0; i < m_start_neighbors_idx.size(); i++) {
         int neighbor_idx = m_start_neighbors_idx[i];
         m_G[neighbor_idx] = m_start_neighbors_cost[i];
-        m_open.push(new AstarNode_t(neighbor_idx, m_G[neighbor_idx], m_H[neighbor_idx], current));
+        m_open.push(new AstarNode_t(neighbor_idx, m_G[neighbor_idx], current));
     }
 }
 
@@ -162,7 +162,7 @@ void AstarSolver_t::Astar_search(Graph_t &g)
             if ( m_G[neighbor] > m_G[current->m_id] + g.getEdgeCost(current->m_id, neighbor) )
             {
                 m_G[neighbor] = m_G[current->m_id] + g.getEdgeCost(current->m_id, neighbor);
-                m_open.push(new AstarNode_t(neighbor, m_G[neighbor], m_H[neighbor], current));
+                m_open.push(new AstarNode_t(neighbor, m_G[neighbor], current));
             }
         }
         // Consider one more case here! The goal may also be the neighbor
@@ -172,7 +172,7 @@ void AstarSolver_t::Astar_search(Graph_t &g)
             int index = it - m_goal_neighbors_idx.begin();
             if ( m_G[m_goal] > m_G[current->m_id] + m_goal_neighbors_cost[index] ) {
                 m_G[m_goal] = m_G[current->m_id] + m_goal_neighbors_cost[index];
-                m_open.push(new AstarNode_t(m_goal, m_G[m_goal], m_H[m_goal], current));
+                m_open.push(new AstarNode_t(m_goal, m_G[m_goal], current));
             }
         }
     }

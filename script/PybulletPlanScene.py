@@ -49,8 +49,8 @@ class PybulletPlanScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet planning scene
-        self.planningClientID = p.connect(p.DIRECT)
-        # self.planningClientID = p.connect(p.GUI)
+        # self.planningClientID = p.connect(p.DIRECT)
+        self.planningClientID = p.connect(p.GUI)
 
         ### create a planner assistant
         self.planner_p = Planner(
@@ -507,35 +507,39 @@ class PybulletPlanScene(object):
         if armType == "Left":
             currArmConfig = copy.deepcopy(self.robot_p.leftArmCurrConfiguration)
         else:
-            currArmConfig = copy.deepcopy(self.robot_p.leftArmCurrConfiguration)
+            currArmConfig = copy.deepcopy(self.robot_p.rightArmCurrConfiguration)
 
         targetArmConfig = copy.deepcopy(currArmConfig)
         ### given the joint_name, figure out the index of the joint
         joint_index = self.robot_p.motomanRJointNames.index(req.joint_name)
         rotate_radian = req.rotate_angle * math.pi / 180
         if armType == "Left":
+            target_radian = targetArmConfig[joint_index] + rotate_radian
+        else:
+            target_radian = targetArmConfig[joint_index-7] + rotate_radian
+
+        if armType == "Left":
             ### check if the given joint value exceeds the limit
-            if (rotate_radian < self.robot_p.ll[joint_index]) or \
-                        (rotate_radian > self.robot_p.ul[joint_index]):
+            if (target_radian < self.robot_p.ll[joint_index]) or \
+                        (target_radian > self.robot_p.ul[joint_index]):
                 rospy.logerr("The joint value input for %s exceeds its limits" % req.joint_name)
                 rospy.logerr(
                     "%f does not in the range [%f, %f]" % \
-                    (rotate_radian, self.robot_p.ll[joint_index], self.robot_p.ul[joint_index]))
+                    (target_radian, self.robot_p.ll[joint_index], self.robot_p.ul[joint_index]))
                 return SingleJointChangeResponse(False)
             ### otherwise continue
-            targetArmConfig[joint_index] = rotate_radian
+            targetArmConfig[joint_index] = target_radian
         else:
             ### check if the given joint value exceeds the limit
-            if (rotate_radian < self.robot_p.ll[joint_index]) or \
-                        (rotate_radian > self.robot_p.ul[joint_index]):
+            if (target_radian < self.robot_p.ll[joint_index]) or \
+                        (target_radian > self.robot_p.ul[joint_index]):
                 rospy.logerr("The joint value input for %s exceeds its limits" % req.joint_name)
                 rospy.logerr(
                     "%f does not in the range [%f, %f]" % \
-                    (rotate_radian, self.robot_p.ll[joint_index], self.robot_p.ul[joint_index]))
+                    (target_radian, self.robot_p.ll[joint_index], self.robot_p.ul[joint_index]))
                 return SingleJointChangeResponse(False)
             ### otherwise continue
-            joint_index = joint_index - 7 ### for the right arm
-            targetArmConfig[joint_index] = rotate_radian
+            targetArmConfig[joint_index-7] = target_radian
 
         config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
                         currArmConfig, targetArmConfig)

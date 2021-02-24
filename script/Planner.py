@@ -14,8 +14,8 @@ import IPython
 import subprocess
 from operator import itemgetter
 import copy
-# import sklearn
-# from sklearn.neighbors import NearestNeighbors
+import sklearn
+from sklearn.neighbors import NearestNeighbors
 
 import utils
 from CollisionChecker import CollisionChecker
@@ -122,6 +122,7 @@ class Planner(object):
                 print("finish the %s node" % str(temp_counter))
                 # raw_input("enter to continue")
 
+
     def sampleRegionCheck(self, ikSolution, robot, workspace, armType):
         if armType == "Left":
             ee_idx = robot.left_ee_idx
@@ -132,6 +133,8 @@ class Planner(object):
         robot.setSingleArmToConfig(ikSolution, armType)
         pos_quat = p.getLinkState(robot.motomanGEO, ee_idx, physicsClientId=self.planningServer)
         pos = list(pos_quat[0])
+        # print("pos:")
+        # print(pos)
         ### conservative version
         # if (pos[0] <= workspace.standingBasePosition[0]+workspace.standingBase_dim[0]/2 or \
         #     pos[2] <= workspace.tablePosition[2]+workspace.table_dim[2]/2 or \
@@ -141,11 +144,12 @@ class Planner(object):
         #     # print("bad sample region")
         #     return isIKFallIntoRightRegion
         ### normal version
-        if (pos[0] <= workspace.standingBasePosition[0]+0.25 or \
+        if (pos[1] >= workspace.tablePosition[1]+0.45 or \
+            pos[1] <= workspace.tablePosition[1]-0.45 or \
+            pos[0] >= workspace.table_offset_x + 0.6 or \
+            pos[0] <= workspace.table_offset_x + 0.1 or \
             pos[2] <= workspace.tablePosition[2]+workspace.table_dim[2]/2 or \
-            pos[2] >= workspace.tablePosition[2]+workspace.table_dim[2]/2 + 0.4 or
-            pos[1] >= workspace.tablePosition[1]+0.6 or
-            pos[1] <= workspace.tablePosition[1]-0.6):
+            (pos[0] - workspace.table_offset_x) + (pos[2] - workspace.tablePosition[2] - workspace.table_dim[2]/2) > 0.6):
             # print("bad sample region")
             return isIKFallIntoRightRegion
         ### congrats
@@ -176,6 +180,97 @@ class Planner(object):
                 f_samples.write(" " + str(node[k]))
             f_samples.write("\n")
         f_samples.close()
+
+
+    def configDistanceMetric(self, n1, n2, robot, armType):
+        ### n1, n2: [q1, q2, ... q7]
+
+        if armType == "Left":
+            ee_idx = robot.left_ee_idx
+        else:
+            ee_idx = robot.right_ee_idx
+        # print("=========new=============")
+        dist = 0.0
+        min_degree = math.pi / 90 * 3
+        nseg = int(max(
+            abs(n1[0]-n2[0]), abs(n1[1]-n2[1]), abs(n1[2]-n2[2]), abs(n1[3]-n2[3]),
+            abs(n1[4]-n2[4]), abs(n1[5]-n2[5]), abs(n1[6]-n2[6])) / min_degree)
+        nseg = min(nseg, 5) ### maximum 5 segment (want to speed up)
+        if nseg == 0: nseg += 1
+        robot.setSingleArmToConfig(n1, armType)
+        if armType == "Left":
+            old_pos = robot.left_ee_pose[0]
+        else:
+            old_pos = robot.right_ee_pose[0]
+        # print("old pos: ")
+        # print(old_pos)
+        for i in range(1, nseg+1):
+            interm_j0 = n1[0] + (n2[0]-n1[0]) / nseg * i
+            interm_j1 = n1[1] + (n2[1]-n1[1]) / nseg * i
+            interm_j2 = n1[2] + (n2[2]-n1[2]) / nseg * i
+            interm_j3 = n1[3] + (n2[3]-n1[3]) / nseg * i
+            interm_j4 = n1[4] + (n2[4]-n1[4]) / nseg * i
+            interm_j5 = n1[5] + (n2[5]-n1[5]) / nseg * i
+            interm_j6 = n1[6] + (n2[6]-n1[6]) / nseg * i
+            intermNode = [interm_j0, interm_j1, interm_j2, interm_j3, interm_j4, interm_j5, interm_j6]
+            robot.setSingleArmToConfig(intermNode, armType)
+            if armType == "Left":
+                current_pos = robot.left_ee_pose[0]
+            else:
+                current_pos = robot.right_ee_pose[0]
+            # print("current pos: ")
+            # print(current_pos)
+            dist += utils.computePoseDist_pos(old_pos, current_pos)
+            # print("dist between two small pieces: ", dist)
+            # print("\n")
+            old_pos = current_pos
+        #     print("old pos: ")
+        #     print(old_pos)
+
+        # print("total dist: ", dist)
+
+        return dist
+
+
+    def samplesConnect_configDistance(self, robot, workspace, armType):
+        connectivity = np.zeros((self.nsamples, self.nsamples))
+        knn = NearestNeighbors(
+            n_neighbors=self.num_neighbors, algorithm='auto', 
+            metric=lambda a,b: self.configDistanceMetric(a,b,robot,armType))
+        knn.fit(self.nodes[armType])
+        neigh_dist, neigh_index = knn.kneighbors(
+                    X=self.nodes[armType], n_neighbors=self.num_neighbors, return_distance=True)
+        connectionsFile = self.roadmapFolder + "/connections_" + str(armType) + ".txt"
+        f_connection = open(connectionsFile, "w")
+        ### for each node
+        for node_idx in range(len(self.nodes[armType])):
+            queryNode = self.nodes[armType][node_idx]
+            neighbors_connected = 0
+            ### for each potential neighbor
+            for j in range(len(neigh_index[node_idx])):
+                ### first check if this query node has already connected to enough neighbors
+                if neighbors_connected >= self.num_neighbors:
+                    break
+                if neigh_index[node_idx][j] == node_idx:
+                    ### if the neighbor is the query node itself
+                    continue
+                if connectivity[node_idx][neigh_index[node_idx][j]] == 1:
+                    ### the connectivity has been checked before
+                    neighbors_connected += 1
+                    continue
+                ### Otherwise, check the edge validity
+                ### in terms of collision with the robot itself and all known geometries (e.g. table/shelf)
+                ### between the query node and the current neighbor
+                neighbor = self.nodes[armType][neigh_index[node_idx][j]]
+                isEdgeValid = self.checkEdgeValidity_knownGEO(queryNode, neighbor, robot, workspace, armType)
+                if isEdgeValid:
+                    ### write the edge information with their costs and labels into the txt file
+                    f_connection.write(str(node_idx) + " " + str(neigh_index[node_idx][j]) + " " + str(neigh_dist[node_idx][j]) + "\n")
+                    connectivity[node_idx][neigh_index[node_idx][j]] = 1
+                    connectivity[neigh_index[node_idx][j]][node_idx] = 1
+                    neighbors_connected += 1
+            print("Number of neighbors for current node " + str(node_idx) + ": " + str(neighbors_connected))
+        f_connection.close()
 
 
     def samplesConnect(self, robot, workspace, armType):

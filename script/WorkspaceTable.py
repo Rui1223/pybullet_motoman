@@ -29,6 +29,7 @@ class WorkspaceTable(object):
         ### specify the transit center
         self.objectTransitCenter = [
             self.tablePosition[0], self.tablePosition[1], self.tablePosition[2]+self.table_dim[2]/2+0.305]
+        self.table_offset_x = table_offset_x
 
 
 
