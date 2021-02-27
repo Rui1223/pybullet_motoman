@@ -189,13 +189,13 @@ class Planner(object):
             ee_idx = robot.left_ee_idx
         else:
             ee_idx = robot.right_ee_idx
-        # print("=========new=============")
+        print("=========new=============")
         dist = 0.0
-        min_degree = math.pi / 90 * 3
+        min_degree = math.pi / 90 * 5
         nseg = int(max(
             abs(n1[0]-n2[0]), abs(n1[1]-n2[1]), abs(n1[2]-n2[2]), abs(n1[3]-n2[3]),
             abs(n1[4]-n2[4]), abs(n1[5]-n2[5]), abs(n1[6]-n2[6])) / min_degree)
-        nseg = min(nseg, 5) ### maximum 5 segment (want to speed up)
+        nseg = min(nseg, 3) ### maximum 3 segment (want to speed up)
         if nseg == 0: nseg += 1
         robot.setSingleArmToConfig(n1, armType)
         if armType == "Left":
@@ -1113,15 +1113,19 @@ class Planner(object):
         goal_neighbors_cost = []
 
         # neighborIndex_to_start = sorted(range(len(dist_to_start)), key=dist_to_start.__getitem__)
+        # dist_to_start = [
+        #     utils.calculateNorm2(initialConfig, neighborConfig) for neighborConfig in self.nodes[armType]]
         dist_to_start = [
-            utils.calculateNorm2(initialConfig, neighborConfig) for neighborConfig in self.nodes[armType]]
+            self.configDistanceMetric(initialConfig, neighborConfig, robot, armType) for neighborConfig in self.nodes[armType]]
         neighborIndex_to_start, neighborDist_to_start = zip(
                                     *sorted(enumerate(dist_to_start), key=itemgetter(1)))
         neighborIndex_to_start = list(neighborIndex_to_start)
         neighborDist_to_start = list(neighborDist_to_start)
 
+        # dist_to_goal = [
+        #     utils.calculateNorm2(targetConfig, neighborConfig) for neighborConfig in self.nodes[armType]]
         dist_to_goal = [
-            utils.calculateNorm2(targetConfig, neighborConfig) for neighborConfig in self.nodes[armType]]
+            self.configDistanceMetric(targetConfig, neighborConfig, robot, armType) for neighborConfig in self.nodes[armType]]
         neighborIndex_to_goal, neighborDist_to_goal = zip(
                                     *sorted(enumerate(dist_to_goal), key=itemgetter(1)))
         neighborIndex_to_goal = list(neighborIndex_to_goal) 

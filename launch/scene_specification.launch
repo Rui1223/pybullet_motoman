@@ -37,7 +37,7 @@
 	</group>
 
 	<!-- the following node expected argument PybulletExecutionScene <scene_index(int) saveImage(bool) objectName(string)> -->
-	<node pkg="pybullet_motoman" type="PybulletExecutionScene.py" name="pybullet_execution_scene"
+<!-- 	<node pkg="pybullet_motoman" type="PybulletExecutionScene.py" name="pybullet_execution_scene"
 		args="$(arg pybullet_execution_scene)" output="screen" required="True" />
 
 	<node pkg="pybullet_motoman" type="PybulletPlanScene.py" name="pybullet_plan_scene"
@@ -46,7 +46,7 @@
 	<node pkg="pybullet_motoman" type="TestPipeline.py" name="test_pipeline"
 		output="screen" required="True" />
 
-	<node pkg="pybullet_motoman" type="main_planner_node" name="main_planner" output="screen" />
+	<node pkg="pybullet_motoman" type="main_planner_node" name="main_planner" output="screen" /> -->
 
 
 </launch>
