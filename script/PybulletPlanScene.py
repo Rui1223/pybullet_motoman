@@ -26,7 +26,7 @@ from pybullet_motoman.msg import ObjectPoseBox
 from pybullet_motoman.srv import MotionPlanning, MotionPlanningResponse
 from pybullet_motoman.srv import SingleJointChange, SingleJointChangeResponse
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryRequest
-from pybullet_motoman.msg import ObjectPose
+from pybullet_motoman.msg import ObjectPoseBox
 from pybullet_motoman.msg import EdgeConfigs
 
 ### This class defines a PybulletPlanScene class which
