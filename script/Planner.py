@@ -16,14 +16,10 @@ import IPython
 import subprocess
 from operator import itemgetter
 import copy
-<<<<<<< HEAD
+
 import json
 # import sklearn
 # from sklearn.neighbors import NearestNeighbors
-=======
-import sklearn
-from sklearn.neighbors import NearestNeighbors
->>>>>>> motoman-planning
 
 import utils
 from CollisionChecker import CollisionChecker
@@ -67,12 +63,15 @@ class Planner(object):
 
         self.query_idx = 1
 
+        
+
     def readRestposeFromJson(self, fileName):
         file_path = os.path.join(self.rosPackagePath, "script", "joint_to_pose.json")
         f = open(file_path, 'r')
         res = json.load(f)
         f.close()
         return res
+
 
     def inverse_kinematics(self, arm_type, pose, rest_pose):
         """
@@ -458,6 +457,101 @@ class Planner(object):
 
         return temp_localPose
 
+    def generateConservativeTargetGrasp(self, grasp_pose, robot, workspace, armType, motionType):
+        ### This function generates a pre-grasp pose based on grasp pose
+        ### It is 10cm (0.1m) behind the approaching direction of z axis (local axis of the end effector)
+        ### Input: grasp_pose: [[x,y,z], [x,y,z,w]]
+        if armType == "Left":
+            ee_idx = robot.left_ee_idx
+            first_joint_index = 0
+            db_start_idx = 0
+        else:
+            ee_idx = robot.right_ee_idx
+            first_joint_index = 7
+            db_start_idx = 12
+
+        temp_rot_matrix = p.getMatrixFromQuaternion(grasp_pose[1])
+        ### local z-axis of the end effector
+        temp_approaching_direction = [temp_rot_matrix[2], temp_rot_matrix[5], temp_rot_matrix[8]]
+        temp_pos = list(np.array(grasp_pose[0]) - 0.025*np.array(temp_approaching_direction))
+
+        preGrasp_pose = [temp_pos, grasp_pose[1]] ### the quaternion remains the same as grasp_pose
+        ### check the IK the pre-grasp pose
+        ori_q_preGraspIK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO, 
+                                endEffectorLinkIndex=ee_idx, 
+                                targetPosition=preGrasp_pose[0], 
+                                targetOrientation=preGrasp_pose[1], 
+                                lowerLimits=robot.ll, upperLimits=robot.ul, 
+                                jointRanges=robot.jr, restPoses=robot.rp,
+                                maxNumIterations=10000, residualThreshold=0.001,
+                                physicsClientId=robot.server)
+        singleArmConfig_IK = list(ori_q_preGraspIK[first_joint_index:first_joint_index+7])
+        singleArmConfig_IK, isIKValid = self.AdjustIKBasedOnJointLimit(singleArmConfig_IK, robot, armType)
+        isPoseValid = False
+        if isIKValid:
+            isPoseValid = self.checkPoseIK(singleArmConfig_IK, ee_idx, preGrasp_pose, robot, workspace, armType, motionType)
+        if not isPoseValid:
+            print('Pybullet failed. Linear IK')
+            singleArmConfig_IK = self.linear_inverse_kinematics(armType, preGrasp_pose, robot.rp, robot, start_pose=None)
+            isIKValid = False
+            isPoseValid = False
+            if singleArmConfig_IK is not None:
+                singleArmConfig_IK, isIKValid = self.AdjustIKBasedOnJointLimit(singleArmConfig_IK, robot, armType)
+                if isIKValid:
+                    isPoseValid = self.checkPoseIK(
+                            singleArmConfig_IK, ee_idx, preGrasp_pose, robot, workspace, armType, motionType)
+
+        # if not isPoseValid:
+        #     # singleArmConfig_IK = self.inverse_kinematics(armType, preGrasp_pose, robot.rp)
+        #     # print("show me current rest pose of the robot: ")
+        #     # print(robot.rp)
+        #     singleArmConfig_IK = self.linear_inverse_kinematics(armType, preGrasp_pose, robot.rp, robot, start_pose=None)
+        #     isPoseValid = False
+        #     if singleArmConfig_IK is not None:
+        #         isPoseValid = self.checkPoseIK(
+        #                 singleArmConfig_IK, ee_idx, preGrasp_pose, robot, workspace, armType, motionType)
+
+        trials = db_start_idx
+        while (not isPoseValid) and (trials <= len(self.rp_db)):
+            ### try another IK (not specify rest pose)
+            # rp = self.randomizeRestposes(robot, armType)
+            print('IK trial %d...' % (trials))
+            if trials == len(self.rp_db):
+                # use pybullet ik result
+                rp = list(ori_q_preGraspIK)
+            else:
+                rp = self.useRestPoseFromJsonFile(robot, armType, trials)
+            q_preGraspIK = p.calculateInverseKinematics(bodyUniqueId=robot.motomanGEO,
+                                    endEffectorLinkIndex=ee_idx,
+                                    targetPosition=preGrasp_pose[0],
+                                    targetOrientation=preGrasp_pose[1],
+                                    lowerLimits=robot.ll, upperLimits=robot.ul, 
+                                    jointRanges=robot.jr, restPoses=rp,
+                                    maxNumIterations=10000, residualThreshold=0.001,
+                                    physicsClientId=robot.server)
+            singleArmConfig_IK = list(q_preGraspIK[first_joint_index:first_joint_index+7])
+            singleArmConfig_IK, isIKValid = self.AdjustIKBasedOnJointLimit(singleArmConfig_IK, robot, armType)
+            isPoseValid = False
+            if isIKValid:
+                isPoseValid = self.checkPoseIK(singleArmConfig_IK, ee_idx, preGrasp_pose, robot, workspace, armType, motionType)
+            if not isPoseValid:
+                print('Pybullet failed. Linear IK')
+                singleArmConfig_IK = self.linear_inverse_kinematics(armType, preGrasp_pose, rp, robot, start_pose=None)
+                isIKValid = False
+                isPoseValid = False
+                if singleArmConfig_IK is not None:
+                    singleArmConfig_IK, isIKValid = self.AdjustIKBasedOnJointLimit(singleArmConfig_IK, robot, armType)
+                    if isIKValid:
+                        isPoseValid = self.checkPoseIK(singleArmConfig_IK, ee_idx, preGrasp_pose, robot, workspace, armType, motionType)
+            if isIKValid and isPoseValid:
+                break
+            else:
+                trials += 1
+        ### you need to return both the statement whether the pose is valid
+        ### and the valid configuration the pose corresponds to
+        return isPoseValid, preGrasp_pose, singleArmConfig_IK
+
+
 
     def generatePreGrasp(self, grasp_pose, robot, workspace, armType, motionType):
         ### This function generates a pre-grasp pose based on grasp pose
@@ -492,6 +586,8 @@ class Planner(object):
         isPoseValid = False
         if isIKValid:
             isPoseValid = self.checkPoseIK(singleArmConfig_IK, ee_idx, preGrasp_pose, robot, workspace, armType, motionType)
+        else:
+            print("IK is not found, let alone other checking!")
         if not isPoseValid:
             print('Pybullet failed. Linear IK')
             singleArmConfig_IK = self.linear_inverse_kinematics(armType, preGrasp_pose, robot.rp, robot, start_pose=None)
@@ -1219,7 +1315,7 @@ class Planner(object):
         return isEdgeValid
 
 
-    def generateTrajectory_DirectConfigPath(self, n1, n2):
+    def generateTrajectory_DirectConfigPath(self, n1, n2, min_degree=math.pi / 90 * 4):
         ### This function generates a trajectory based on two configs (which has been proved to be valid transition)
         ### Input: n1, n2: node (a list of 7 joint values)
         ### output: an edge trajectory (config_edge_traj) which includes the endtail but not the head
@@ -1228,7 +1324,7 @@ class Planner(object):
         config_edge_traj = []
 
         # nseg = 5
-        min_degree = math.pi / 90 * 4 ### want more waypoint to move more naturally
+        # min_degree = math.pi / 90 * 4 ### want more waypoint to move more naturally
         nseg = int(max(
             abs(n1[0]-n2[0]), abs(n1[1]-n2[1]), abs(n1[2]-n2[2]), abs(n1[3]-n2[3]),
             abs(n1[4]-n2[4]), abs(n1[5]-n2[5]), abs(n1[6]-n2[6])) / min_degree)
@@ -1476,7 +1572,7 @@ class Planner(object):
             else:
                 config2 = self.nodes[armType][smoothed_path[i+1]]
             ### get edge trajectory
-            config_edge_traj = self.generateTrajectory_DirectConfigPath(config1, config2)
+            config_edge_traj = self.generateTrajectory_DirectConfigPath(config1, config2, min_degree=math.pi / 90 * 2.)
             result_traj.append(config_edge_traj)
 
         ### before you claim the victory of this query, increment the planning query
@@ -1605,7 +1701,7 @@ class Planner(object):
             neighbor = self.nodes[armType][neighborIndex_to_goal[j]]
             ### check the edge validity
             isEdgeValid = self.checkEdgeValidity_DirectConfigPath(
-                        initialConfig, neighbor, robot, workspace, armType, motionType)
+                        targetConfig, neighbor, robot, workspace, armType, motionType)
             if isEdgeValid:
                 goal_neighbors_idx.append(neighborIndex_to_goal[j])
                 goal_neighbors_cost.append(neighborDist_to_goal[j])

@@ -392,6 +392,7 @@
     <origin rpy="1.57 0 -3.14" xyz="0.09996 -0.0375 0.32214"/>
     <axis xyz="0 0 1.0"/>
     <limit effort="0" lower="-3.13" upper="3.13" velocity="2.95"/>
+    <!-- <limit effort="0" lower="2.18" upper="3.13" velocity="2.95"/> -->
   </joint>
   <joint name="arm_right_joint_2_l" type="revolute">
     <parent link="arm_right_link_1_s"/>

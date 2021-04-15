@@ -130,8 +130,6 @@ class WorkspaceTable(object):
         temp_pos = [random.uniform(self.tablePosition[0]-self.table_dim[0]/2+0.1, self.tablePosition[0]+self.table_dim[0]/2-0.1), \
                     random.uniform(self.tablePosition[1]+0.1, self.tablePosition[1]+self.table_dim[1]/2-0.1), \
                     self.tablePosition[2]+self.table_dim[2]/2+dropHeight]
-        print("temp_pos")
-        print(temp_pos)
 
         ### select one configuration
         temp_angles = random.choice(object_configs_angles[obj_name])
@@ -191,8 +189,17 @@ class WorkspaceTable(object):
         #             self.tablePosition[2]+self.table_dim[2]/2]
         # temp_pos = [0.80-0.1+delta_x, 0.45+delta_y, 0.61 + 0.025 + 0.1 + 0.02 - 0.1]
         # temp_quat = [0.0, 1.0, 0.0, 1.0]
-        temp_pos = [0.80, 0.45, self.tablePosition[2] + self.table_dim[2]/2 + 0.05]
-        temp_quat = [0.0, 0.707, 0.0, 0.707]
+        
+        ### for 003_cracker_box (demo)
+        # temp_pos = [0.80, 0.05, self.tablePosition[2] + self.table_dim[2]/2 + 0.09]
+        temp_pos = [0.6800329089164734 + 0.03, -0.08994719386100769 - 0.23/2 + 0.09, self.tablePosition[2] + self.table_dim[2]/2 + 0.16/2 + 0.005]
+        temp_quat = [0.7071068, 0, 0, 0.7071068]
+
+        ### for 004_sugar_box
+        # temp_pos = [0.80, -0.35, self.tablePosition[2] + self.table_dim[2]/2 + 0.19/2]
+        # temp_quat = [0.0, 0.0, 0.0, 1.0]
+        # temp_pos = [1.20, -0.55, self.tablePosition[2] + self.table_dim[2]/2 + 0.19/2]
+        # temp_quat = [0.0, 0.0, 0.0, 1.0]
 
         ### select one configuration
         # temp_angles = object_configs_angles[obj_name][0]

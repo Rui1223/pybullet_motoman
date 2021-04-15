@@ -3,19 +3,31 @@
 		<!-- specification of the motoman robot -->
 		<rosparam param="basePosition">[0.0, 0.0, 0.0]</rosparam>
 		<rosparam param="baseOrientation">[0.0, 0.0, 0.0, 1.0]</rosparam>
-<!-- 		<rosparam param="leftArmHomeConfiguration">[2.827, 0.00, 2.67, 0.00, -1.571, -1.571, 0.00]</rosparam>
+		<!-- <rosparam param="leftArmHomeConfiguration">[2.827, 0.00, 2.67, 0.00, -1.571, -1.571, 0.00]</rosparam>
 		<rosparam param="rightArmHomeConfiguration">[2.827, 0.00, 2.67, 0.00, -1.571, -1.571, 0.00]</rosparam> -->
-<!-- 		<rosparam param="leftArmHomeConfiguration">[2.827, -1.257, 2.67, 0.000, -1.571, -1.571, 0.000]</rosparam>
+		<!-- <rosparam param="leftArmHomeConfiguration">[2.827, -1.257, 2.67, 0.000, -1.571, -1.571, 0.000]</rosparam>
 		<rosparam param="rightArmHomeConfiguration">[2.827, -1.257, 2.67, 0.000, -1.571, -1.571, 0.000]</rosparam> -->
-		<rosparam param="leftArmHomeConfiguration">[0.0, 0.0, 0.0, -0.2, 0.0, 0.0, 0.0]</rosparam>
-		<rosparam param="rightArmHomeConfiguration">[0.0, 0.0, 0.0, -0.2, 0.0, 0.0, 0.0]</rosparam>
+		<!-- <rosparam param="leftArmHomeConfiguration">[0.0, 0.0, 0.0, -0.2, 0.0, 0.0, 0.0]</rosparam>
+		<rosparam param="rightArmHomeConfiguration">[0.0, 0.0, 0.0, -0.2, 0.0, 0.0, 0.0]</rosparam> -->
+		<!-- for demo: home configuration-->
+		<rosparam param="leftArmHomeConfiguration">[2.1838748733518063, -0.9209540227290458, 0.8832032430221721, 1.1669805304419556, 2.2862132885171125, -1.7084464602195035, -2.920715879126091]</rosparam>
+		<!-- <rosparam param="rightArmHomeConfiguration">[2.1838748733518063, -0.9209540227290458, 0.8832032430221721, 1.1669805304419556, 2.2862132885171125, -1.7084464602195035, -2.920715879126091]</rosparam> -->
+		<!-- <rosparam param="rightArmHomeConfiguration">[-3.1282064342345585, -0.8423079221535875, -0.5623394341156668, 1.0641399123596846, 1.420238382384334, -1.3375485840697974, 2.3110774896629898]</rosparam> -->
+		<rosparam param="rightArmHomeConfiguration">[-3.1282064342345585, -0.8423079221535875, -0.5623394341156668, 1.0641399123596846, 1.420238382384334, -1.3375485840697974, -0.83051516392]</rosparam>
+
+
+		<!-- <rosparam param="rightArmHomeConfiguration">[-2.6451453735966766, -0.8378272988634045, 0.14458693243630757, 1.1077410856312522, -3.026871769053642, -1.201289948420037, 0.9481538221117312]</rosparam> -->
+		<!-- <rosparam param="rightArmHomeConfiguration">[-3.111453735966766, -0.8378272988634045, 0.14458693243630757, 1.1077410856312522, 1.576871769053642, -1.201289948420037, 0.9481538221117312]</rosparam> -->
+		<!-- <rosparam param="rightArmHomeConfiguration">[0.0, 0.0, 0.0, -0.2, 0.0, 0.0, 0.0]</rosparam> -->
+		<!-- <rosparam param="leftArmHomeConfiguration">[0.0, 0.0, 1.57, -1.57, 0.0, 0.0, 0.0]</rosparam>
+		<rosparam param="rightArmHomeConfiguration">[0.0, 0.0, 1.57, -1.57, 0.0, 0.0, 0.0]</rosparam> -->
 		<rosparam param="urdfFile">urdf/motoman.urdf</rosparam>
 	</group>
 
 	<group ns="workspace_table">
 		<!-- specification of the workspace (table scene) -->
 		<rosparam param="standingBase_dim">[0.915, 0.62, 0.19]</rosparam>
-		<rosparam param="table_dim">[0.762, 1.215, 0.8]</rosparam>
+		<rosparam param="table_dim">[0.762, 1.215, 0.81]</rosparam>
 		<!-- <rosparam param="table_dim">[0.58, 1.32, 0.58]</rosparam> -->
 		<!-- the following parameter specifies how the far the inner periphery of table is from the robot rigid body in x direction -->
 
@@ -50,6 +62,7 @@
 	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen" if="$(arg sim)" />
 
 	<!-- the following node expected argument PybulletExecutionScene <scene_index(int) saveImage(bool) objectName(string)> -->
+
 	<arg name="pybullet_execution_scene" default="3 n 003_cracker_box"/>
 	<node pkg="pybullet_motoman" type="PybulletExecutionScene.py" name="pybullet_execution_scene"
 		args="$(arg pybullet_execution_scene)" output="screen" required="True" if="$(arg sim)" />

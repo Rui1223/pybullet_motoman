@@ -37,7 +37,7 @@ class CollisionChecker(object):
         isCollision = False
         ### loop through all known geometries in the workspace
         for g in knownGEO:
-            contacts = p.getClosestPoints(robotGEO, g, distance=0.01, physicsClientId=self.server)
+            contacts = p.getClosestPoints(robotGEO, g, distance=0., physicsClientId=self.server)
             if len(contacts) != 0:
                 for contact in contacts:
                     print("body-to-body collision: ")
@@ -72,6 +72,12 @@ class CollisionChecker(object):
                     if contact[8] >= 0:
                         ### This is a fake collision (>=0: separation, <0: penetration)
                         continue
+                    if (isObjectInLeftHand == True and contact[3] == 9):
+                        continue
+                    if (isObjectInRightHand == True and contact[3] == 19):
+                        continue
+                    if (isObjectInRightHand == True and contact[3] > 19):
+                        continue
                     print("body-to-body collision: ")
                     print(str(contact[1]) + ": " + str(contact[2]))
                     print("link-to-link collision: ")
@@ -98,18 +104,24 @@ class CollisionChecker(object):
         return isCollision
 
 
-    def collisionCheck_object_knownGEO(self, objectGEO, knownGEO):
+    def collisionCheck_object_knownGEO(self, objectGEO, knownGEO, dist_threshold=0.):
         isCollision = False
         ### loop through all objectGEO and knownGEO
         for object_g in objectGEO:
             for known_g in knownGEO:
                 # contacts = p.getContactPoints(object_g, known_g, physicsClientId=self.server)
-                contacts = p.getClosestPoints(object_g, known_g, distance=0., physicsClientId=self.server)
+                contacts = p.getClosestPoints(object_g, known_g, distance=dist_threshold, physicsClientId=self.server)
                 # print(object_g)
                 # print(known_g)
                 # print("contact")
                 # print(contacts)
                 if len(contacts) != 0:
+                    for contact in contacts:
+                        print("body-to-body collision: ")
+                        print(str(contact[1]) + ": " + str(contact[2]))
+                        print("link-to-link collision: ")
+                        print(str(contact[3]) + ": " + str(contact[4]))
+
                     isCollision = True
                     # print("collision with known GEO")
                     break

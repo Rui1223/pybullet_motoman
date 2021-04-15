@@ -83,6 +83,8 @@ class PybulletPlanScene(object):
         while not rospy.has_param('/motoman_robot/leftArmHomeConfiguration'):
             rospy.sleep(0.2)
         leftArmHomeConfiguration = rospy.get_param('/motoman_robot/leftArmHomeConfiguration')
+        print("leftArmHomeConfiguration")
+        print(leftArmHomeConfiguration)
 
         while not rospy.has_param('/motoman_robot/rightArmHomeConfiguration'):
             rospy.sleep(0.2)
@@ -135,6 +137,8 @@ class PybulletPlanScene(object):
         isObjectInRightHand = ee_poses_msg.isObjectInRightHand
         self.planner_p.updateManipulationStatus(
                 isObjectInLeftHand, isObjectInRightHand, self.workspace_p.object_geometries, self.robot_p)
+        # print("+++++++++++++++++++PRINT OBJECT INFO++++++++++++++++++++")
+        # print(self.workspace_p.object_geometries)
         if VERBOSE:
             print('updateEEPoseInPlanScene takes time: %f' % (time.time()-start_time))
 
@@ -208,23 +212,47 @@ class PybulletPlanScene(object):
             req.gripper_pose.position.z], [req.gripper_pose.orientation.x,
             req.gripper_pose.orientation.y, req.gripper_pose.orientation.z,
             req.gripper_pose.orientation.w]]
-        ### check the targetPose
-        isPoseValid, configToGraspPose = self.planner_p.generateConfigBasedOnPose(
-                    targetPose, self.robot_p, self.workspace_p, armType, motionType)
-        # print("configToGraspPose")
-        # print(configToGraspPose)
+        if armType == "Left":
+            ### check the targetPose
+            isPoseValid, configToGraspPose = self.planner_p.generateConfigBasedOnPose(
+                        targetPose, self.robot_p, self.workspace_p, armType, motionType)
+            # print("configToGraspPose")
+            # print(configToGraspPose)
+        else:
+            ###### HARD-CODED PART #########
+            ### for right hand, we make a conservative target pose
+            print("ARE YOU TRYING TO GENERATE A CONSERVATIVE TARGET GRASP?????????????")
+            isPoseValid, configToGraspPose = self.planner_p.generateConfigBasedOnPose(
+                        targetPose, self.robot_p, self.workspace_p, armType, motionType)
+            # isPoseValid, GraspPose, configToGraspPose = self.planner_p.generateConservativeTargetGrasp(
+            #             targetPose, self.robot_p, self.workspace_p, armType, motionType)
+            print('YES, I TRY IT HARD, MAN')
+            # print("Let's set this as the home configuration")
+            print("configToGraspPose")
+            print(configToGraspPose)
+            print("++++++++++++++++++++++++++++++++++++++")
+            print("++++++++++++++++++++++++++++++++++++++")
+
+            # if armType == "Right":
+            #     time.sleep(1000000)
+
         if VERBOSE:
             print('transit_motion_planning after generateConfigBasedOnPose takes time: %f' % (time.time()-start_time))
+
 
         if not isPoseValid:
             print("this pose is not even valid, let alone motion planning")
             return False
         else:
+            print("congrats on the target pose, now pre-grasp pose, please")
+            # if armType == "Right":
+            #     time.sleep(1000000)
             ### reset rest pose
             if armType == "Left":
                 self.robot_p.setRestPoses(configToGraspPose, self.robot_p.rightArmCurrConfiguration, self.robot_p.rightHandCurrConfiguration)
             else:
                 self.robot_p.setRestPoses(self.robot_p.leftArmCurrConfiguration, configToGraspPose, self.robot_p.rightHandCurrConfiguration)
+                # time.sleep(100000)
             ### given the targetPose, get the preGraspPose, which is 10cm behind along z axis
             isPoseValid, preGraspPose, configToPreGraspPose = self.planner_p.generatePreGrasp(
                                 targetPose, self.robot_p, self.workspace_p, armType, motionType)
@@ -247,7 +275,7 @@ class PybulletPlanScene(object):
             print("the poses can be directly connected")
             ### now we need to generate a trajectory for executor to execute
             config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
-                                                    initialConfig, configToPreGraspPose)
+                                                    initialConfig, configToPreGraspPose, min_degree=math.pi / 90)
             result_traj = []
             result_traj.append(config_edge_traj)
         else:
@@ -291,6 +319,11 @@ class PybulletPlanScene(object):
             print('transit_motion_planning takes time: %f' % (time.time()-start_time))
 
         print("the execution has been finished\n")
+
+        # time.sleep(1000000)
+
+
+
         return True
 
 
@@ -312,6 +345,49 @@ class PybulletPlanScene(object):
             initialConfig = copy.deepcopy(self.robot_p.rightArmCurrConfiguration)
             theme = "RightTransfer"
 
+        ### check if there is a collision between the object and the table (id: 1)
+        isCollision = self.planner_p.collisionAgent_p.collisionCheck_object_knownGEO(
+                                        self.workspace_p.object_geometries, [self.workspace_p.known_geometries[1]], dist_threshold=0.05)
+        if isCollision:
+            ### lift it up
+            targetPose = [[initialPose[0][0], initialPose[0][1],
+                            initialPose[0][2]+0.06], initialPose[1]]
+
+            isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
+                                targetPose, self.robot_p, self.workspace_p, armType, motionType)
+            if not isPoseValid:
+                print("this pose is not even valid, let alone motion planning")
+                return False
+            else:
+                print("the grasp pose is valid, proceed to planning")
+
+            # isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
+            #     initialConfig, configToTargetPose, self.robot_p, self.workspace_p, armType, motionType)
+
+            # if isDirectPathValid:
+            #     config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+            #                                                     initialConfig, configToTargetPose)
+            #     result_traj = []
+            #     result_traj.append(config_edge_traj)
+            # else:
+            #     result_traj = self.planner_p.AstarPathFinding(
+            #             initialConfig, configToTargetPose,
+            #             self.robot_p, self.workspace_p, armType, motionType)
+
+            config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                            initialConfig, configToTargetPose, min_degree=math.pi / 90 / 2)
+            result_traj = []
+            result_traj.append(config_edge_traj)
+            
+            if result_traj != []:
+                execute_success = self.serviceCall_execute_trajectory(
+                                            result_traj, armType, self.robot_p.motomanRJointNames)
+            print("lift up %s arm finished" % armType)
+            ### now depends on left or right arm
+            ### we want to move the arm along side (either left or right)
+            initialConfig = configToTargetPose
+
+
         targetPose = [[req.gripper_pose.position.x, req.gripper_pose.position.y,
             req.gripper_pose.position.z], [req.gripper_pose.orientation.x,
             req.gripper_pose.orientation.y, req.gripper_pose.orientation.z,
@@ -319,6 +395,7 @@ class PybulletPlanScene(object):
         ### check if the target pose is valid
         isPoseValid, configToGraspPose = self.planner_p.generateConfigBasedOnPose(
                     targetPose, self.robot_p, self.workspace_p, armType, motionType)
+
         if VERBOSE:
             print('transfer_motion_planning after generateConfigBasedOnPose takes time: %f' % (time.time()-start_time))
 
@@ -328,9 +405,10 @@ class PybulletPlanScene(object):
         else:
             print("the grasp pose is valid, proceed to planning")
 
-        ### first check if we can direct connect current pose to pre-grasp_pose
+        ### first check if we can direct connect current pose to grasp_pose
         isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
             initialConfig, configToGraspPose, self.robot_p, self.workspace_p, armType, motionType)
+        # isDirectPathValid = False
         # isDirectPathValid, config_edge_traj = self.planner_p.checkEdgeValidity_cartesianMove(
         #                     configToGraspPose, initialPose, targetPose, self.robot_p, self.workspace_p, armType, motionType)
         # print("========================is DirectPathValid: ", isDirectPathValid)
@@ -342,8 +420,12 @@ class PybulletPlanScene(object):
             ### it is feasible to directly move from current pose to grasp pose
             print("the poses can be directly connected")
             ### now we need to generate a trajectory for executor to execute
-            config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
-                                                        initialConfig, configToGraspPose)
+            if armType == "Left":
+                config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                            initialConfig, configToGraspPose, min_degree=math.pi / 90)
+            else:
+                config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                            initialConfig, configToGraspPose)               
             result_traj = []
             result_traj.append(config_edge_traj)
         else:
@@ -363,6 +445,8 @@ class PybulletPlanScene(object):
             execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
             print("the execution has been finished")
+            print("let me the know where the object is")
+            print(self.workspace_p.object_geometries)
             if VERBOSE:
                 print('transfer_motion_planning takes time: %f' % (time.time()-start_time))
 
@@ -435,6 +519,13 @@ class PybulletPlanScene(object):
                             targetPose[0][2]], targetPose[1]]
         isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
                             targetPose, self.robot_p, self.workspace_p, armType, motionType)
+
+        # print("Let's set this as the home configuration")
+        # print("configToTargetPose")
+        # print(configToTargetPose)
+        # print("++++++++++++++++++++++++++++++++++++++")
+        # print("++++++++++++++++++++++++++++++++++++++")
+
         if not isPoseValid:
             print("this pose is not even valid, let alone motion planning")
             return False
@@ -456,6 +547,396 @@ class PybulletPlanScene(object):
         execute_success = self.serviceCall_execute_trajectory(
                                     result_traj, armType, self.robot_p.motomanRJointNames)
         print("move alongside %s arm finished" % armType)
+        # # ** reset to home pose
+        # # home_pose = [0.0, 0.0, 1.57, -1.57, 0.0, 0.0, 0.0]
+        # home_pose = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        # isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
+        #     configToTargetPose, home_pose, self.robot_p, self.workspace_p, armType, motionType)
+
+        # if isDirectPathValid:
+        #     config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+        #                                                     configToTargetPose, home_pose)
+        #     result_traj = []
+        #     result_traj.append(config_edge_traj)
+        # else:
+        #     result_traj = self.planner_p.AstarPathFinding(
+        #             configToTargetPose, home_pose,
+        #             self.robot_p, self.workspace_p, armType, motionType)
+        
+        # if result_traj != []:
+        #     execute_success = self.serviceCall_execute_trajectory(
+        #                                 result_traj, armType, self.robot_p.motomanRJointNames)
+
+        return True
+
+
+    def moveAway3_motion_planning(self, req):
+
+        armType = req.armType
+        motionType = req.motionType
+        ### synchronize with the real scene so as to get the object and robot initial pose
+        self.updateInPlanSceneFromRealScene(req.object_pose)
+        if armType == "Left":
+            initialPose = copy.deepcopy(self.robot_p.left_ee_pose)
+            initialConfig = copy.deepcopy(self.robot_p.leftArmCurrConfiguration)
+            # theme = "LeftMoveAway"
+            theme = "LeftTransit"
+
+        else:
+            initialPose = copy.deepcopy(self.robot_p.right_ee_pose)
+            initialConfig = copy.deepcopy(self.robot_p.rightArmCurrConfiguration)
+            theme = "RightTransit"
+        if armType == 'Left':
+
+            ### lift it up
+            targetPose = [[initialPose[0][0], initialPose[0][1],
+                            initialPose[0][2]+0.04], initialPose[1]]
+
+            isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
+                                targetPose, self.robot_p, self.workspace_p, armType, motionType)
+            if not isPoseValid:
+                print("this pose is not even valid, let alone motion planning")
+                return False
+            else:
+                print("the grasp pose is valid, proceed to planning")
+
+            isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
+                initialConfig, configToTargetPose, self.robot_p, self.workspace_p, armType, motionType)
+
+            if isDirectPathValid:
+                config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                                initialConfig, configToTargetPose)
+                result_traj = []
+                result_traj.append(config_edge_traj)
+            else:
+                result_traj = self.planner_p.AstarPathFinding(
+                        initialConfig, configToTargetPose,
+                        self.robot_p, self.workspace_p, armType, motionType)
+            
+            if result_traj != []:
+                execute_success = self.serviceCall_execute_trajectory(
+                                            result_traj, armType, self.robot_p.motomanRJointNames)
+            print("lift up %s arm finished" % armType)
+
+            ### now depends on left or right arm
+            ### we want to move the arm along side (either left or right)
+            currConfig = configToTargetPose
+            if armType == "Left":
+                ### for the left arm, move the left
+                targetPose = [[targetPose[0][0], targetPose[0][1]+0.4,
+                                targetPose[0][2]], targetPose[1]]
+            else:
+                ### for the right arm, move to right
+                targetPose = [[targetPose[0][0], targetPose[0][1]-0.4,
+                                targetPose[0][2]], targetPose[1]]
+            isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
+                                targetPose, self.robot_p, self.workspace_p, armType, motionType)
+
+            # print("Let's set this as the home configuration")
+            # print("configToTargetPose")
+            # print(configToTargetPose)
+            # print("++++++++++++++++++++++++++++++++++++++")
+            # print("++++++++++++++++++++++++++++++++++++++")
+
+            if not isPoseValid:
+                print("this pose is not even valid, let alone motion planning")
+                return False
+            else:
+                print("the grasp pose is valid, proceed to planning")
+            
+            isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
+                currConfig, configToTargetPose, self.robot_p, self.workspace_p, armType, motionType)
+            if isDirectPathValid:
+                config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                                currConfig, configToTargetPose)
+                result_traj = []
+                result_traj.append(config_edge_traj)
+            else:
+                result_traj = self.planner_p.AstarPathFinding(
+                        currConfig, configToTargetPose,
+                        self.robot_p, self.workspace_p, armType, motionType)
+
+            execute_success = self.serviceCall_execute_trajectory(
+                                        result_traj, armType, self.robot_p.motomanRJointNames)
+            print("move alongside %s arm finished" % armType)
+            # # ** reset to home pose
+            # # home_pose = [0.0, 0.0, 1.57, -1.57, 0.0, 0.0, 0.0]
+            # home_pose = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            # isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
+            #     configToTargetPose, home_pose, self.robot_p, self.workspace_p, armType, motionType)
+
+            # if isDirectPathValid:
+            #     config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+            #                                                     configToTargetPose, home_pose)
+            #     result_traj = []
+            #     result_traj.append(config_edge_traj)
+            # else:
+            #     result_traj = self.planner_p.AstarPathFinding(
+            #             configToTargetPose, home_pose,
+            #             self.robot_p, self.workspace_p, armType, motionType)
+            
+            # if result_traj != []:
+            #     execute_success = self.serviceCall_execute_trajectory(
+            #                                 result_traj, armType, self.robot_p.motomanRJointNames)
+            return True
+
+        if armType == 'Right':
+            #### (not used) configToTargetPose = [-3.051709074651789, -0.7437459017506597, -0.11702544303157998, 1.2418171296172877, 1.5097524020385686, -1.6338341900612185, 0.4236664846169708]
+        #     configToTargetPose = [-3.1282064342345585, -0.8423079221535875, -0.5623394341156668, 1.0641399123596846, 1.420238382384334, -1.3375485840697974, -0.83051516392]
+        # else:
+        #     configToTargetPose = [2.1838748733518063, -0.9209540227290458, 0.8832032430221721, 1.1669805304419556, 2.2862132885171125, -1.7084464602195035, -2.920715879126091]
+            print("first lift it up")
+
+        ###################################################################################################################
+        targetPose = [[initialPose[0][0], initialPose[0][1],
+                        initialPose[0][2]+0.0], initialPose[1]]
+        isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
+                            targetPose, self.robot_p, self.workspace_p, armType, motionType)
+        if not isPoseValid:
+            print("this pose is not even valid, let alone motion planning")
+            return False
+        else:
+            print("the grasp pose is valid, proceed to planning")
+
+        isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
+            initialConfig, configToTargetPose, self.robot_p, self.workspace_p, armType, motionType)
+
+        if isDirectPathValid:
+            config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                            initialConfig, configToTargetPose, min_degree=math.pi / 90)
+            result_traj = []
+            result_traj.append(config_edge_traj)
+        else:
+            result_traj = self.planner_p.AstarPathFinding(
+                    initialConfig, configToTargetPose,
+                    self.robot_p, self.workspace_p, armType, motionType)
+        
+        if result_traj != []:
+            execute_success = self.serviceCall_execute_trajectory(
+                                        result_traj, armType, self.robot_p.motomanRJointNames)
+        print("lift up %s arm finished" % armType)
+        ###################################################################################################################
+
+        print("then move back to home position")
+        initialConfig = copy.deepcopy(configToTargetPose)
+        configToTargetPose = [-3.1282064342345585, -0.8423079221535875, -0.5623394341156668, 1.0641399123596846, 1.420238382384334, -1.3375485840697974, -0.83051516392]
+
+        isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
+            initialConfig, configToTargetPose, self.robot_p, self.workspace_p, armType, motionType)
+
+        if isDirectPathValid:
+            config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                            initialConfig, configToTargetPose, min_degree=math.pi / 90)
+            result_traj = []
+            result_traj.append(config_edge_traj)
+        else:
+            result_traj = self.planner_p.AstarPathFinding(
+                    initialConfig, configToTargetPose,
+                    self.robot_p, self.workspace_p, armType, motionType)
+        
+        if result_traj != []:
+            execute_success = self.serviceCall_execute_trajectory(
+                                        result_traj, armType, self.robot_p.motomanRJointNames)
+        print("lift up %s arm finished" % armType)
+
+        return True
+
+
+    def moveAway1_motion_planning(self, req):
+
+        armType = req.armType
+        motionType = req.motionType
+        ### synchronize with the real scene so as to get the object and robot initial pose
+        self.updateInPlanSceneFromRealScene(req.object_pose)
+        if armType == "Left":
+            initialPose = copy.deepcopy(self.robot_p.left_ee_pose)
+            initialConfig = copy.deepcopy(self.robot_p.leftArmCurrConfiguration)
+            # theme = "LeftMoveAway"
+            theme = "LeftTransit"
+
+        else:
+            initialPose = copy.deepcopy(self.robot_p.right_ee_pose)
+            initialConfig = copy.deepcopy(self.robot_p.rightArmCurrConfiguration)
+            theme = "RightTransit"
+
+
+        if armType == "Left":
+            ### for the left arm, move the left
+            targetPose = [[initialPose[0][0], initialPose[0][1]+0.1,
+                            initialPose[0][2]], initialPose[1]]
+        else:
+            ### for the right arm, move to right
+            targetPose = [[initialPose[0][0], initialPose[0][1]-0.1,
+                            initialPose[0][2]], initialPose[1]]
+        isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
+                            targetPose, self.robot_p, self.workspace_p, armType, motionType)
+
+        if not isPoseValid:
+            print("this pose is not even valid, let alone motion planning")
+            return False
+        else:
+            print("the grasp pose is valid, proceed to planning")
+        
+        isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
+            initialConfig, configToTargetPose, self.robot_p, self.workspace_p, armType, motionType)
+        if isDirectPathValid:
+            config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                            initialConfig, configToTargetPose)
+            result_traj = []
+            result_traj.append(config_edge_traj)
+        else:
+            result_traj = self.planner_p.AstarPathFinding(
+                    initialConfig, configToTargetPose,
+                    self.robot_p, self.workspace_p, armType, motionType)
+
+        execute_success = self.serviceCall_execute_trajectory(
+                                    result_traj, armType, self.robot_p.motomanRJointNames)
+        print("move alongside %s arm finished" % armType)
+
+        initialConfig = copy.deepcopy(configToTargetPose)
+        initialPose = copy.deepcopy(targetPose)
+
+        ### lift it up
+        targetPose = [[initialPose[0][0], initialPose[0][1],
+                        initialPose[0][2]+0.25], initialPose[1]]
+
+        isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
+                            targetPose, self.robot_p, self.workspace_p, armType, motionType)
+        if not isPoseValid:
+            print("this pose is not even valid, let alone motion planning")
+            return False
+        else:
+            print("the grasp pose is valid, proceed to planning")
+
+        isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
+            initialConfig, configToTargetPose, self.robot_p, self.workspace_p, armType, motionType)
+
+        if isDirectPathValid:
+            config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                            initialConfig, configToTargetPose)
+            result_traj = []
+            result_traj.append(config_edge_traj)
+        else:
+            result_traj = self.planner_p.AstarPathFinding(
+                    initialConfig, configToTargetPose,
+                    self.robot_p, self.workspace_p, armType, motionType)
+        
+        if result_traj != []:
+            execute_success = self.serviceCall_execute_trajectory(
+                                        result_traj, armType, self.robot_p.motomanRJointNames)
+        print("lift up %s arm finished" % armType)
+
+        # ** reset to home pose
+        # home_pose = [0.0, 0.0, 1.57, -1.57, 0.0, 0.0, 0.0]
+        # home_pose = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        # isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
+        #     configToTargetPose, home_pose, self.robot_p, self.workspace_p, armType, motionType)
+
+        # if isDirectPathValid:
+        #     config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+        #                                                     configToTargetPose, home_pose)
+        #     result_traj = []
+        #     result_traj.append(config_edge_traj)
+        # else:
+        #     result_traj = self.planner_p.AstarPathFinding(
+        #             configToTargetPose, home_pose,
+        #             self.robot_p, self.workspace_p, armType, motionType)
+        
+        # if result_traj != []:
+        #     execute_success = self.serviceCall_execute_trajectory(
+        #                                 result_traj, armType, self.robot_p.motomanRJointNames)
+
+        return True
+
+
+    def moveAway2_motion_planning(self, req):
+
+        armType = req.armType
+        motionType = req.motionType
+        ### synchronize with the real scene so as to get the object and robot initial pose
+        self.updateInPlanSceneFromRealScene(req.object_pose)
+        if armType == "Left":
+            initialPose = copy.deepcopy(self.robot_p.left_ee_pose)
+            initialConfig = copy.deepcopy(self.robot_p.leftArmCurrConfiguration)
+            # theme = "LeftMoveAway"
+            theme = "LeftTransit"
+
+        else:
+            initialPose = copy.deepcopy(self.robot_p.right_ee_pose)
+            initialConfig = copy.deepcopy(self.robot_p.rightArmCurrConfiguration)
+            theme = "RightTransit"
+
+
+        if armType == "Left":
+            ### for the left arm, move the left
+            targetPose = [[initialPose[0][0], initialPose[0][1]+0.1,
+                            initialPose[0][2]], initialPose[1]]
+        else:
+            ### for the right arm, move to right
+            targetPose = [[initialPose[0][0], initialPose[0][1]-0.1,
+                            initialPose[0][2]], initialPose[1]]
+        isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
+                            targetPose, self.robot_p, self.workspace_p, armType, motionType)
+
+        if not isPoseValid:
+            print("this pose is not even valid, let alone motion planning")
+            return False
+        else:
+            print("the grasp pose is valid, proceed to planning")
+        
+        isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
+            initialConfig, configToTargetPose, self.robot_p, self.workspace_p, armType, motionType)
+        if isDirectPathValid:
+            config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                            initialConfig, configToTargetPose, min_degree=math.pi / 90)
+            result_traj = []
+            result_traj.append(config_edge_traj)
+        else:
+            result_traj = self.planner_p.AstarPathFinding(
+                    initialConfig, configToTargetPose,
+                    self.robot_p, self.workspace_p, armType, motionType)
+
+        execute_success = self.serviceCall_execute_trajectory(
+                                    result_traj, armType, self.robot_p.motomanRJointNames)
+        print("move alongside %s arm finished" % armType)
+
+        initialConfig = copy.deepcopy(configToTargetPose)
+        initialPose = copy.deepcopy(targetPose)
+
+        # ### lift it up
+        # targetPose = [[initialPose[0][0], initialPose[0][1],
+        #                 initialPose[0][2]+0.25], initialPose[1]]
+
+        # isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
+        #                     targetPose, self.robot_p, self.workspace_p, armType, motionType)
+
+        isPoseValid = True
+        # configToTargetPose = [-3.051709074651789, -0.7437459017506597, -0.11702544303157998, 1.2418171296172877, 1.5097524020385686, -1.6338341900612185, 0.4236664846169708]
+        configToTargetPose = [-3.1282064342345585, -0.8423079221535875, -0.5623394341156668, 1.0641399123596846, 1.420238382384334, -1.3375485840697974, -0.83051516392]
+
+        if not isPoseValid:
+            print("this pose is not even valid, let alone motion planning")
+            return False
+        else:
+            print("the grasp pose is valid, proceed to planning")
+
+        isDirectPathValid = self.planner_p.checkEdgeValidity_DirectConfigPath(
+            initialConfig, configToTargetPose, self.robot_p, self.workspace_p, armType, motionType)
+
+        if isDirectPathValid:
+            config_edge_traj = self.planner_p.generateTrajectory_DirectConfigPath(
+                                                            initialConfig, configToTargetPose, min_degree=math.pi / 90)
+            result_traj = []
+            result_traj.append(config_edge_traj)
+        else:
+            result_traj = self.planner_p.AstarPathFinding(
+                    initialConfig, configToTargetPose,
+                    self.robot_p, self.workspace_p, armType, motionType)
+        
+        if result_traj != []:
+            execute_success = self.serviceCall_execute_trajectory(
+                                        result_traj, armType, self.robot_p.motomanRJointNames)
+        print("lift up %s arm finished" % armType)
         return True
 
 
@@ -506,6 +987,11 @@ class PybulletPlanScene(object):
                             targetPose[0][2]], targetPose[1]]
         isPoseValid, configToTargetPose = self.planner_p.generateConfigBasedOnPose(
                             targetPose, self.robot_p, self.workspace_p, armType, motionType)
+        print("=================================")
+        print("=================================")
+        print("=================================")
+        print("reset config")
+        print(configToTargetPose)
         if not isPoseValid:
             print("this pose is not even valid, let alone motion planning")
             return False
@@ -597,7 +1083,10 @@ class PybulletPlanScene(object):
             return MotionPlanningResponse(isSuccess)
 
         elif req.motionType == "moveAway":
-            isSuccess = self.moveAway_motion_planning(req)
+            # isSuccess = self.moveAway_motion_planning(req)  # up, then right
+
+            # isSuccess = self.moveAway3_motion_planning(req)  # for handoff
+            isSuccess = self.moveAway2_motion_planning(req)  # right hand direct grasp
             print("isSuccess: ", isSuccess)
             return MotionPlanningResponse(isSuccess)
 
@@ -635,11 +1124,13 @@ class PybulletPlanScene(object):
             target_radian = targetArmConfig[joint_index] + rotate_radian
         else:
             target_radian = targetArmConfig[joint_index-7] + rotate_radian
-
+        while target_radian > np.pi:
+            target_radian -= np.pi*2
+        while target_radian < -np.pi:
+            target_radian += np.pi*2
         if armType == "Left":
             ### check if the given joint value exceeds the limit
-            if (target_radian < self.robot_p.ll[joint_index]) or \
-                        (target_radian > self.robot_p.ul[joint_index]):
+            if (target_radian < self.robot_p.ll[joint_index]) or (target_radian > self.robot_p.ul[joint_index]):
                 rospy.logerr("The joint value input for %s exceeds its limits" % req.joint_name)
                 rospy.logerr(
                     "%f does not in the range [%f, %f]" % \
