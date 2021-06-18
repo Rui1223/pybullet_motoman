@@ -27,6 +27,7 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Pose
 from pybullet_motoman.srv import ExecuteTrajectory, ExecuteTrajectoryResponse
+from pybullet_motoman.srv import ExecuteMoveItTrajectory, ExecuteMoveItTrajectoryResponse
 from pybullet_motoman.msg import EEPoses
 from pybullet_motoman.srv import AttachObject, AttachObjectResponse
 from pybullet_motoman.srv import EnablePhysics, EnablePhysicsResponse
@@ -48,8 +49,8 @@ class PybulletExecutionScene(object):
         self.rosPackagePath = rospack.get_path("pybullet_motoman")
 
         ### set the server for the pybullet real scene
-        self.executingClientID = p.connect(p.DIRECT)
-        # self.executingClientID = p.connect(p.GUI)
+        # self.executingClientID = p.connect(p.DIRECT)
+        self.executingClientID = p.connect(p.GUI)
         # p.setAdditionalSearchPath(pybullet_data.getDataPath())
         # self.egl_plugin = p.loadPlugin(egl.get_filename(), "_eglRendererPlugin")
         # print("plugin=", self.egl_plugin)
@@ -144,6 +145,8 @@ class PybulletExecutionScene(object):
         # self.object_pose_pub = rospy.Publisher('object_pose', ObjectPose, queue_size=10)
         execute_trajectory_server = rospy.Service(
                 "execute_trajectory", ExecuteTrajectory, self.execute_traj_callback)
+        execute_trajectory_server = rospy.Service(
+                "execute_moveit_trajectory", ExecuteMoveItTrajectory, self.execute_moveit_traj_callback)
         attach_object_server = rospy.Service(
                 "attach_object", AttachObject, self.attach_object_callback)
         enable_physics_server = rospy.Service(
@@ -189,6 +192,19 @@ class PybulletExecutionScene(object):
         self.executor_e.executeTrajctory(trajectory, self.robot_e, req.armType)
 
         return ExecuteTrajectoryResponse(True)
+
+
+    def execute_moveit_traj_callback(self, req):
+        ### given the request data: moveit_traj + armType
+        ### execute the trajectory on a specified arm
+
+        trajectory = []
+        for joint_state in req.trajectory:
+            trajectory.append(joint_state.position)
+
+        self.executor_e.executeMoveItTrajctory(trajectory, self.robot_e, req.armType)
+
+        return ExecuteMoveItTrajectoryResponse(True)
 
 
     def configureMotomanRobot(self, 

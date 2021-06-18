@@ -183,6 +183,13 @@ class Executor(object):
                 time.sleep(0.05)
             time.sleep(0.05)
 
+    def executeMoveItTrajctory(self, trajectory, robot, armType):
+        for config in trajectory:
+            robot.moveSingleArm(config, armType)
+            if (self.isObjectInLeftHand and armType == "Left") or (self.isObjectInRightHand and armType == "Right"):
+                self.updateRealObjectBasedonLocalPose(robot, armType)
+            time.sleep(0.1)
+
 
     def pose_transition(self, w1, w2, robot, armType):
         # nseg = 5

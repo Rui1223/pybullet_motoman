@@ -237,6 +237,7 @@ if __name__ == '__main__':
         print("\n")
         if plan_success: break
 
+    # time.sleep(100000)  
 
     ## before next plan, we want the object to be attached to the gripper
     attach_success = serviceCall_attachObject(attach=True, armType="Left")
@@ -249,8 +250,6 @@ if __name__ == '__main__':
         print("plan_success: ", plan_success)
         print("\n")
         if plan_success: break
-
-    # time.sleep(100000)
     
     ## request the service to plan
     planning_requests = shiyang_obtain_gripper_poses_for_right_hand(

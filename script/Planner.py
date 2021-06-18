@@ -1113,19 +1113,19 @@ class Planner(object):
         goal_neighbors_cost = []
 
         # neighborIndex_to_start = sorted(range(len(dist_to_start)), key=dist_to_start.__getitem__)
-        # dist_to_start = [
-        #     utils.calculateNorm2(initialConfig, neighborConfig) for neighborConfig in self.nodes[armType]]
         dist_to_start = [
-            self.configDistanceMetric(initialConfig, neighborConfig, robot, armType) for neighborConfig in self.nodes[armType]]
+            utils.calculateNorm2(initialConfig, neighborConfig) for neighborConfig in self.nodes[armType]]
+        # dist_to_start = [
+        #     self.configDistanceMetric(initialConfig, neighborConfig, robot, armType) for neighborConfig in self.nodes[armType]]
         neighborIndex_to_start, neighborDist_to_start = zip(
                                     *sorted(enumerate(dist_to_start), key=itemgetter(1)))
         neighborIndex_to_start = list(neighborIndex_to_start)
         neighborDist_to_start = list(neighborDist_to_start)
 
-        # dist_to_goal = [
-        #     utils.calculateNorm2(targetConfig, neighborConfig) for neighborConfig in self.nodes[armType]]
         dist_to_goal = [
-            self.configDistanceMetric(targetConfig, neighborConfig, robot, armType) for neighborConfig in self.nodes[armType]]
+            utils.calculateNorm2(targetConfig, neighborConfig) for neighborConfig in self.nodes[armType]]
+        # dist_to_goal = [
+        #     self.configDistanceMetric(targetConfig, neighborConfig, robot, armType) for neighborConfig in self.nodes[armType]]
         neighborIndex_to_goal, neighborDist_to_goal = zip(
                                     *sorted(enumerate(dist_to_goal), key=itemgetter(1)))
         neighborIndex_to_goal = list(neighborIndex_to_goal) 
@@ -1165,7 +1165,7 @@ class Planner(object):
             neighbor = self.nodes[armType][neighborIndex_to_goal[j]]
             ### check the edge validity
             isEdgeValid = self.checkEdgeValidity_DirectConfigPath(
-                        initialConfig, neighbor, robot, workspace, armType, motionType)
+                        targetConfig, neighbor, robot, workspace, armType, motionType)
             if isEdgeValid:
                 goal_neighbors_idx.append(neighborIndex_to_goal[j])
                 goal_neighbors_cost.append(neighborDist_to_goal[j])

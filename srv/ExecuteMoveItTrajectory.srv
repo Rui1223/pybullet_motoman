@@ -1,0 +1,8 @@
+# This srv file defines the service
+# for a need to execute a given moveIt trajectory
+# on a specified arm
+
+sensor_msgs/JointState[] trajectory
+string armType
+---
+bool success

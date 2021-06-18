@@ -31,13 +31,13 @@
   </link>
 
   <!-- joint list -->
-  <!-- <joint name="torso_joint_b1" type="revolute"> -->
-  <joint name="torso_joint_b1" type="fixed">
+  <joint name="torso_joint_b1" type="revolute">
+  <!-- <joint name="torso_joint_b1" type="fixed"> -->
     <parent link="base_link"/>
     <child link="torso_link_b1"/>
     <origin rpy="0 0 0" xyz="0.09257 0 0.877"/>
-    <!-- <axis xyz="0 0 1"/> -->
-    <!-- <limit effort="100" lower="-2.9570" upper="2.9570" velocity="2.26"/> -->
+    <axis xyz="0 0 1"/>
+    <limit effort="100" lower="-2.9570" upper="2.9570" velocity="2.26"/>
     <!-- <limit effort="100" lower="-0.0001" upper="0.0001" velocity="2.26"/> -->
   </joint>
   <!-- end of joint list -->
