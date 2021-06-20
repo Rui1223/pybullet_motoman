@@ -405,7 +405,7 @@ class Planner(object):
         return isPoseValid, preGrasp_pose, singleArmConfig_IK
 
 
-    def updateRealObjectBasedonLocalPose(self, robot, workspace, armType):
+    def updateMeshBasedonLocalPose(self, robot, workspace, armType):
         if armType == "Left":
             # ee_idx = robot.left_ee_idx
             # objectInHand = self.objectInLeftHand
@@ -535,7 +535,7 @@ class Planner(object):
         ### If currently it is in hand manipulation, also move the object 
         if (self.isObjectInLeftHand and armType == "Left") or \
                             (self.isObjectInRightHand and armType == "Right"):
-            self.updateRealObjectBasedonLocalPose(robot, workspace, armType)
+            self.updateMeshBasedonLocalPose(robot, workspace, armType)
 
         ### depend on what type of motion it is, we have different collision check strategies
         ### IN TERMS OF THE OBJECT!
