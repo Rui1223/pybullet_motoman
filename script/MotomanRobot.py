@@ -138,6 +138,9 @@ class MotomanRobot(object):
 
 
     def setSingleArmToConfig(self, singleArmConfig, armType):
+        if isinstance(singleArmConfig[0], str):
+            singleArmConfig = [float(i) for i in singleArmConfig]
+
         ### the planning version of moveSingArm
         if armType == "Left":
             for j in range(1, 8):
@@ -210,7 +213,7 @@ class MotomanRobot(object):
             # print(jointInfo)
             if jointInfo[2] == 0:
                 ### only get revolute joint
-                self.motomanRJointNames.append(jointInfo[1])
+                self.motomanRJointNames.append(jointInfo[1].decode("utf-8"))
 
 
     def printRJointNames(self):

@@ -52,7 +52,7 @@
   <param name="robot_description" textfile="$(find pybullet_motoman)/urdf/motoman.urdf" />
 
 	<!-- by default, we don't use real scene -->
-	<arg name="sim" default="false" />
+	<arg name="sim" default="true" />
 
 
 	<node pkg="pybullet_motoman" type="PybulletPlanScene.py" name="pybullet_plan_scene"

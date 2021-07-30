@@ -31,10 +31,10 @@ class Executor(object):
     def attachObject(self, workspace, robot, armType):
         if armType == "Left":
             self.isObjectInLeftHand = True
-            self.objectInLeftHand = workspace.object_geometries.items()[0] ### mesh: name
+            self.objectInLeftHand = list(workspace.object_geometries.items())[0] ### mesh: name
         else:
             self.isObjectInRightHand = True
-            self.objectInRightHand = workspace.object_geometries.items()[0] ### mesh: name
+            self.objectInRightHand = list(workspace.object_geometries.items())[0] ### mesh: name
 
         ### get the object pose relative to the frame of the end effector 
         ### since once the object is attached to the end effector, 

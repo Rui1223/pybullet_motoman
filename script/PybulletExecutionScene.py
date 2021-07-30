@@ -3,6 +3,7 @@ from __future__ import division
 
 import pybullet as p
 import pybullet_data
+import sys; sys.path.append('/home/lsy/catkin_ws/src/pybullet_motoman/script')
 
 import time
 import sys

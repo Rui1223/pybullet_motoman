@@ -642,8 +642,8 @@ if __name__ == '__main__':
     # # single_joint_change_success = serviceCall_singleJointChange(
     # #                     rotate_angle, joint_name="arm_right_joint_7_t", armType="Right")
     
-    rightHandDirectGrasp();
-    # leftHandGrasp()
+    # rightHandDirectGrasp()
+    leftHandGrasp()
 
     time.sleep(10000)
 

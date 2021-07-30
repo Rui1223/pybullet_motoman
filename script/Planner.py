@@ -424,17 +424,17 @@ class Planner(object):
         self.isObjectInRightHand = isObjectInRightHand
 
         if self.isObjectInLeftHand:
-            self.objectInLeftHand = object_geometries.keys()[0]
+            self.objectInLeftHand = list(object_geometries.keys())[0]
             self.leftLocalPose = self.computeLocalPose(
-                        object_geometries.values()[0][0], robot, "Left")
+                        list(object_geometries.values())[0][0], robot, "Left")
         else:
             self.objectInLeftHand = None
             self.leftLocalPose = [[-1, -1, -1], [-1, -1, -1, -1]]
 
         if self.isObjectInRightHand:
-            self.objectInRightHand = object_geometries.keys()[0]
+            self.objectInRightHand = list(object_geometries.keys())[0]
             self.rightLocalPose = self.computeLocalPose(
-                        object_geometries.values()[0][0], robot, "Right")
+                        list(object_geometries.values())[0][0], robot, "Right")
         else:
             self.objectInRightHand = None
             self.rightLocalPose = [[-1, -1, -1], [-1, -1, -1, -1]]
@@ -964,7 +964,7 @@ class Planner(object):
         robot.setSingleArmToConfig(singleArmConfig_IK, armType)
         isValid = False
         ### check if there is collision between the robot and the object
-        object_geometry = workspace.object_geometries.keys() ### list
+        object_geometry = list(workspace.object_geometries.keys()) ### list
         if self.collisionAgent_p.collisionCheck_robot_objectGEO(
             robot.motomanGEO, object_geometry, armType, 
             self.isObjectInLeftHand, self.isObjectInRightHand) == True:
